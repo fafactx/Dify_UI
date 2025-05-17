@@ -897,10 +897,10 @@ function showDetail(index) {
                 <p><strong>ID:</strong> ${evaluation.id}</p>
                 <p><strong>Date:</strong> ${dateStr} ${timeStr}</p>
                 <p><strong>Average Score:</strong> ${evaluation.average_score || 0}</p>
-                ${evaluation.CAS_Name ? `<p><strong>CAS Name:</strong> ${evaluation.CAS_Name}</p>` : ''}
-                ${evaluation.Product_Family ? `<p><strong>Product Family:</strong> ${evaluation.Product_Family}</p>` : ''}
+                ${evaluation['CAS Name'] ? `<p><strong>CAS Name:</strong> ${evaluation['CAS Name']}</p>` : ''}
+                ${evaluation['Product Family'] ? `<p><strong>Product Family:</strong> ${evaluation['Product Family']}</p>` : ''}
                 ${evaluation.MAG ? `<p><strong>MAG:</strong> ${evaluation.MAG}</p>` : ''}
-                ${evaluation.Part_Number ? `<p><strong>Part Number:</strong> ${evaluation.Part_Number}</p>` : ''}
+                ${evaluation['Part Number'] ? `<p><strong>Part Number:</strong> ${evaluation['Part Number']}</p>` : ''}
             </div>
         </div>
 
@@ -932,12 +932,12 @@ function showDetail(index) {
             <div class="detail-content">
                 ${evaluation.Question ? `<p><strong>Question:</strong> ${evaluation.Question}</p>` : ''}
                 ${evaluation.Answer ? `<p><strong>Answer:</strong> ${evaluation.Answer}</p>` : ''}
-                ${evaluation.Question_Scenario ? `<p><strong>Question Scenario:</strong> ${evaluation.Question_Scenario}</p>` : ''}
-                ${evaluation.Answer_Source ? `<p><strong>Answer Source:</strong> ${evaluation.Answer_Source}</p>` : ''}
-                ${evaluation.Question_Complexity ? `<p><strong>Question Complexity:</strong> ${evaluation.Question_Complexity}</p>` : ''}
-                ${evaluation.Question_Frequency ? `<p><strong>Question Frequency:</strong> ${evaluation.Question_Frequency}</p>` : ''}
-                ${evaluation.Question_Category ? `<p><strong>Question Category:</strong> ${evaluation.Question_Category}</p>` : ''}
-                ${evaluation.Source_Category ? `<p><strong>Source Category:</strong> ${evaluation.Source_Category}</p>` : ''}
+                ${evaluation['Question Scenario'] ? `<p><strong>Question Scenario:</strong> ${evaluation['Question Scenario']}</p>` : ''}
+                ${evaluation['Answer Source'] ? `<p><strong>Answer Source:</strong> ${evaluation['Answer Source']}</p>` : ''}
+                ${evaluation['Question Complexity'] ? `<p><strong>Question Complexity:</strong> ${evaluation['Question Complexity']}</p>` : ''}
+                ${evaluation['Question Frequency'] ? `<p><strong>Question Frequency:</strong> ${evaluation['Question Frequency']}</p>` : ''}
+                ${evaluation['Question Category'] ? `<p><strong>Question Category:</strong> ${evaluation['Question Category']}</p>` : ''}
+                ${evaluation['Source Category'] ? `<p><strong>Source Category:</strong> ${evaluation['Source Category']}</p>` : ''}
             </div>
         </div>
 
