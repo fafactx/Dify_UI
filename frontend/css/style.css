@@ -1,0 +1,90 @@
+/* frontend/css/style.css */
+.dashboard {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+}
+
+.chart-container {
+  margin-bottom: 30px;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  background-color: white;
+}
+
+.data-table {
+  margin-top: 30px;
+  background-color: white;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.table-header {
+  cursor: pointer;
+}
+
+.table-header:hover {
+  background-color: #f5f5f5;
+}
+
+.stat-card {
+  text-align: center;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  background-color: white;
+  height: 100%;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: bold;
+  margin: 10px 0;
+}
+
+.summary-text {
+  max-height: 100px;
+  overflow-y: auto;
+  font-style: italic;
+  color: #666;
+  background-color: #f9f9f9;
+}
+
+.table-responsive {
+  overflow-x: auto;
+}
+
+.modal-body {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .stat-card {
+    margin-bottom: 15px;
+  }
+  
+  .chart-container {
+    margin-bottom: 20px;
+  }
+}
+
+/* 动画效果 */
+.stat-value {
+  transition: all 0.3s ease;
+}
+
+.stat-value:hover {
+  transform: scale(1.05);
+}
+
+/* 表格样式增强 */
+.table th {
+  background-color: #f0f0f0;
+}
+
+.table-striped tbody tr:hover {
+  background-color: rgba(0, 123, 255, 0.05);
+}
