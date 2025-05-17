@@ -18,7 +18,7 @@ const asyncHandler = fn => (req, res, next) => {
 // 添加新评估
 router.post('/evaluations', asyncHandler(async (req, res) => {
   const evaluationData = req.body;
-  
+
   // 验证请求数据
   if (!evaluationData || Object.keys(evaluationData).length === 0) {
     return res.status(400).json({
@@ -26,11 +26,11 @@ router.post('/evaluations', asyncHandler(async (req, res) => {
       message: '请求体不能为空'
     });
   }
-  
+
   // 处理评估结果
   const results = {};
   let resultCount = 0;
-  
+
   // 如果数据包含result0, result1等键，分别处理每个评估
   for (const key in evaluationData) {
     if (key.startsWith('result')) {
@@ -40,7 +40,7 @@ router.post('/evaluations', asyncHandler(async (req, res) => {
       resultCount++;
     }
   }
-  
+
   // 如果没有找到result开头的键，将整个请求体视为单个评估
   if (resultCount === 0) {
     const resultKey = `result${Date.now()}`;
@@ -48,7 +48,7 @@ router.post('/evaluations', asyncHandler(async (req, res) => {
     results[resultKey] = { success: true, id: saveResult.lastInsertRowid };
     resultCount = 1;
   }
-  
+
   res.json({
     success: true,
     message: `成功保存 ${resultCount} 条评估数据`,
@@ -69,9 +69,9 @@ router.get('/evaluations', asyncHandler(async (req, res) => {
     sortBy: req.query.sortBy,
     sortOrder: req.query.sortOrder
   };
-  
+
   const evaluations = evaluationsDAL.getEvaluations(options);
-  
+
   res.json({
     success: true,
     ...evaluations
@@ -82,14 +82,14 @@ router.get('/evaluations', asyncHandler(async (req, res) => {
 router.get('/evaluations/:id', asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id);
   const evaluation = evaluationsDAL.getEvaluationById(id);
-  
+
   if (!evaluation) {
     return res.status(404).json({
       success: false,
       message: `未找到ID为 ${id} 的评估数据`
     });
   }
-  
+
   res.json({
     success: true,
     evaluation
@@ -99,7 +99,7 @@ router.get('/evaluations/:id', asyncHandler(async (req, res) => {
 // 获取总体统计概览
 router.get('/stats/overview', asyncHandler(async (req, res) => {
   const stats = evaluationsDAL.getStatsOverview();
-  
+
   res.json({
     success: true,
     stats
@@ -110,14 +110,14 @@ router.get('/stats/overview', asyncHandler(async (req, res) => {
 // 获取统计数据
 router.get('/stats', asyncHandler(async (req, res) => {
   const stats = evaluationsDAL.getStatsOverview();
-  
+
   res.json({ stats });
 }));
 
-// 保存评估数据
+// 保存评估数据 (兼容旧API)
 router.post('/save-evaluation', asyncHandler(async (req, res) => {
   const evaluationData = req.body;
-  
+
   // 验证请求数据
   if (!evaluationData || Object.keys(evaluationData).length === 0) {
     return res.status(400).json({
@@ -125,29 +125,114 @@ router.post('/save-evaluation', asyncHandler(async (req, res) => {
       message: '请求体不能为空'
     });
   }
-  
+
   // 处理评估结果
   const results = {};
   let resultCount = 0;
-  
-  // 如果数据包含result0, result1等键，分别处理每个评估
-  for (const key in evaluationData) {
-    if (key.startsWith('result')) {
-      const result = evaluationData[key];
-      const saveResult = evaluationsDAL.saveEvaluation(key, result);
-      results[key] = { success: true, id: saveResult.lastInsertRowid };
-      resultCount++;
+
+  // 检查是否是Dify工作流格式 (arg1嵌套格式)
+  if (evaluationData.arg1 && typeof evaluationData.arg1 === 'object') {
+    console.log('检测到Dify工作流格式数据');
+
+    // 处理arg1中的数据
+    const difyData = evaluationData.arg1;
+
+    // 如果arg1中包含result0, result1等键，分别处理每个评估
+    for (const key in difyData) {
+      if (key.startsWith('result')) {
+        const result = difyData[key];
+        const saveResult = evaluationsDAL.saveEvaluation(key, result);
+        results[key] = { success: true, id: saveResult.lastInsertRowid };
+        resultCount++;
+      }
+    }
+
+    // 如果arg1不包含result开头的键，将整个arg1视为单个评估
+    if (resultCount === 0) {
+      const resultKey = `result${Date.now()}`;
+      const saveResult = evaluationsDAL.saveEvaluation(resultKey, difyData);
+      results[resultKey] = { success: true, id: saveResult.lastInsertRowid };
+      resultCount = 1;
+    }
+  } else {
+    // 标准格式处理
+
+    // 如果数据包含result0, result1等键，分别处理每个评估
+    for (const key in evaluationData) {
+      if (key.startsWith('result')) {
+        const result = evaluationData[key];
+        const saveResult = evaluationsDAL.saveEvaluation(key, result);
+        results[key] = { success: true, id: saveResult.lastInsertRowid };
+        resultCount++;
+      }
+    }
+
+    // 如果没有找到result开头的键，将整个请求体视为单个评估
+    if (resultCount === 0) {
+      const resultKey = `result${Date.now()}`;
+      const saveResult = evaluationsDAL.saveEvaluation(resultKey, evaluationData);
+      results[resultKey] = { success: true, id: saveResult.lastInsertRowid };
+      resultCount = 1;
     }
   }
-  
-  // 如果没有找到result开头的键，将整个请求体视为单个评估
-  if (resultCount === 0) {
+
+  res.json({
+    success: true,
+    message: `成功保存 ${resultCount} 条评估数据`,
+    results
+  });
+}));
+
+// 专门用于Dify工作流的评估数据保存接口
+router.post('/dify-evaluation', asyncHandler(async (req, res) => {
+  const evaluationData = req.body;
+
+  // 验证请求数据
+  if (!evaluationData || Object.keys(evaluationData).length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: '请求体不能为空'
+    });
+  }
+
+  console.log('接收到Dify工作流数据:', JSON.stringify(evaluationData).substring(0, 200) + '...');
+
+  // 处理评估结果
+  const results = {};
+  let resultCount = 0;
+
+  // 检查是否是Dify工作流格式 (arg1嵌套格式)
+  if (evaluationData.arg1 && typeof evaluationData.arg1 === 'object') {
+    console.log('处理arg1中的数据');
+
+    // 处理arg1中的数据
+    const difyData = evaluationData.arg1;
+
+    // 如果arg1中包含result0, result1等键，分别处理每个评估
+    for (const key in difyData) {
+      if (key.startsWith('result')) {
+        const result = difyData[key];
+        const saveResult = evaluationsDAL.saveEvaluation(key, result);
+        results[key] = { success: true, id: saveResult.lastInsertRowid };
+        resultCount++;
+      }
+    }
+
+    // 如果arg1不包含result开头的键，将整个arg1视为单个评估
+    if (resultCount === 0) {
+      const resultKey = `result${Date.now()}`;
+      const saveResult = evaluationsDAL.saveEvaluation(resultKey, difyData);
+      results[resultKey] = { success: true, id: saveResult.lastInsertRowid };
+      resultCount = 1;
+    }
+  } else {
+    // 直接处理整个请求体
     const resultKey = `result${Date.now()}`;
     const saveResult = evaluationsDAL.saveEvaluation(resultKey, evaluationData);
     results[resultKey] = { success: true, id: saveResult.lastInsertRowid };
     resultCount = 1;
   }
-  
+
   res.json({
     success: true,
     message: `成功保存 ${resultCount} 条评估数据`,
