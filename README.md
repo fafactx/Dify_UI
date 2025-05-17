@@ -225,27 +225,7 @@ deploy.bat --install  # 首次运行时安装依赖
 
 点击表格上方的"导出 CSV"按钮，可以将当前筛选的评估结果导出为 CSV 文件。
 
-## Docker 部署（可选）
 
-如果你希望使用 Docker 部署，可以按照以下步骤操作：
-
-### 步骤 1：安装 Docker 和 Docker Compose
-
-确保你的系统已安装 Docker 和 Docker Compose。
-
-### 步骤 2：构建和启动容器
-
-在项目根目录中运行：
-
-```bash
-docker-compose up -d
-```
-
-这将构建 Docker 镜像并在后台启动容器。
-
-### 步骤 3：访问仪表板
-
-在浏览器中打开 http://10.193.21.115:3001 访问可视化仪表板
 
 ## 故障排除
 
@@ -253,7 +233,6 @@ docker-compose up -d
 
 - 确保后端服务器正在运行
 - 检查端口 3000 是否被其他应用占用
-- 如果使用 Docker，确保容器正在运行
 
 ### 无法显示数据
 
@@ -318,10 +297,7 @@ docker-compose up -d
    cd ..
    ```
 
-5. 如使用 Docker，重新构建容器
-   ```bash
-   docker-compose up -d --build
-   ```
+
 
 ## 技术栈详情
 

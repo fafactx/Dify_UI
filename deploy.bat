@@ -58,7 +58,8 @@ for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3000 ^| findstr LISTENING') 
 )
 
 echo 步骤 3: 启动后端服务
-start cmd /k node server.js
+start /min cmd /c "cd %cd% && node server.js > backend.log 2>&1"
+echo 后端服务已在后台启动，日志保存在 backend.log
 cd ..
 
 echo 步骤 4: 准备前端
@@ -72,15 +73,23 @@ for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3001 ^| findstr LISTENING') 
 )
 
 echo 步骤 5: 启动前端服务
-start cmd /k npm run dev
+start /min cmd /c "cd %cd% && npm run dev > frontend.log 2>&1"
+echo 前端服务已在后台启动，日志保存在 frontend.log
 cd ..
 
-echo 步骤 6: 打开可视化仪表板
-timeout /t 5
-start http://10.193.21.115:3001
+echo 步骤 6: 服务访问信息
+echo 前端地址: http://10.193.21.115:3001
+echo 后端地址: http://10.193.21.115:3000
+echo 请在浏览器中访问前端地址
 
 echo 部署完成！
 echo 请按照 README.md 中的说明在 Dify 工作流中集成 Code 节点
-echo 服务器日志将显示在新打开的命令行窗口中
+echo 服务已在后台运行，您可以关闭此窗口
+echo.
+echo 如需查看日志，请运行:
+echo   type backend\backend.log  # 查看后端日志
+echo   type frontend\frontend.log  # 查看前端日志
+echo.
+echo 如需停止服务，请运行 stop.bat
 echo.
 echo 提示: 如果需要安装依赖，请使用 deploy.bat --install

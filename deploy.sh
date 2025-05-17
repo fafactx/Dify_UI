@@ -60,9 +60,8 @@ if [ ! -z "$PORT_PID" ]; then
 fi
 
 echo "步骤 3: 启动后端服务"
-node server.js > backend.log 2>&1 &
-BACKEND_PID=$!
-echo "后端服务已启动，PID: $BACKEND_PID"
+nohup node server.js > backend.log 2>&1 &
+echo "后端服务已在后台启动，日志保存在 backend/backend.log"
 cd ..
 
 echo "步骤 4: 准备前端"
@@ -77,32 +76,28 @@ if [ ! -z "$PORT_PID" ]; then
 fi
 
 echo "步骤 5: 启动前端服务"
-npm run dev > frontend.log 2>&1 &
-FRONTEND_PID=$!
-echo "前端服务已启动，PID: $FRONTEND_PID"
+nohup npm run dev > frontend.log 2>&1 &
+echo "前端服务已在后台启动，日志保存在 frontend/frontend.log"
 cd ..
 
-echo "步骤 6: 打开可视化仪表板"
-sleep 5
-if command -v xdg-open > /dev/null; then
-    xdg-open http://10.193.21.115:3001
-elif command -v open > /dev/null; then
-    open http://10.193.21.115:3001
-else
-    echo "请手动打开浏览器访问 http://10.193.21.115:3001"
-fi
+echo "步骤 6: 服务访问信息"
+echo "前端地址: http://10.193.21.115:3001"
+echo "后端地址: http://10.193.21.115:3000"
+echo "请在浏览器中访问前端地址"
 
 echo "部署完成！"
 echo "请按照 README.md 中的说明在 Dify 工作流中集成 Code 节点"
-echo "后端日志保存在 backend/backend.log 文件中"
-echo "前端日志保存在 frontend/frontend.log 文件中"
-echo "按 Ctrl+C 停止所有服务"
+echo "服务已在后台运行，您可以关闭此终端"
+echo ""
+echo "如需查看日志，请运行:"
+echo "  tail -f backend/backend.log  # 查看后端日志"
+echo "  tail -f frontend/frontend.log  # 查看前端日志"
+echo ""
+echo "如需停止服务，请运行:"
+echo "  pkill -f 'node server.js'  # 停止后端"
+echo "  pkill -f 'vite'  # 停止前端"
 echo ""
 echo "提示: 如果需要安装依赖，请使用 ./deploy.sh --install"
 
 # 使脚本可执行
 chmod +x deploy.sh
-
-# 等待用户中断
-trap "kill $BACKEND_PID $FRONTEND_PID 2>/dev/null" EXIT
-wait
