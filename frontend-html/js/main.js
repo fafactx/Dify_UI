@@ -277,24 +277,55 @@ function safeUpdateElement(element, content) {
 function updateStatsCards() {
     if (!state.stats || !elements.statsCards) return;
 
+    console.log('[DEBUG] 更新统计卡片，状态:', state.stats);
+
+    // 如果没有维度平均值，尝试计算
+    if (!state.stats.dimension_averages && state.evaluations && state.evaluations.length > 0) {
+        console.log('[DEBUG] 尝试计算维度平均值');
+        state.stats.dimension_averages = calculateDimensionAverages(state.evaluations);
+    }
+
     const { count, overall_average, dimension_averages } = state.stats;
 
-    // 1. 样本总数直接使用count
-    const totalSamples = count || 0;
+    // 1. 样本总数直接使用count或评估数据长度
+    const totalSamples = count || (state.evaluations ? state.evaluations.length : 0);
+    console.log('[DEBUG] 样本总数:', totalSamples);
 
-    // 2. 总平均分使用overall_average
-    const formattedAverage = overall_average || 0;
+    // 2. 总平均分使用overall_average或计算所有维度的平均值
+    let formattedAverage = overall_average || 0;
+
+    // 如果没有overall_average但有dimension_averages，计算平均值
+    if (!overall_average && dimension_averages) {
+        const validScores = Object.values(dimension_averages)
+            .filter(score => typeof score === 'number' && !isNaN(score));
+
+        if (validScores.length > 0) {
+            formattedAverage = validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
+        }
+    }
+
+    console.log('[DEBUG] 总平均分:', formattedAverage);
 
     // 3. 处理维度平均值
     let highestDimension = '';
     let highestScore = 0;
     let lowestDimension = '';
-    let lowestScore = 0;
+    let lowestScore = 100; // 评分范围是0-100，所以初始值设为100
 
     // 获取所有维度并按分数排序
+    const validDimensions = getAllDimensions(); // 获取有效维度列表
+    console.log('[DEBUG] 有效维度:', validDimensions);
+
+    // 过滤出有效维度的分数，并按分数排序
     const sortedDimensions = Object.entries(dimension_averages || {})
-        .filter(([_, score]) => typeof score === 'number')
+        .filter(([dim, score]) =>
+            validDimensions.includes(dim) &&
+            typeof score === 'number' &&
+            !isNaN(score)
+        )
         .sort((a, b) => b[1] - a[1]);
+
+    console.log('[DEBUG] 排序后的维度:', sortedDimensions);
 
     if (sortedDimensions.length > 0) {
         // 最高分维度
@@ -304,6 +335,11 @@ function updateStatsCards() {
         // 最低分维度
         lowestDimension = sortedDimensions[sortedDimensions.length - 1][0];
         lowestScore = sortedDimensions[sortedDimensions.length - 1][1];
+
+        console.log('[DEBUG] 最高分维度:', highestDimension, highestScore);
+        console.log('[DEBUG] 最低分维度:', lowestDimension, lowestScore);
+    } else {
+        console.warn('[DEBUG] 没有有效的维度数据');
     }
 
     // 创建统计卡片 HTML
@@ -406,8 +442,8 @@ function updateEvaluationsTable() {
             .map(dim => {
                 const score = eval[dim];
                 let badgeClass = 'medium';
-                if (score >= 8) badgeClass = 'high';
-                if (score <= 4) badgeClass = 'low';
+                if (score >= 80) badgeClass = 'high';
+                if (score <= 40) badgeClass = 'low';
 
                 return `<span class="dimension-badge ${badgeClass}">${formatDimensionName(dim)}: ${score}</span>`;
             })
@@ -505,10 +541,10 @@ function updateChartsWithData() {
         console.warn('[DEBUG] 无法计算维度平均值，尝试使用测试数据');
         // 使用测试数据
         state.stats.dimension_averages = {
-            hallucination_control: 8,
-            quality: 7,
-            professionalism: 6,
-            usefulness: 5
+            hallucination_control: 80,
+            quality: 70,
+            professionalism: 60,
+            usefulness: 50
         };
     }
 
@@ -574,11 +610,28 @@ function updateChartsWithData() {
  * @returns {Object} 维度平均值对象
  */
 function calculateDimensionAverages(evaluations) {
-    if (!evaluations || evaluations.length === 0) return {};
+    if (!evaluations || evaluations.length === 0) {
+        console.warn('[DEBUG] 没有评估数据，无法计算维度平均值');
+        return {};
+    }
+
+    console.log('[DEBUG] 计算维度平均值，样本数量:', evaluations.length);
 
     // 获取实际存在的4个维度
     const validDimensions = getAllDimensions();
     console.log('[DEBUG] 计算平均值时使用的有效维度:', validDimensions);
+
+    // 检查评估数据中是否包含这些维度
+    const sampleEval = evaluations[0];
+    console.log('[DEBUG] 样本评估数据:', sampleEval);
+
+    validDimensions.forEach(dim => {
+        if (sampleEval[dim] === undefined) {
+            console.warn(`[DEBUG] 样本数据中缺少维度: ${dim}`);
+        } else {
+            console.log(`[DEBUG] 样本数据中包含维度 ${dim}，值为:`, sampleEval[dim]);
+        }
+    });
 
     const dimensions = {};
     const counts = {};
@@ -590,27 +643,34 @@ function calculateDimensionAverages(evaluations) {
     });
 
     // 累加维度值，只考虑实际存在的4个维度
-    evaluations.forEach(eval => {
+    evaluations.forEach((eval, index) => {
         validDimensions.forEach(dim => {
-            if (typeof eval[dim] === 'number') {
+            if (typeof eval[dim] === 'number' && !isNaN(eval[dim])) {
                 dimensions[dim] += eval[dim];
                 counts[dim]++;
+            } else if (eval[dim] !== undefined) {
+                console.warn(`[DEBUG] 评估 #${index} 的维度 ${dim} 值无效:`, eval[dim]);
             }
         });
     });
+
+    console.log('[DEBUG] 维度累加值:', dimensions);
+    console.log('[DEBUG] 维度计数:', counts);
 
     // 计算平均值
     const averages = {};
     validDimensions.forEach(dim => {
         if (counts[dim] > 0) {
             averages[dim] = dimensions[dim] / counts[dim];
+            console.log(`[DEBUG] 维度 ${dim} 平均值: ${dimensions[dim]} / ${counts[dim]} = ${averages[dim]}`);
         } else {
             // 如果没有数据，设置默认值
             averages[dim] = 0;
+            console.warn(`[DEBUG] 维度 ${dim} 没有有效数据，设置默认值 0`);
         }
     });
 
-    // 添加average_score字段
+    // 添加average_score字段 - 所有维度的平均值
     let totalScore = 0;
     let totalCount = 0;
 
@@ -623,6 +683,10 @@ function calculateDimensionAverages(evaluations) {
 
     if (totalCount > 0) {
         averages.average_score = totalScore / totalCount;
+        console.log(`[DEBUG] 总平均分: ${totalScore} / ${totalCount} = ${averages.average_score}`);
+    } else {
+        averages.average_score = 0;
+        console.warn('[DEBUG] 没有有效维度数据，总平均分设为 0');
     }
 
     console.log('[DEBUG] 计算的维度平均值:', averages);

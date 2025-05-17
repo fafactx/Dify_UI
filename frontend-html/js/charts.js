@@ -707,8 +707,8 @@ function updateBarChart(dimensionAverages, evaluations) {
                 nameLocation: 'middle',
                 nameGap: 30,
                 min: 0,
-                max: 10,
-                splitNumber: 5
+                max: 100,
+                splitNumber: 10
             },
             series: [{
                 name: 'Score',
@@ -921,8 +921,8 @@ function updateBarChart(dimensionAverages, evaluations) {
             nameLocation: 'middle',
             nameGap: 40,
             min: 0,
-            max: 10,
-            splitNumber: 5
+            max: 100,
+            splitNumber: 10
         },
         series: [{
             name: 'Average Score',
@@ -997,7 +997,7 @@ function updateCompareChart(compareItems) {
     // 准备雷达图数据
     const indicator = dimensionArray.map(dim => ({
         name: formatDimensionName(dim),
-        max: 10
+        max: 100
     }));
 
     const seriesData = compareItems.map((item, index) => ({
@@ -1198,10 +1198,10 @@ function testCharts() {
 
     // 测试雷达图 - 只使用4个实际维度
     const testRadarData = {
-        hallucination_control: 8,
-        quality: 7,
-        professionalism: 6,
-        usefulness: 5
+        hallucination_control: 80,
+        quality: 70,
+        professionalism: 60,
+        usefulness: 50
     };
 
     console.log(`[DEBUG] 测试雷达图，使用测试数据:`, testRadarData);
@@ -1272,10 +1272,10 @@ window.diagnoseDashboard = function() {
 
         // 使用测试数据更新图表
         const testData = {
-            hallucination_control: 8,
-            quality: 7,
-            professionalism: 6,
-            usefulness: 5
+            hallucination_control: 80,
+            quality: 70,
+            professionalism: 60,
+            usefulness: 50
         };
 
         console.log('使用测试数据更新图表...');
