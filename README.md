@@ -45,23 +45,20 @@ DIFY_UI/
 │   ├── dify_code.py        # Dify Code 节点脚本
 │   ├── server.js           # Express 服务器
 │   └── package.json        # 后端依赖
-├── frontend/               # 现代化前端
-│   ├── src/                # 源代码
-│   │   ├── components/     # 组件
-│   │   │   ├── charts/     # 图表组件
-│   │   │   ├── dashboard/  # 仪表板组件
-│   │   │   ├── modals/     # 模态框组件
-│   │   │   └── table/      # 表格组件
-│   │   ├── hooks/          # 自定义 Hooks
-│   │   ├── store/          # 状态管理
-│   │   ├── theme/          # 主题配置
-│   │   └── utils/          # 工具函数
-│   ├── package.json        # 前端依赖
+├── frontend-html/          # HTML5 前端
+│   ├── css/                # 样式文件
+│   │   └── styles.css      # 主样式表
+│   ├── js/                 # JavaScript 文件
+│   │   ├── api.js          # API 交互
+│   │   ├── charts.js       # 图表处理
+│   │   └── main.js         # 主逻辑
+│   ├── index.html          # 主页面
 │   └── deploy.sh           # 前端部署脚本
 ├── scripts/                # 脚本目录
 │   └── setup.js            # 设置脚本
 ├── deploy.sh               # 完整部署脚本
 ├── stop.sh                 # 停止服务脚本
+├── upgrade-node.sh         # Node.js 升级脚本
 ├── package.json            # 根目录依赖和脚本
 └── README.md               # 项目说明
 ```
@@ -278,8 +275,8 @@ SyntaxError: Unexpected reserved word
    cd ..
 
    # 更新前端
-   cd frontend
-   npm install  # 如有新依赖
+   cd frontend-html
+   # HTML5 前端不需要安装依赖
    cd ..
    ```
 
@@ -293,8 +290,10 @@ SyntaxError: Unexpected reserved word
    node server.js
    cd ..
 
-   cd frontend
-   npm run dev
+   cd frontend-html
+   python -m http.server 3001  # Python 3
+   # 或
+   python -m SimpleHTTPServer 3001  # Python 2
    cd ..
    ```
 
@@ -307,19 +306,12 @@ SyntaxError: Unexpected reserved word
 - **Express** - Web 应用框架
 - **文件系统存储** - 使用 JSON 文件存储评估数据
 
-### 传统版前端
-- **Vue 3** - 渐进式 JavaScript 框架
+### 前端
+- **HTML5** - 标准标记语言
+- **CSS3** - 样式表语言
+- **JavaScript** - 脚本语言
 - **Bootstrap 5** - 响应式 CSS 框架
-- **Chart.js** - 简单易用的图表库
-
-### 现代版前端
-- **React 18** + **TypeScript** - 现代化前端框架
-- **Vite** - 快速的构建工具
-- **Chakra UI** - 美观且高度可定制的组件库
 - **ECharts 5** - 强大的数据可视化库
-- **Framer Motion** - 流畅的动画效果
-- **React Query** - 数据获取和缓存
-- **Zustand** - 轻量级状态管理
 
 ## 贡献指南
 
