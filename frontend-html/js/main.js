@@ -265,6 +265,10 @@ function updateStatsCards() {
     let lowestDimension = '';
     let lowestScore = 10; // 初始设为最高可能分数
 
+    // 获取实际存在的4个维度
+    const validDimensions = getAllDimensions();
+    console.log('[DEBUG] 实际存在的维度:', validDimensions);
+
     if (dimension_averages) {
         // 记录所有维度及其分数
         console.log('[DEBUG] 所有维度及分数:');
@@ -272,12 +276,9 @@ function updateStatsCards() {
             console.log(`[DEBUG] 维度: ${dim}, 分数: ${dimension_averages[dim]}`);
         });
 
-        // 只处理评分维度（排除非评分字段）
-        const scoreDimensions = Object.keys(dimension_averages).filter(dim =>
-            dim !== 'average_score' &&
-            typeof dimension_averages[dim] === 'number' &&
-            !dim.includes('_id') &&
-            dim !== 'MAG' // 排除MAG字段，因为它不是评分维度
+        // 只处理实际存在的4个维度
+        const scoreDimensions = validDimensions.filter(dim =>
+            typeof dimension_averages[dim] === 'number'
         );
 
         console.log('[DEBUG] 过滤后的评分维度:', scoreDimensions);
@@ -287,7 +288,7 @@ function updateStatsCards() {
             console.warn('[DEBUG] 没有找到有效的评分维度');
             highestDimension = 'quality';
             highestScore = 0;
-            lowestDimension = 'factual_accuracy';
+            lowestDimension = 'usefulness';
             lowestScore = 0;
         } else {
             // 计算最高和最低分数
@@ -309,10 +310,10 @@ function updateStatsCards() {
         }
     } else {
         console.warn('[DEBUG] 维度平均值不存在');
-        // 使用默认值
+        // 使用默认值，但确保使用实际存在的维度
         highestDimension = 'quality';
         highestScore = 0;
-        lowestDimension = 'factual_accuracy';
+        lowestDimension = 'usefulness';
         lowestScore = 0;
     }
 
@@ -514,35 +515,56 @@ function updateCharts() {
 function calculateDimensionAverages(evaluations) {
     if (!evaluations || evaluations.length === 0) return {};
 
+    // 获取实际存在的4个维度
+    const validDimensions = getAllDimensions();
+    console.log('[DEBUG] 计算平均值时使用的有效维度:', validDimensions);
+
     const dimensions = {};
     const counts = {};
 
-    // 累加所有维度的值
+    // 初始化维度计数器
+    validDimensions.forEach(dim => {
+        dimensions[dim] = 0;
+        counts[dim] = 0;
+    });
+
+    // 累加维度值，只考虑实际存在的4个维度
     evaluations.forEach(eval => {
-        Object.keys(eval).forEach(key => {
-            if (typeof eval[key] === 'number' &&
-                key !== 'timestamp' &&
-                key !== 'id' &&
-                key !== 'average_score' &&
-                !key.includes('_id')) {
-
-                if (!dimensions[key]) dimensions[key] = 0;
-                if (!counts[key]) counts[key] = 0;
-
-                dimensions[key] += eval[key];
-                counts[key]++;
+        validDimensions.forEach(dim => {
+            if (typeof eval[dim] === 'number') {
+                dimensions[dim] += eval[dim];
+                counts[dim]++;
             }
         });
     });
 
     // 计算平均值
     const averages = {};
-    Object.keys(dimensions).forEach(key => {
-        if (counts[key] > 0) {
-            averages[key] = dimensions[key] / counts[key];
+    validDimensions.forEach(dim => {
+        if (counts[dim] > 0) {
+            averages[dim] = dimensions[dim] / counts[dim];
+        } else {
+            // 如果没有数据，设置默认值
+            averages[dim] = 0;
         }
     });
 
+    // 添加average_score字段
+    let totalScore = 0;
+    let totalCount = 0;
+
+    validDimensions.forEach(dim => {
+        if (averages[dim] !== undefined) {
+            totalScore += averages[dim];
+            totalCount++;
+        }
+    });
+
+    if (totalCount > 0) {
+        averages.average_score = totalScore / totalCount;
+    }
+
+    console.log('[DEBUG] 计算的维度平均值:', averages);
     return averages;
 }
 

@@ -76,26 +76,141 @@ function safeInitChart(elementId) {
 function initCharts() {
     console.log('[DEBUG] 开始初始化图表，添加延迟以确保容器尺寸正确');
 
-    // 使用setTimeout延迟初始化，确保DOM完全加载并且容器尺寸正确
-    setTimeout(() => {
-        // 初始化雷达图
-        radarChart = safeInitChart('radar-chart');
+    // 检查容器是否存在并设置最小高度
+    const ensureContainers = () => {
+        const containers = ['radar-chart', 'bar-chart', 'compare-chart'];
+        let allExist = true;
 
-        // 初始化柱状图
-        barChart = safeInitChart('bar-chart');
+        containers.forEach(id => {
+            const container = document.getElementById(id);
+            if (!container) {
+                console.warn(`[DEBUG] 图表容器 #${id} 不存在`);
+                allExist = false;
+            } else {
+                // 确保容器有最小高度
+                if (container.clientHeight < 100) {
+                    container.style.minHeight = '400px';
+                    console.log(`[DEBUG] 设置 #${id} 最小高度为 400px`);
+                }
 
-        // 初始化对比图
-        compareChart = safeInitChart('compare-chart');
+                // 确保容器可见
+                const parent = container.closest('.card');
+                if (parent) {
+                    const isVisible = window.getComputedStyle(parent).display !== 'none';
+                    console.log(`[DEBUG] 容器 #${id} 的父元素可见性: ${isVisible}`);
 
-        // 强制重绘图表
-        forceResizeCharts();
+                    // 如果父元素不可见，临时使其可见以便初始化
+                    if (!isVisible) {
+                        const originalDisplay = parent.style.display;
+                        parent.style.display = 'block';
+                        parent.dataset.originalDisplay = originalDisplay;
+                        console.log(`[DEBUG] 临时使 #${id} 的父元素可见`);
+                    }
+                }
+            }
+        });
 
-        console.log('[DEBUG] 图表初始化完成，已强制重绘');
-    }, 300); // 延迟300毫秒
+        return allExist;
+    };
+
+    // 恢复容器原始可见性
+    const restoreContainers = () => {
+        const containers = ['radar-chart', 'bar-chart', 'compare-chart'];
+        containers.forEach(id => {
+            const container = document.getElementById(id);
+            if (container) {
+                const parent = container.closest('.card');
+                if (parent && parent.dataset.originalDisplay !== undefined) {
+                    parent.style.display = parent.dataset.originalDisplay;
+                    delete parent.dataset.originalDisplay;
+                    console.log(`[DEBUG] 恢复 #${id} 的父元素原始可见性`);
+                }
+            }
+        });
+    };
+
+    // 初始化重试计数
+    let retryCount = 0;
+    const maxRetries = 3;
+
+    // 初始化函数
+    const initChartsWithRetry = () => {
+        console.log(`[DEBUG] 尝试初始化图表，尝试次数: ${retryCount + 1}`);
+
+        // 确保容器存在
+        const containersExist = ensureContainers();
+
+        if (!containersExist && retryCount < maxRetries) {
+            // 如果容器不存在且未超过最大重试次数，延迟后重试
+            retryCount++;
+            console.log(`[DEBUG] 容器不存在，${500 * retryCount}ms 后重试`);
+            setTimeout(initChartsWithRetry, 500 * retryCount);
+            return;
+        }
+
+        // 初始化图表
+        try {
+            // 初始化雷达图
+            if (!radarChart) {
+                radarChart = safeInitChart('radar-chart');
+            }
+
+            // 初始化柱状图
+            if (!barChart) {
+                barChart = safeInitChart('bar-chart');
+            }
+
+            // 初始化对比图
+            if (!compareChart) {
+                compareChart = safeInitChart('compare-chart');
+            }
+
+            // 强制重绘图表
+            forceResizeCharts();
+
+            // 恢复容器原始可见性
+            restoreContainers();
+
+            console.log('[DEBUG] 图表初始化完成，已强制重绘');
+
+            // 添加额外的延迟重绘，确保在页面完全加载后图表正确显示
+            setTimeout(() => {
+                forceResizeCharts();
+                console.log('[DEBUG] 额外的延迟重绘完成');
+            }, 1000);
+        } catch (error) {
+            console.error('[DEBUG] 初始化图表时出错:', error);
+
+            if (retryCount < maxRetries) {
+                // 如果未超过最大重试次数，延迟后重试
+                retryCount++;
+                console.log(`[DEBUG] 初始化失败，${500 * retryCount}ms 后重试`);
+                setTimeout(initChartsWithRetry, 500 * retryCount);
+            } else {
+                console.error('[DEBUG] 达到最大重试次数，初始化失败');
+                // 恢复容器原始可见性
+                restoreContainers();
+            }
+        }
+    };
+
+    // 使用setTimeout延迟初始化，确保DOM完全加载
+    setTimeout(initChartsWithRetry, 500);
 
     // 设置图表响应式
     window.addEventListener('resize', () => {
         forceResizeCharts();
+    });
+
+    // 监听视图切换事件
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', () => {
+            // 延迟重绘图表，确保在视图切换后图表正确显示
+            setTimeout(() => {
+                forceResizeCharts();
+                console.log('[DEBUG] 视图切换后重绘图表');
+            }, 300);
+        });
     });
 
     // 添加MutationObserver监听DOM变化，当容器可见性变化时重绘图表
@@ -117,6 +232,25 @@ function initCharts() {
                 attributes: true,
                 attributeFilter: ['style', 'class']
             });
+
+            // 同时监听父元素的变化
+            const parent = container.closest('.card');
+            if (parent) {
+                const parentObserver = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.attributeName === 'style' ||
+                            mutation.attributeName === 'class') {
+                            console.log(`[DEBUG] 检测到 #${id} 父元素变化，重绘图表`);
+                            forceResizeCharts();
+                        }
+                    });
+                });
+
+                parentObserver.observe(parent, {
+                    attributes: true,
+                    attributeFilter: ['style', 'class']
+                });
+            }
         }
     });
 }
@@ -811,18 +945,11 @@ function formatDimensionName(dimension) {
  * @returns {string} 格式化后的英文维度名称
  */
 function formatDimensionNameEn(dimension) {
-    // 维度名称映射（英文）
+    // 只保留4个实际使用的维度的映射
     const dimensionMapEn = {
-        'factual_accuracy': 'Factual Accuracy',
         'hallucination_control': 'Hallucination Control',
-        'professionalism': 'Professionalism',
-        'practicality': 'Practicality',
-        'technical_depth': 'Technical Depth',
-        'context_relevance': 'Context Relevance',
-        'solution_completeness': 'Solution Completeness',
-        'actionability': 'Actionability',
-        'clarity_structure': 'Clarity & Structure',
         'quality': 'Quality',
+        'professionalism': 'Professionalism',
         'usefulness': 'Usefulness'
     };
 
@@ -864,20 +991,12 @@ function testCharts() {
         }
     });
 
-    // 测试雷达图
+    // 测试雷达图 - 只使用4个实际维度
     const testRadarData = {
         hallucination_control: 8,
         quality: 7,
         professionalism: 6,
-        usefulness: 5,
-        // 添加其他维度的测试数据
-        factual_accuracy: 9,
-        practicality: 4,
-        technical_depth: 7,
-        context_relevance: 8,
-        solution_completeness: 6,
-        actionability: 5,
-        clarity_structure: 7
+        usefulness: 5
     };
 
     console.log(`[DEBUG] 测试雷达图，使用测试数据:`, testRadarData);
