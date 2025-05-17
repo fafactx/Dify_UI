@@ -235,6 +235,144 @@ router.get('/product-scores', asyncHandler(async (req, res) => {
   }
 }));
 
+// 获取所有测试用例
+router.get('/test-cases', asyncHandler(async (req, res) => {
+  try {
+    // 获取查询参数
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 100;
+    const sortBy = req.query.sortBy || 'timestamp';
+    const sortOrder = req.query.sortOrder || 'desc';
+
+    // 从数据库获取评估数据
+    const result = evaluationsDAL.getEvaluations({
+      page,
+      limit,
+      sortBy,
+      sortOrder
+    });
+
+    // 返回测试用例数据
+    res.json({
+      testCases: result.data.map(item => ({
+        id: item.id,
+        result_key: item.result_key,
+        timestamp: item.timestamp,
+        date: item.date,
+        data: item
+      })),
+      pagination: {
+        total: result.total,
+        page,
+        limit,
+        totalPages: Math.ceil(result.total / limit)
+      }
+    });
+  } catch (error) {
+    console.error(`获取测试用例出错: ${error.message}`);
+    res.status(500).json({ success: false, message: error.message });
+  }
+}));
+
+// 获取单个测试用例
+router.get('/test-cases/:id', asyncHandler(async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+
+    // 从数据库获取评估数据
+    const testCase = evaluationsDAL.getEvaluationById(id);
+
+    if (!testCase) {
+      return res.status(404).json({ success: false, message: '测试用例不存在' });
+    }
+
+    // 返回测试用例数据
+    res.json({
+      testCase: {
+        id: testCase.id,
+        result_key: testCase.result_key,
+        timestamp: testCase.timestamp,
+        date: testCase.date,
+        data: testCase
+      }
+    });
+  } catch (error) {
+    console.error(`获取测试用例出错: ${error.message}`);
+    res.status(500).json({ success: false, message: error.message });
+  }
+}));
+
+// 删除单个测试用例
+router.delete('/test-cases/:id', asyncHandler(async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+
+    // 从数据库删除评估数据
+    const result = evaluationsDAL.deleteEvaluation(id);
+
+    if (!result.success) {
+      return res.status(404).json({ success: false, message: '测试用例不存在' });
+    }
+
+    // 返回成功消息
+    res.json({
+      success: true,
+      message: `测试用例 #${id} 已成功删除`
+    });
+  } catch (error) {
+    console.error(`删除测试用例出错: ${error.message}`);
+    res.status(500).json({ success: false, message: error.message });
+  }
+}));
+
+// 批量删除测试用例
+router.delete('/test-cases/batch', asyncHandler(async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: '请提供有效的ID数组' });
+    }
+
+    // 从数据库批量删除评估数据
+    const result = evaluationsDAL.deleteEvaluations(ids);
+
+    // 返回成功消息
+    res.json({
+      success: true,
+      message: `已成功删除 ${result.deletedCount} 个测试用例`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error(`批量删除测试用例出错: ${error.message}`);
+    res.status(500).json({ success: false, message: error.message });
+  }
+}));
+
+// 删除ID范围内的测试用例
+router.delete('/test-cases/range', asyncHandler(async (req, res) => {
+  try {
+    const { fromId, toId } = req.body;
+
+    if (!fromId || !toId || fromId > toId || fromId < 1) {
+      return res.status(400).json({ success: false, message: '请提供有效的ID范围' });
+    }
+
+    // 从数据库删除ID范围内的评估数据
+    const result = evaluationsDAL.deleteEvaluationRange(fromId, toId);
+
+    // 返回成功消息
+    res.json({
+      success: true,
+      message: `已成功删除ID范围 ${fromId} 到 ${toId} 内的 ${result.deletedCount} 个测试用例`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error(`删除ID范围内的测试用例出错: ${error.message}`);
+    res.status(500).json({ success: false, message: error.message });
+  }
+}));
+
 // 保存评估数据 (兼容旧API)
 router.post('/save-evaluation', asyncHandler(async (req, res) => {
   const evaluationData = req.body;

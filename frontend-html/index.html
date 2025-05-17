@@ -74,6 +74,15 @@
             const randomParam = Math.floor(Math.random() * 1000000);
             const url = `raglim-dashboard.html?t=${timestamp}&r=${randomParam}`;
 
+            // 检查URL参数，如果有page参数，则跳转到指定页面
+            const urlParams = new URLSearchParams(window.location.search);
+            const page = urlParams.get('page');
+
+            if (page === 'test-cases') {
+                window.location.href = `test-cases.html?t=${timestamp}&r=${randomParam}`;
+                return;
+            }
+
             setTimeout(function() {
                 window.location.href = url;
             }, 1500); // 1.5秒后重定向，给用户一个加载的视觉反馈

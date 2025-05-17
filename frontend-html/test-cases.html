@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAGLLM Test Suite - Test Cases</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .navbar {
+            background-color: #1E3A8A;
+            color: white;
+        }
+        .sidebar {
+            background-color: white;
+            height: calc(100vh - 64px);
+        }
+        .sidebar-item {
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            color: #4B5563;
+            transition: all 0.2s;
+        }
+        .sidebar-item:hover, .sidebar-item.active {
+            background-color: #EFF6FF;
+            color: #3B82F6;
+            border-right: 3px solid #3B82F6;
+        }
+        .sidebar-item i {
+            margin-right: 0.75rem;
+            width: 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 1.5rem;
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .btn-primary {
+            background-color: #3B82F6;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: #2563EB;
+        }
+        .btn-danger {
+            background-color: #EF4444;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-danger:hover {
+            background-color: #DC2626;
+        }
+        .btn-secondary {
+            background-color: #6B7280;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-secondary:hover {
+            background-color: #4B5563;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid #E5E7EB;
+        }
+        th {
+            background-color: #F9FAFB;
+            font-weight: 600;
+            color: #4B5563;
+        }
+        tr:hover {
+            background-color: #F9FAFB;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 1.5rem;
+        }
+        .pagination button {
+            padding: 0.5rem 1rem;
+            margin: 0 0.25rem;
+            border-radius: 0.375rem;
+            background-color: white;
+            border: 1px solid #E5E7EB;
+            color: #4B5563;
+            transition: all 0.2s;
+        }
+        .pagination button:hover, .pagination button.active {
+            background-color: #3B82F6;
+            color: white;
+            border-color: #3B82F6;
+        }
+        .pagination button:disabled {
+            background-color: #F3F4F6;
+            color: #9CA3AF;
+            cursor: not-allowed;
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 1.5rem;
+            width: 100%;
+            max-width: 500px;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar flex items-center justify-between px-6 py-4">
+        <div class="flex items-center">
+            <h1 class="text-xl font-bold">RAGLLM Test Suite</h1>
+        </div>
+        <div class="flex items-center">
+            <div class="relative mr-4">
+                <input type="text" placeholder="Search test cases..." class="px-4 py-2 rounded-full text-sm text-gray-700 focus:outline-none">
+                <i class="fas fa-search absolute right-3 top-2.5 text-gray-400"></i>
+            </div>
+            <div class="flex items-center">
+                <i class="fas fa-bell mr-4 text-lg"></i>
+                <i class="fas fa-user-circle text-2xl"></i>
+            </div>
+        </div>
+    </nav>
+
+    <div class="flex">
+        <!-- Sidebar -->
+        <div class="sidebar w-64 flex-shrink-0">
+            <a href="index.html" class="sidebar-item">
+                <i class="fas fa-chart-line"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="test-cases.html" class="sidebar-item active">
+                <i class="fas fa-vial"></i>
+                <span>Test Cases</span>
+            </a>
+            <a href="#" class="sidebar-item">
+                <i class="fas fa-poll"></i>
+                <span>Results</span>
+            </a>
+            <a href="#" class="sidebar-item">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Performance</span>
+            </a>
+            <a href="#" class="sidebar-item">
+                <i class="fas fa-chart-bar"></i>
+                <span>Metrics</span>
+            </a>
+            <a href="#" class="sidebar-item">
+                <i class="fas fa-cog"></i>
+                <span>Settings</span>
+            </a>
+        </div>
+
+        <!-- Main Content -->
+        <div class="content flex-grow">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">Test Cases</h2>
+                <div class="flex">
+                    <button id="deleteSelectedBtn" class="btn-danger mr-2 hidden">
+                        <i class="fas fa-trash mr-2"></i>Delete Selected
+                    </button>
+                    <button id="deleteRangeBtn" class="btn-secondary mr-2">
+                        <i class="fas fa-trash-alt mr-2"></i>Delete Range
+                    </button>
+                    <button id="refreshBtn" class="btn-primary">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="overflow-x-auto">
+                    <table id="testCasesTable">
+                        <thead>
+                            <tr>
+                                <th class="w-12">
+                                    <input type="checkbox" id="selectAll" class="rounded">
+                                </th>
+                                <th class="w-16">ID</th>
+                                <th class="w-32">Date</th>
+                                <th class="w-48">CAS Name</th>
+                                <th class="w-32">Product Family</th>
+                                <th class="w-32">Part Number</th>
+                                <th class="w-24">Score</th>
+                                <th class="w-24">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="testCasesBody">
+                            <!-- Test cases will be loaded here -->
+                            <tr>
+                                <td colspan="8" class="text-center py-4">Loading test cases...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="pagination mt-4" id="pagination">
+                    <!-- Pagination will be generated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Range Modal -->
+    <div id="deleteRangeModal" class="modal hidden">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold mb-4">Delete Range</h3>
+            <p class="mb-4">Enter the range of test case IDs to delete:</p>
+            <div class="flex mb-4">
+                <div class="mr-2 flex-1">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">From ID</label>
+                    <input type="number" id="fromId" min="1" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">To ID</label>
+                    <input type="number" id="toId" min="1" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+            </div>
+            <div class="flex justify-end">
+                <button id="cancelDeleteRange" class="btn-secondary mr-2">Cancel</button>
+                <button id="confirmDeleteRange" class="btn-danger">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmationModal" class="modal hidden">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold mb-4">Confirm Deletion</h3>
+            <p id="confirmationMessage" class="mb-4">Are you sure you want to delete the selected test cases?</p>
+            <div class="flex justify-end">
+                <button id="cancelDelete" class="btn-secondary mr-2">Cancel</button>
+                <button id="confirmDelete" class="btn-danger">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let testCases = [];
+        let currentPage = 1;
+        const pageSize = 10;
+        let selectedIds = new Set();
+        
+        // DOM elements
+        const testCasesBody = document.getElementById('testCasesBody');
+        const pagination = document.getElementById('pagination');
+        const selectAllCheckbox = document.getElementById('selectAll');
+        const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+        const deleteRangeBtn = document.getElementById('deleteRangeBtn');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const deleteRangeModal = document.getElementById('deleteRangeModal');
+        const confirmationModal = document.getElementById('confirmationModal');
+        const fromIdInput = document.getElementById('fromId');
+        const toIdInput = document.getElementById('toId');
+        
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTestCases();
+            
+            // Event listeners
+            selectAllCheckbox.addEventListener('change', handleSelectAll);
+            deleteSelectedBtn.addEventListener('click', showDeleteConfirmation);
+            deleteRangeBtn.addEventListener('click', showDeleteRangeModal);
+            refreshBtn.addEventListener('click', loadTestCases);
+            
+            // Modal event listeners
+            document.getElementById('cancelDeleteRange').addEventListener('click', hideDeleteRangeModal);
+            document.getElementById('confirmDeleteRange').addEventListener('click', handleDeleteRange);
+            document.getElementById('cancelDelete').addEventListener('click', hideConfirmationModal);
+            document.getElementById('confirmDelete').addEventListener('click', handleDelete);
+        });
+        
+        // Load test cases from the API
+        async function loadTestCases() {
+            try {
+                const apiBaseUrl = getApiBaseUrl();
+                const response = await fetch(`${apiBaseUrl}/api/test-cases`);
+                
+                if (!response.ok) {
+                    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                testCases = data.testCases || [];
+                
+                // Reset selection
+                selectedIds.clear();
+                selectAllCheckbox.checked = false;
+                updateDeleteSelectedButton();
+                
+                // Render the test cases
+                renderTestCases();
+                renderPagination();
+            } catch (error) {
+                console.error('Error loading test cases:', error);
+                testCasesBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center py-4 text-red-500">
+                            Error loading test cases: ${error.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+        
+        // Render test cases for the current page
+        function renderTestCases() {
+            if (testCases.length === 0) {
+                testCasesBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center py-4">No test cases found</td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            const startIndex = (currentPage - 1) * pageSize;
+            const endIndex = Math.min(startIndex + pageSize, testCases.length);
+            const pageTestCases = testCases.slice(startIndex, endIndex);
+            
+            testCasesBody.innerHTML = pageTestCases.map(testCase => `
+                <tr data-id="${testCase.id}">
+                    <td>
+                        <input type="checkbox" class="case-checkbox rounded" 
+                               data-id="${testCase.id}" 
+                               ${selectedIds.has(testCase.id) ? 'checked' : ''}>
+                    </td>
+                    <td>${testCase.id}</td>
+                    <td>${formatDate(testCase.date)}</td>
+                    <td>${testCase.data['CAS Name'] || 'N/A'}</td>
+                    <td>${testCase.data['Product Family'] || 'N/A'}</td>
+                    <td>${testCase.data['Part Number'] || 'N/A'}</td>
+                    <td>${testCase.data.average_score ? testCase.data.average_score.toFixed(1) : 'N/A'}</td>
+                    <td>
+                        <button class="text-red-500 hover:text-red-700" onclick="deleteTestCase(${testCase.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <button class="text-blue-500 hover:text-blue-700 ml-2" onclick="viewTestCase(${testCase.id})">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+            
+            // Add event listeners to checkboxes
+            document.querySelectorAll('.case-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', handleCheckboxChange);
+            });
+        }
+        
+        // Render pagination controls
+        function renderPagination() {
+            const totalPages = Math.ceil(testCases.length / pageSize);
+            
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+            
+            let paginationHTML = `
+                <button id="prevPage" ${currentPage === 1 ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            `;
+            
+            for (let i = 1; i <= totalPages; i++) {
+                paginationHTML += `
+                    <button class="page-btn ${currentPage === i ? 'active' : ''}" data-page="${i}">
+                        ${i}
+                    </button>
+                `;
+            }
+            
+            paginationHTML += `
+                <button id="nextPage" ${currentPage === totalPages ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            `;
+            
+            pagination.innerHTML = paginationHTML;
+            
+            // Add event listeners to pagination buttons
+            document.querySelectorAll('.page-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    currentPage = parseInt(button.dataset.page);
+                    renderTestCases();
+                    renderPagination();
+                });
+            });
+            
+            const prevPageBtn = document.getElementById('prevPage');
+            const nextPageBtn = document.getElementById('nextPage');
+            
+            if (prevPageBtn) {
+                prevPageBtn.addEventListener('click', () => {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        renderTestCases();
+                        renderPagination();
+                    }
+                });
+            }
+            
+            if (nextPageBtn) {
+                nextPageBtn.addEventListener('click', () => {
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        renderTestCases();
+                        renderPagination();
+                    }
+                });
+            }
+        }
+        
+        // Handle select all checkbox
+        function handleSelectAll() {
+            const isChecked = selectAllCheckbox.checked;
+            
+            // Update all checkboxes on the current page
+            document.querySelectorAll('.case-checkbox').forEach(checkbox => {
+                checkbox.checked = isChecked;
+                const id = parseInt(checkbox.dataset.id);
+                
+                if (isChecked) {
+                    selectedIds.add(id);
+                } else {
+                    selectedIds.delete(id);
+                }
+            });
+            
+            updateDeleteSelectedButton();
+        }
+        
+        // Handle individual checkbox change
+        function handleCheckboxChange(event) {
+            const checkbox = event.target;
+            const id = parseInt(checkbox.dataset.id);
+            
+            if (checkbox.checked) {
+                selectedIds.add(id);
+            } else {
+                selectedIds.delete(id);
+                selectAllCheckbox.checked = false;
+            }
+            
+            updateDeleteSelectedButton();
+        }
+        
+        // Update delete selected button visibility
+        function updateDeleteSelectedButton() {
+            if (selectedIds.size > 0) {
+                deleteSelectedBtn.classList.remove('hidden');
+            } else {
+                deleteSelectedBtn.classList.add('hidden');
+            }
+        }
+        
+        // Show delete confirmation modal
+        function showDeleteConfirmation() {
+            const count = selectedIds.size;
+            document.getElementById('confirmationMessage').textContent = 
+                `Are you sure you want to delete ${count} selected test case${count !== 1 ? 's' : ''}?`;
+            confirmationModal.classList.remove('hidden');
+        }
+        
+        // Hide confirmation modal
+        function hideConfirmationModal() {
+            confirmationModal.classList.add('hidden');
+        }
+        
+        // Show delete range modal
+        function showDeleteRangeModal() {
+            deleteRangeModal.classList.remove('hidden');
+        }
+        
+        // Hide delete range modal
+        function hideDeleteRangeModal() {
+            deleteRangeModal.classList.add('hidden');
+        }
+        
+        // Handle delete range
+        async function handleDeleteRange() {
+            const fromId = parseInt(fromIdInput.value);
+            const toId = parseInt(toIdInput.value);
+            
+            if (isNaN(fromId) || isNaN(toId) || fromId > toId || fromId < 1) {
+                alert('Please enter a valid ID range');
+                return;
+            }
+            
+            try {
+                const apiBaseUrl = getApiBaseUrl();
+                const response = await fetch(`${apiBaseUrl}/api/test-cases/range`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ fromId, toId })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+                }
+                
+                hideDeleteRangeModal();
+                loadTestCases();
+            } catch (error) {
+                console.error('Error deleting test cases range:', error);
+                alert(`Error deleting test cases: ${error.message}`);
+            }
+        }
+        
+        // Handle delete selected
+        async function handleDelete() {
+            try {
+                const apiBaseUrl = getApiBaseUrl();
+                const response = await fetch(`${apiBaseUrl}/api/test-cases/batch`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ ids: Array.from(selectedIds) })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+                }
+                
+                hideConfirmationModal();
+                loadTestCases();
+            } catch (error) {
+                console.error('Error deleting test cases:', error);
+                alert(`Error deleting test cases: ${error.message}`);
+            }
+        }
+        
+        // Delete a single test case
+        async function deleteTestCase(id) {
+            if (!confirm(`Are you sure you want to delete test case #${id}?`)) {
+                return;
+            }
+            
+            try {
+                const apiBaseUrl = getApiBaseUrl();
+                const response = await fetch(`${apiBaseUrl}/api/test-cases/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+                }
+                
+                loadTestCases();
+            } catch (error) {
+                console.error(`Error deleting test case #${id}:`, error);
+                alert(`Error deleting test case: ${error.message}`);
+            }
+        }
+        
+        // View test case details
+        function viewTestCase(id) {
+            const testCase = testCases.find(tc => tc.id === id);
+            if (!testCase) return;
+            
+            // For now, just show the data in an alert
+            alert(JSON.stringify(testCase.data, null, 2));
+            
+            // In a real implementation, you would show a modal with the details
+        }
+        
+        // Format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        }
+        
+        // Get API base URL
+        function getApiBaseUrl() {
+            // If in local development, use localhost
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                return 'http://localhost:3000';
+            } else {
+                // In production, use the same host but with port 3000
+                return `${window.location.protocol}//${window.location.hostname}:3000`;
+            }
+        }
+    </script>
+</body>
+</html>

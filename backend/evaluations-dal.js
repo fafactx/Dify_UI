@@ -235,25 +235,122 @@ class EvaluationsDAL {
 
   // 获取单个评估详情
   getEvaluationById(id) {
-    const stmt = this.db.prepare(`
-      SELECT id, result_key, timestamp, date, data
-      FROM evaluations
-      WHERE id = ?
-    `);
+    try {
+      const stmt = this.db.prepare(`
+        SELECT id, result_key, timestamp, date, data
+        FROM evaluations
+        WHERE id = ?
+      `);
 
-    const evaluation = stmt.get(id);
+      const evaluation = stmt.get(id);
 
-    if (!evaluation) {
-      return null;
+      if (!evaluation) {
+        return null;
+      }
+
+      return {
+        id: evaluation.id,
+        result_key: evaluation.result_key,
+        timestamp: evaluation.timestamp,
+        date: evaluation.date,
+        ...JSON.parse(evaluation.data)
+      };
+    } catch (error) {
+      console.error(`Error getting evaluation by ID ${id}:`, error);
+      throw error;
     }
+  }
 
-    return {
-      id: evaluation.id,
-      result_key: evaluation.result_key,
-      timestamp: evaluation.timestamp,
-      date: evaluation.date,
-      ...JSON.parse(evaluation.data)
-    };
+  // 删除单个评估数据
+  deleteEvaluation(id) {
+    try {
+      // 开始事务
+      const transaction = this.db.transaction(() => {
+        // 删除评估数据
+        const stmt = this.db.prepare(`
+          DELETE FROM evaluations
+          WHERE id = ?
+        `);
+
+        const result = stmt.run(id);
+
+        // 清除统计缓存
+        this._clearStatsCache();
+
+        return {
+          success: result.changes > 0,
+          deletedCount: result.changes
+        };
+      });
+
+      return transaction();
+    } catch (error) {
+      console.error(`Error deleting evaluation ${id}:`, error);
+      throw error;
+    }
+  }
+
+  // 批量删除评估数据
+  deleteEvaluations(ids) {
+    try {
+      // 开始事务
+      const transaction = this.db.transaction(() => {
+        // 准备删除语句
+        const stmt = this.db.prepare(`
+          DELETE FROM evaluations
+          WHERE id = ?
+        `);
+
+        // 执行批量删除
+        let deletedCount = 0;
+        for (const id of ids) {
+          const result = stmt.run(id);
+          deletedCount += result.changes;
+        }
+
+        // 清除统计缓存
+        this._clearStatsCache();
+
+        return {
+          success: true,
+          deletedCount
+        };
+      });
+
+      return transaction();
+    } catch (error) {
+      console.error(`Error deleting evaluations:`, error);
+      throw error;
+    }
+  }
+
+  // 删除ID范围内的评估数据
+  deleteEvaluationRange(fromId, toId) {
+    try {
+      // 开始事务
+      const transaction = this.db.transaction(() => {
+        // 删除ID范围内的评估数据
+        const stmt = this.db.prepare(`
+          DELETE FROM evaluations
+          WHERE id >= ? AND id <= ?
+        `);
+
+        const result = stmt.run(fromId, toId);
+
+        // 清除统计缓存
+        this._clearStatsCache();
+
+        return {
+          success: true,
+          deletedCount: result.changes
+        };
+      });
+
+      return transaction();
+    } catch (error) {
+      console.error(`Error deleting evaluation range from ${fromId} to ${toId}:`, error);
+      throw error;
+    }
   }
 
   // 获取总体统计概览
