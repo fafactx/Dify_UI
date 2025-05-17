@@ -74,21 +74,70 @@ function safeInitChart(elementId) {
  * 初始化所有图表
  */
 function initCharts() {
-    // 初始化雷达图
-    radarChart = safeInitChart('radar-chart');
+    console.log('[DEBUG] 开始初始化图表，添加延迟以确保容器尺寸正确');
 
-    // 初始化柱状图
-    barChart = safeInitChart('bar-chart');
+    // 使用setTimeout延迟初始化，确保DOM完全加载并且容器尺寸正确
+    setTimeout(() => {
+        // 初始化雷达图
+        radarChart = safeInitChart('radar-chart');
 
-    // 初始化对比图
-    compareChart = safeInitChart('compare-chart');
+        // 初始化柱状图
+        barChart = safeInitChart('bar-chart');
+
+        // 初始化对比图
+        compareChart = safeInitChart('compare-chart');
+
+        // 强制重绘图表
+        forceResizeCharts();
+
+        console.log('[DEBUG] 图表初始化完成，已强制重绘');
+    }, 300); // 延迟300毫秒
 
     // 设置图表响应式
     window.addEventListener('resize', () => {
-        if (radarChart) radarChart.resize();
-        if (barChart) barChart.resize();
-        if (compareChart) compareChart.resize();
+        forceResizeCharts();
     });
+
+    // 添加MutationObserver监听DOM变化，当容器可见性变化时重绘图表
+    const chartContainers = ['radar-chart', 'bar-chart', 'compare-chart'];
+    chartContainers.forEach(id => {
+        const container = document.getElementById(id);
+        if (container) {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.attributeName === 'style' ||
+                        mutation.attributeName === 'class') {
+                        console.log(`[DEBUG] 检测到 #${id} 容器变化，重绘图表`);
+                        forceResizeCharts();
+                    }
+                });
+            });
+
+            observer.observe(container, {
+                attributes: true,
+                attributeFilter: ['style', 'class']
+            });
+        }
+    });
+}
+
+/**
+ * 强制重绘所有图表
+ */
+function forceResizeCharts() {
+    console.log('[DEBUG] 强制重绘所有图表');
+    if (radarChart) {
+        radarChart.resize();
+        console.log('[DEBUG] 雷达图重绘完成');
+    }
+    if (barChart) {
+        barChart.resize();
+        console.log('[DEBUG] 柱状图重绘完成');
+    }
+    if (compareChart) {
+        compareChart.resize();
+        console.log('[DEBUG] 对比图重绘完成');
+    }
 }
 
 /**
@@ -108,26 +157,30 @@ function updateRadarChart(dimensionAverages) {
         return;
     }
 
-    // 获取所有维度
-    const allDimensions = getAllDimensions();
-    console.log(`[DEBUG] 所有维度:`, allDimensions);
+    // 获取实际存在的维度
+    const validDimensions = getAllDimensions();
+    console.log(`[DEBUG] 实际存在的维度:`, validDimensions);
 
-    // 过滤掉非数值属性，但保留所有定义的维度
-    const dimensions = allDimensions.filter(dim =>
-        dim !== 'average_score'
-    );
+    // 过滤数据，只保留实际存在的维度
+    const filteredData = {};
+    validDimensions.forEach(dim => {
+        if (dimensionAverages[dim] !== undefined) {
+            filteredData[dim] = dimensionAverages[dim];
+        }
+    });
 
-    console.log(`[DEBUG] 过滤后的维度:`, dimensions);
+    console.log(`[DEBUG] 过滤后的维度数据:`, filteredData);
 
-    if (dimensions.length === 0) {
+    // 检查是否有有效数据
+    if (Object.keys(filteredData).length === 0) {
         console.warn(`[DEBUG] 没有有效的维度数据，无法更新饼图`);
         return;
     }
 
     // 准备饼图数据
-    const data = dimensions.map((dim, index) => ({
+    const data = Object.keys(filteredData).map((dim, index) => ({
         name: formatDimensionNameEn(dim),
-        value: dimensionAverages[dim] || 0,
+        value: filteredData[dim],
         itemStyle: {
             color: CHART_COLORS.gradients[index % 5][0]
         }
@@ -152,7 +205,11 @@ function updateRadarChart(dimensionAverages) {
         },
         tooltip: {
             trigger: 'item',
-            formatter: '{a} <br/>{b}: {c} ({d}%)'
+            formatter: function(params) {
+                return `<div style="font-weight:bold;margin-bottom:5px;">${params.name}</div>` +
+                       `<div>${params.marker} Score: ${params.value}</div>` +
+                       `<div>Proportion: ${params.percent}%</div>`;
+            }
         },
         legend: {
             orient: 'horizontal',
@@ -220,6 +277,12 @@ function updateRadarChart(dimensionAverages) {
     try {
         radarChart.setOption(option);
         console.log(`[DEBUG] 饼图选项设置成功`);
+
+        // 强制重绘
+        setTimeout(() => {
+            radarChart.resize();
+            console.log(`[DEBUG] 饼图强制重绘完成`);
+        }, 100);
     } catch (error) {
         console.error(`[DEBUG] 设置饼图选项失败:`, error);
     }
@@ -232,6 +295,7 @@ function updateRadarChart(dimensionAverages) {
  */
 function updateBarChart(dimensionAverages, evaluations) {
     console.log(`[DEBUG] 开始更新MAG分数分布图，数据:`, dimensionAverages);
+    console.log(`[DEBUG] 评估数据数量:`, evaluations ? evaluations.length : 0);
 
     if (!barChart) {
         console.error(`[DEBUG] 图表实例不存在，无法更新`);
@@ -248,10 +312,15 @@ function updateBarChart(dimensionAverages, evaluations) {
         // 创建一个简单的散点图，显示所有维度的平均分
         const data = [];
         Object.keys(dimensionAverages).forEach(dim => {
-            if (dim !== 'average_score') {
+            if (dim !== 'average_score' &&
+                typeof dimensionAverages[dim] === 'number' &&
+                !dim.includes('_id') &&
+                dim !== 'MAG') {
                 data.push([formatDimensionNameEn(dim), dimensionAverages[dim]]);
             }
         });
+
+        console.log(`[DEBUG] 维度数据:`, data);
 
         // 排序数据
         data.sort((a, b) => a[1] - b[1]);
@@ -336,15 +405,24 @@ function updateBarChart(dimensionAverages, evaluations) {
 
         try {
             barChart.setOption(option);
-            console.log(`[DEBUG] MAG分数分布图选项设置成功`);
+            console.log(`[DEBUG] 维度分数分布图选项设置成功`);
         } catch (error) {
-            console.error(`[DEBUG] 设置MAG分数分布图选项失败:`, error);
+            console.error(`[DEBUG] 设置维度分数分布图选项失败:`, error);
         }
 
         return;
     }
 
-    console.log(`[DEBUG] 评估数据样本:`, evaluations[0]);
+    // 打印评估数据的第一个样本，以便了解数据结构
+    if (evaluations.length > 0) {
+        console.log(`[DEBUG] 评估数据样本:`, evaluations[0]);
+        console.log(`[DEBUG] 样本中的MAG字段:`, evaluations[0][MAG_FIELD]);
+
+        // 检查所有样本中的MAG字段
+        const magValues = evaluations.map(eval => eval[MAG_FIELD]).filter(Boolean);
+        console.log(`[DEBUG] 所有MAG值:`, magValues);
+        console.log(`[DEBUG] 唯一MAG值:`, [...new Set(magValues)]);
+    }
 
     // 按MAG值分组
     const magGroups = {};
@@ -373,6 +451,7 @@ function updateBarChart(dimensionAverages, evaluations) {
                     dim !== 'timestamp' &&
                     dim !== 'id' &&
                     dim !== 'average_score' &&
+                    dim !== MAG_FIELD && // 排除MAG字段本身
                     !dim.includes('_id')) {
                     totalScore += eval[dim];
                     dimensionCount++;
@@ -389,6 +468,49 @@ function updateBarChart(dimensionAverages, evaluations) {
     });
 
     console.log(`[DEBUG] MAG分组:`, magGroups);
+
+    // 如果没有有效的MAG分组，显示一个提示
+    if (Object.keys(magGroups).length === 0) {
+        console.warn(`[DEBUG] 没有有效的MAG分组数据`);
+
+        // 设置一个空图表
+        const option = {
+            title: {
+                text: 'MAG Correlation Chart (No Data)',
+                left: 'center',
+                textStyle: {
+                    fontSize: 18,
+                    fontWeight: 'bold',
+                    color: '#333'
+                },
+                padding: [20, 0, 0, 0]
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '10%',
+                top: '15%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: []
+            },
+            yAxis: {
+                type: 'value'
+            },
+            series: []
+        };
+
+        try {
+            barChart.setOption(option);
+            console.log(`[DEBUG] 空MAG图表设置成功`);
+        } catch (error) {
+            console.error(`[DEBUG] 设置空MAG图表失败:`, error);
+        }
+
+        return;
+    }
 
     // 计算每个MAG组的平均分
     const data = [];
@@ -411,6 +533,8 @@ function updateBarChart(dimensionAverages, evaluations) {
         // 如果无法提取数字，按字符串排序
         return a[0].localeCompare(b[0]);
     });
+
+    console.log(`[DEBUG] 排序后的MAG数据:`, data);
 
     // 设置图表选项
     const option = {
@@ -660,18 +784,12 @@ function updateCompareChart(compareItems) {
  * @returns {Array} 所有维度的数组
  */
 function getAllDimensions() {
-    // 所有支持的维度列表
+    // 只返回实际存在的4个维度
+    console.log('[DEBUG] 获取实际存在的维度列表');
     return [
-        'factual_accuracy',
         'hallucination_control',
-        'professionalism',
-        'practicality',
-        'technical_depth',
-        'context_relevance',
-        'solution_completeness',
-        'actionability',
-        'clarity_structure',
         'quality',
+        'professionalism',
         'usefulness'
     ];
 }
@@ -682,22 +800,9 @@ function getAllDimensions() {
  * @returns {string} 格式化后的维度名称
  */
 function formatDimensionName(dimension) {
-    // 维度名称映射
-    const dimensionMap = {
-        'factual_accuracy': '事实准确性',
-        'hallucination_control': '幻觉控制',
-        'professionalism': '专业性',
-        'practicality': '实践性',  // 修改为"实践性"，与 usefulness 区分
-        'technical_depth': '技术深度',
-        'context_relevance': '上下文相关性',
-        'solution_completeness': '解决方案完整性',
-        'actionability': '可操作性',
-        'clarity_structure': '清晰度和结构',
-        'quality': '质量',
-        'usefulness': '实用性'
-    };
-
-    return dimensionMap[dimension] || dimension.replace(/_/g, ' ');
+    // 直接调用英文版本，确保所有地方都使用英文
+    console.log('[DEBUG] 调用formatDimensionName，转为使用英文版本');
+    return formatDimensionNameEn(dimension);
 }
 
 /**

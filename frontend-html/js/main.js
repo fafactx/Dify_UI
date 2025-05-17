@@ -254,6 +254,9 @@ function updateStatsCards() {
 
     const { count, overall_average, dimension_averages } = state.stats;
 
+    console.log('[DEBUG] 更新统计卡片，数据:', state.stats);
+    console.log('[DEBUG] 维度平均值:', dimension_averages);
+
     // 找出最高评分维度
     let highestDimension = '';
     let highestScore = 0;
@@ -263,22 +266,58 @@ function updateStatsCards() {
     let lowestScore = 10; // 初始设为最高可能分数
 
     if (dimension_averages) {
+        // 记录所有维度及其分数
+        console.log('[DEBUG] 所有维度及分数:');
         Object.keys(dimension_averages).forEach(dim => {
-            if (dim !== 'average_score') {
+            console.log(`[DEBUG] 维度: ${dim}, 分数: ${dimension_averages[dim]}`);
+        });
+
+        // 只处理评分维度（排除非评分字段）
+        const scoreDimensions = Object.keys(dimension_averages).filter(dim =>
+            dim !== 'average_score' &&
+            typeof dimension_averages[dim] === 'number' &&
+            !dim.includes('_id') &&
+            dim !== 'MAG' // 排除MAG字段，因为它不是评分维度
+        );
+
+        console.log('[DEBUG] 过滤后的评分维度:', scoreDimensions);
+
+        // 如果没有评分维度，使用默认值
+        if (scoreDimensions.length === 0) {
+            console.warn('[DEBUG] 没有找到有效的评分维度');
+            highestDimension = 'quality';
+            highestScore = 0;
+            lowestDimension = 'factual_accuracy';
+            lowestScore = 0;
+        } else {
+            // 计算最高和最低分数
+            scoreDimensions.forEach(dim => {
+                const score = dimension_averages[dim];
+
                 // 检查最高分
-                if (dimension_averages[dim] > highestScore) {
-                    highestScore = dimension_averages[dim];
+                if (score > highestScore) {
+                    highestScore = score;
                     highestDimension = dim;
                 }
 
                 // 检查最低分
-                if (dimension_averages[dim] < lowestScore) {
-                    lowestScore = dimension_averages[dim];
+                if (score < lowestScore) {
+                    lowestScore = score;
                     lowestDimension = dim;
                 }
-            }
-        });
+            });
+        }
+    } else {
+        console.warn('[DEBUG] 维度平均值不存在');
+        // 使用默认值
+        highestDimension = 'quality';
+        highestScore = 0;
+        lowestDimension = 'factual_accuracy';
+        lowestScore = 0;
     }
+
+    console.log(`[DEBUG] 最高维度: ${highestDimension}, 分数: ${highestScore}`);
+    console.log(`[DEBUG] 最低维度: ${lowestDimension}, 分数: ${lowestScore}`);
 
     // 创建统计卡片 HTML - 使用英文标签
     const cardsHtml = `
