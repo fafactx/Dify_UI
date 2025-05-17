@@ -1,20 +1,22 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="description" content="RAGLIM Test Suite Dashboard">
-    <title>RAGLIM Test Suite</title>
+    <meta name="description" content="RAGLLM Testing System Dashboard">
+    <title>RAGLLM Testing System</title>
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" crossorigin="anonymous">
-    <!-- 自定义CSS -->
-    <link href="css/raglim-design.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- ECharts -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js" crossorigin="anonymous"></script>
+    <!-- 自定义CSS -->
+    <link href="css/raglim-design.css" rel="stylesheet">
 </head>
 <body>
     <div class="layout-container">
@@ -22,7 +24,7 @@
         <div class="sidebar">
             <div class="sidebar-header">
                 <i class="fas fa-cube"></i>
-                <span>RAGLIM Test Suite</span>
+                <span>RAGLLM Test Suite</span>
             </div>
             <ul class="sidebar-menu">
                 <li class="active" data-view="dashboard">
@@ -68,7 +70,7 @@
                 </button>
                 <div class="search-bar">
                     <i class="fas fa-search"></i>
-                    <input type="text" placeholder="搜索测试用例">
+                    <input type="text" placeholder="Search test cases...">
                 </div>
                 <div class="nav-icons">
                     <i class="fas fa-bell"></i>
@@ -82,41 +84,50 @@
                 <div id="dashboard-view" class="view-section">
                     <!-- 统计卡片 -->
                     <div class="row g-3 mb-4">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="stat-card">
-                                <div class="stat-number total-cases">547</div>
-                                <div class="stat-label">Total Test Cases</div>
+                                <div class="stat-icon">
+                                    <i class="fas fa-file-alt"></i>
+                                </div>
+                                <div class="stat-number total-cases">4</div>
+                                <div class="stat-label">Total Samples</div>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="stat-card">
-                                <div class="stat-number success-rate">87%</div>
-                                <div class="stat-label">Success Rate</div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="stat-card">
-                                <div class="stat-number average-score">87</div>
+                                <div class="stat-icon">
+                                    <i class="fas fa-star"></i>
+                                </div>
+                                <div class="stat-number average-score">82.0</div>
                                 <div class="stat-label">Average Score</div>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- 操作按钮 -->
-                    <div class="row mb-4">
-                        <div class="col-12">
-                            <button class="btn btn-primary">主内容区</button>
-                            <button class="btn btn-outline-primary ms-2">左侧边栏</button>
-                            <button class="btn btn-outline-primary ms-2">状态记录</button>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="fas fa-trophy"></i>
+                                </div>
+                                <div class="stat-number success-rate">90.0</div>
+                                <div class="stat-label">Highest: Hallucination Control</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="fas fa-arrow-down"></i>
+                                </div>
+                                <div class="stat-number">75.0</div>
+                                <div class="stat-label">Lowest: Usefulness</div>
+                            </div>
                         </div>
                     </div>
 
                     <!-- 图表区域 -->
-                    <div class="row">
-                        <div class="col-12">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
                             <div class="card">
                                 <div class="card-header d-flex justify-content-between align-items-center">
-                                    <span>测试结果趋势</span>
+                                    <span>Dimension Proportion</span>
                                     <div>
                                         <button class="btn btn-sm btn-outline-secondary">
                                             <i class="fas fa-download"></i>
@@ -127,12 +138,50 @@
                                     </div>
                                 </div>
                                 <div class="card-body">
-                                    <div id="main-chart" style="height: 300px;"></div>
+                                    <div id="dimension-chart" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <span>MAG Correlation Chart</span>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary ms-2">
+                                            <i class="fas fa-expand"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div id="correlation-chart" style="height: 300px;"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <span>Dimension Score Distribution</span>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary ms-2">
+                                            <i class="fas fa-expand"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div id="distribution-chart" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                 <!-- 测试用例视图 -->
                 <div id="test-cases-view" class="view-section d-none">
@@ -345,7 +394,514 @@
                     </div>
                 </div>
 
-                <!-- 其他视图 (性能、指标、设置) 可以根据需要添加 -->
+                <!-- 指标视图 -->
+                <div id="metrics-view" class="view-section d-none">
+                    <h2 class="mb-4">评估指标 <span class="text-muted">Metrics</span></h2>
+
+                    <!-- 指标卡片 -->
+                    <div class="row g-3">
+                        <!-- 幻觉控制指标 -->
+                        <div class="col-md-6">
+                            <div class="metric-config-card">
+                                <div class="metric-config-header">
+                                    <div class="metric-config-icon bg-primary-light">
+                                        <i class="fas fa-shield-alt text-primary-deep"></i>
+                                    </div>
+                                    <div class="metric-config-title">
+                                        <h3>Hallucination Control</h3>
+                                        <p>评估模型输出内容的真实性和准确性</p>
+                                    </div>
+                                </div>
+                                <div class="metric-config-body">
+                                    <div class="metric-config-chart">
+                                        <div class="metric-score">
+                                            <span class="score-value">80</span>
+                                            <span class="score-max">/100</span>
+                                        </div>
+                                        <div class="progress mt-2">
+                                            <div class="progress-bar bg-primary" role="progressbar" style="width: 80%" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                    <div class="metric-config-settings mt-4">
+                                        <div class="weight-slider">
+                                            <label>
+                                                <span>权重</span>
+                                                <span class="weight-value">30%</span>
+                                            </label>
+                                            <input type="range" class="form-range" min="0" max="100" step="5" value="30">
+                                        </div>
+                                        <div class="threshold-slider">
+                                            <label>
+                                                <span>阈值</span>
+                                                <span class="threshold-value">70</span>
+                                            </label>
+                                            <input type="range" class="form-range" min="0" max="100" step="5" value="70">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 质量指标 -->
+                        <div class="col-md-6">
+                            <div class="metric-config-card">
+                                <div class="metric-config-header">
+                                    <div class="metric-config-icon bg-success-light">
+                                        <i class="fas fa-check-circle text-success"></i>
+                                    </div>
+                                    <div class="metric-config-title">
+                                        <h3>Quality</h3>
+                                        <p>评估模型输出内容的整体质量和完整性</p>
+                                    </div>
+                                </div>
+                                <div class="metric-config-body">
+                                    <div class="metric-config-chart">
+                                        <div class="metric-score">
+                                            <span class="score-value">70</span>
+                                            <span class="score-max">/100</span>
+                                        </div>
+                                        <div class="progress mt-2">
+                                            <div class="progress-bar bg-success" role="progressbar" style="width: 70%" aria-valuenow="70" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                    <div class="metric-config-settings mt-4">
+                                        <div class="weight-slider">
+                                            <label>
+                                                <span>权重</span>
+                                                <span class="weight-value">25%</span>
+                                            </label>
+                                            <input type="range" class="form-range" min="0" max="100" step="5" value="25">
+                                        </div>
+                                        <div class="threshold-slider">
+                                            <label>
+                                                <span>阈值</span>
+                                                <span class="threshold-value">65</span>
+                                            </label>
+                                            <input type="range" class="form-range" min="0" max="100" step="5" value="65">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 专业性指标 -->
+                        <div class="col-md-6">
+                            <div class="metric-config-card">
+                                <div class="metric-config-header">
+                                    <div class="metric-config-icon bg-danger-light">
+                                        <i class="fas fa-graduation-cap text-danger"></i>
+                                    </div>
+                                    <div class="metric-config-title">
+                                        <h3>Professionalism</h3>
+                                        <p>评估模型输出内容的专业水平和领域知识</p>
+                                    </div>
+                                </div>
+                                <div class="metric-config-body">
+                                    <div class="metric-config-chart">
+                                        <div class="metric-score">
+                                            <span class="score-value">65</span>
+                                            <span class="score-max">/100</span>
+                                        </div>
+                                        <div class="progress mt-2">
+                                            <div class="progress-bar bg-danger" role="progressbar" style="width: 65%" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                    <div class="metric-config-settings mt-4">
+                                        <div class="weight-slider">
+                                            <label>
+                                                <span>权重</span>
+                                                <span class="weight-value">20%</span>
+                                            </label>
+                                            <input type="range" class="form-range" min="0" max="100" step="5" value="20">
+                                        </div>
+                                        <div class="threshold-slider">
+                                            <label>
+                                                <span>阈值</span>
+                                                <span class="threshold-value">60</span>
+                                            </label>
+                                            <input type="range" class="form-range" min="0" max="100" step="5" value="60">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 实用性指标 -->
+                        <div class="col-md-6">
+                            <div class="metric-config-card">
+                                <div class="metric-config-header">
+                                    <div class="metric-config-icon bg-warning-light">
+                                        <i class="fas fa-lightbulb text-warning"></i>
+                                    </div>
+                                    <div class="metric-config-title">
+                                        <h3>Usefulness</h3>
+                                        <p>评估模型输出内容的实用性和解决问题的能力</p>
+                                    </div>
+                                </div>
+                                <div class="metric-config-body">
+                                    <div class="metric-config-chart">
+                                        <div class="metric-score">
+                                            <span class="score-value">50</span>
+                                            <span class="score-max">/100</span>
+                                        </div>
+                                        <div class="progress mt-2">
+                                            <div class="progress-bar bg-warning" role="progressbar" style="width: 50%" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                    <div class="metric-config-settings mt-4">
+                                        <div class="weight-slider">
+                                            <label>
+                                                <span>权重</span>
+                                                <span class="weight-value">25%</span>
+                                            </label>
+                                            <input type="range" class="form-range" min="0" max="100" step="5" value="25">
+                                        </div>
+                                        <div class="threshold-slider">
+                                            <label>
+                                                <span>阈值</span>
+                                                <span class="threshold-value">50</span>
+                                            </label>
+                                            <input type="range" class="form-range" min="0" max="100" step="5" value="50">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 平均分数 -->
+                        <div class="col-12">
+                            <div class="metric-config-card">
+                                <div class="metric-config-header">
+                                    <div class="metric-config-icon bg-info-light">
+                                        <i class="fas fa-calculator text-primary-light"></i>
+                                    </div>
+                                    <div class="metric-config-title">
+                                        <h3>Average Score</h3>
+                                        <p>所有指标的加权平均分数</p>
+                                    </div>
+                                </div>
+                                <div class="metric-config-body">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-4">
+                                            <div class="metric-score text-center">
+                                                <span class="score-value display-4">66.5</span>
+                                                <span class="score-max">/100</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <div class="average-score-formula">
+                                                <p class="mb-2">计算公式:</p>
+                                                <div class="formula-display">
+                                                    <span>80 × 30% + 70 × 25% + 65 × 20% + 50 × 25% = 66.5</span>
+                                                </div>
+                                            </div>
+                                            <div class="threshold-slider mt-4">
+                                                <label>
+                                                    <span>及格阈值</span>
+                                                    <span class="threshold-value">60</span>
+                                                </label>
+                                                <input type="range" class="form-range" min="0" max="100" step="5" value="60">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 性能视图 -->
+                <div id="performance-view" class="view-section d-none">
+                    <h2 class="mb-4">性能分析 <span class="text-muted">Performance Analysis</span></h2>
+
+                    <!-- 过滤器 -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0">
+                                    <i class="fas fa-calendar text-muted"></i>
+                                </span>
+                                <select class="form-select border-start-0">
+                                    <option>Last 7 days</option>
+                                    <option>Last 30 days</option>
+                                    <option>Last 90 days</option>
+                                    <option>Custom range</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0">
+                                    <i class="fas fa-filter text-muted"></i>
+                                </span>
+                                <select class="form-select border-start-0">
+                                    <option>All Product Families</option>
+                                    <option>Enterprise Storage</option>
+                                    <option>Cloud Services</option>
+                                    <option>Security Solutions</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0">
+                                    <i class="fas fa-sort-amount-down text-muted"></i>
+                                </span>
+                                <select class="form-select border-start-0">
+                                    <option>All Complexity Levels</option>
+                                    <option>Low Complexity</option>
+                                    <option>Medium Complexity</option>
+                                    <option>High Complexity</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 图表区域 -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <span>Time Trend</span>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary ms-2">
+                                            <i class="fas fa-expand"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div id="time-trend-chart" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <span>Product Family Comparison</span>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary ms-2">
+                                            <i class="fas fa-expand"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div id="product-comparison-chart" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <span>Complexity Distribution</span>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary ms-2">
+                                            <i class="fas fa-expand"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div id="complexity-chart" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <span>Score Distribution</span>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary ms-2">
+                                            <i class="fas fa-expand"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div id="score-distribution-chart" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 详细数据表格 -->
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span>Detailed Performance Data</span>
+                            <button class="btn btn-primary">
+                                <i class="fas fa-file-export me-2"></i>
+                                Export Report
+                            </button>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Test ID</th>
+                                            <th>Product Family</th>
+                                            <th>Complexity</th>
+                                            <th>Hallucination</th>
+                                            <th>Quality</th>
+                                            <th>Professionalism</th>
+                                            <th>Usefulness</th>
+                                            <th>Average</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>2023-05-18</td>
+                                            <td>TS-001</td>
+                                            <td>Enterprise Storage</td>
+                                            <td>Medium</td>
+                                            <td>85</td>
+                                            <td>78</td>
+                                            <td>72</td>
+                                            <td>65</td>
+                                            <td>75.0</td>
+                                        </tr>
+                                        <tr>
+                                            <td>2023-05-17</td>
+                                            <td>TS-002</td>
+                                            <td>Cloud Services</td>
+                                            <td>High</td>
+                                            <td>92</td>
+                                            <td>85</td>
+                                            <td>80</td>
+                                            <td>75</td>
+                                            <td>83.0</td>
+                                        </tr>
+                                        <tr>
+                                            <td>2023-05-16</td>
+                                            <td>TS-003</td>
+                                            <td>Security Solutions</td>
+                                            <td>Low</td>
+                                            <td>78</td>
+                                            <td>72</td>
+                                            <td>68</td>
+                                            <td>60</td>
+                                            <td>69.5</td>
+                                        </tr>
+                                        <tr>
+                                            <td>2023-05-15</td>
+                                            <td>TS-004</td>
+                                            <td>Enterprise Storage</td>
+                                            <td>High</td>
+                                            <td>88</td>
+                                            <td>82</td>
+                                            <td>75</td>
+                                            <td>70</td>
+                                            <td>78.8</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 设置视图 -->
+                <div id="settings-view" class="view-section d-none">
+                    <h2 class="mb-4">系统设置 <span class="text-muted">Settings</span></h2>
+
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="card">
+                                <div class="card-body p-0">
+                                    <div class="list-group list-group-flush">
+                                        <a href="#" class="list-group-item list-group-item-action active">
+                                            <i class="fas fa-sliders-h me-2"></i>
+                                            General
+                                        </a>
+                                        <a href="#" class="list-group-item list-group-item-action">
+                                            <i class="fas fa-chart-pie me-2"></i>
+                                            Metrics
+                                        </a>
+                                        <a href="#" class="list-group-item list-group-item-action">
+                                            <i class="fas fa-database me-2"></i>
+                                            Data Management
+                                        </a>
+                                        <a href="#" class="list-group-item list-group-item-action">
+                                            <i class="fas fa-users me-2"></i>
+                                            User Access
+                                        </a>
+                                        <a href="#" class="list-group-item list-group-item-action">
+                                            <i class="fas fa-bell me-2"></i>
+                                            Notifications
+                                        </a>
+                                        <a href="#" class="list-group-item list-group-item-action">
+                                            <i class="fas fa-plug me-2"></i>
+                                            Integrations
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">General Settings</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form>
+                                        <div class="mb-3">
+                                            <label class="form-label">System Name</label>
+                                            <input type="text" class="form-control" value="RAGLLM Test Suite">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Default Language</label>
+                                            <select class="form-select">
+                                                <option value="en">English</option>
+                                                <option value="zh">中文</option>
+                                                <option value="es">Español</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Date Format</label>
+                                            <select class="form-select">
+                                                <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                                                <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                                                <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Theme</label>
+                                            <select class="form-select">
+                                                <option value="light">Light</option>
+                                                <option value="dark">Dark</option>
+                                                <option value="system">System Default</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" id="autoRefresh" checked>
+                                            <label class="form-check-label" for="autoRefresh">Auto-refresh Dashboard</label>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Refresh Interval (seconds)</label>
+                                            <input type="number" class="form-control" value="300">
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 其他视图可以根据需要添加 -->
             </div>
         </div>
     </div>
@@ -358,7 +914,7 @@
         // 等待页面加载完成
         document.addEventListener('DOMContentLoaded', function() {
             // 初始化图表
-            initializeChart();
+            initializeCharts();
 
             // 侧边栏菜单切换
             const menuItems = document.querySelectorAll('.sidebar-menu li');
@@ -400,9 +956,151 @@
             });
         });
 
-        // 初始化图表
-        function initializeChart() {
-            const chartDom = document.getElementById('main-chart');
+        // 初始化所有图表
+        function initializeCharts() {
+            // Dashboard charts
+            initializeDimensionChart();
+            initializeCorrelationChart();
+            initializeDistributionChart();
+
+            // Performance charts
+            initializeTimeTrendChart();
+            initializeProductComparisonChart();
+            initializeComplexityChart();
+            initializeScoreDistributionChart();
+        }
+
+        // 初始化维度比例图表
+        function initializeDimensionChart() {
+            const chartDom = document.getElementById('dimension-chart');
+            if (chartDom) {
+                const myChart = echarts.init(chartDom);
+
+                // 图表配置
+                const option = {
+                    tooltip: {
+                        trigger: 'item'
+                    },
+                    legend: {
+                        orient: 'vertical',
+                        right: 10,
+                        top: 'center'
+                    },
+                    series: [
+                        {
+                            name: 'Dimension Proportion',
+                            type: 'pie',
+                            radius: ['40%', '70%'],
+                            avoidLabelOverlap: false,
+                            itemStyle: {
+                                borderRadius: 10,
+                                borderColor: '#fff',
+                                borderWidth: 2
+                            },
+                            label: {
+                                show: false,
+                                position: 'center'
+                            },
+                            emphasis: {
+                                label: {
+                                    show: true,
+                                    fontSize: '16',
+                                    fontWeight: 'bold'
+                                }
+                            },
+                            labelLine: {
+                                show: false
+                            },
+                            data: [
+                                { value: 80, name: 'Hallucination Control', itemStyle: { color: '#3B82F6' } },
+                                { value: 70, name: 'Quality', itemStyle: { color: '#10B981' } },
+                                { value: 65, name: 'Professionalism', itemStyle: { color: '#EF4444' } },
+                                { value: 50, name: 'Usefulness', itemStyle: { color: '#F59E0B' } }
+                            ]
+                        }
+                    ]
+                };
+
+                myChart.setOption(option);
+
+                // 响应窗口大小变化
+                window.addEventListener('resize', function() {
+                    myChart.resize();
+                });
+            }
+        }
+
+        // 初始化相关性图表
+        function initializeCorrelationChart() {
+            const chartDom = document.getElementById('correlation-chart');
+            if (chartDom) {
+                const myChart = echarts.init(chartDom);
+
+                // 图表配置
+                const option = {
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'shadow'
+                        }
+                    },
+                    grid: {
+                        left: '3%',
+                        right: '4%',
+                        bottom: '3%',
+                        containLabel: true
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: ['Usefulness', 'Professionalism', 'Quality', 'Hallucination Control']
+                    },
+                    yAxis: {
+                        type: 'value',
+                        min: 0,
+                        max: 100
+                    },
+                    series: [
+                        {
+                            name: 'Score',
+                            type: 'bar',
+                            data: [
+                                {
+                                    value: 50,
+                                    itemStyle: { color: '#F59E0B' }
+                                },
+                                {
+                                    value: 65,
+                                    itemStyle: { color: '#EF4444' }
+                                },
+                                {
+                                    value: 70,
+                                    itemStyle: { color: '#10B981' }
+                                },
+                                {
+                                    value: 80,
+                                    itemStyle: { color: '#3B82F6' }
+                                }
+                            ],
+                            showBackground: true,
+                            backgroundStyle: {
+                                color: 'rgba(180, 180, 180, 0.2)'
+                            }
+                        }
+                    ]
+                };
+
+                myChart.setOption(option);
+
+                // 响应窗口大小变化
+                window.addEventListener('resize', function() {
+                    myChart.resize();
+                });
+            }
+        }
+
+        // 初始化分布图表
+        function initializeDistributionChart() {
+            const chartDom = document.getElementById('distribution-chart');
             if (chartDom) {
                 const myChart = echarts.init(chartDom);
 
@@ -410,9 +1108,6 @@
                 const option = {
                     tooltip: {
                         trigger: 'axis'
-                    },
-                    legend: {
-                        data: ['测试通过率', '平均分数']
                     },
                     grid: {
                         left: '3%',
@@ -423,28 +1118,390 @@
                     xAxis: {
                         type: 'category',
                         boundaryGap: false,
-                        data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+                        data: ['Usefulness', 'Professionalism', 'Quality', 'Hallucination Control']
                     },
                     yAxis: {
-                        type: 'value'
+                        type: 'value',
+                        min: 0,
+                        max: 100
                     },
                     series: [
                         {
-                            name: '测试通过率',
+                            name: 'Score',
                             type: 'line',
-                            data: [82, 85, 90, 88, 92, 95, 87],
+                            data: [50, 65, 70, 80],
+                            smooth: true,
+                            symbol: 'circle',
+                            symbolSize: 8,
+                            lineStyle: {
+                                width: 3,
+                                color: '#3B82F6'
+                            },
+                            itemStyle: {
+                                color: '#3B82F6'
+                            },
+                            areaStyle: {
+                                color: {
+                                    type: 'linear',
+                                    x: 0,
+                                    y: 0,
+                                    x2: 0,
+                                    y2: 1,
+                                    colorStops: [
+                                        {
+                                            offset: 0,
+                                            color: 'rgba(59, 130, 246, 0.3)'
+                                        },
+                                        {
+                                            offset: 1,
+                                            color: 'rgba(59, 130, 246, 0.1)'
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                };
+
+                myChart.setOption(option);
+
+                // 响应窗口大小变化
+                window.addEventListener('resize', function() {
+                    myChart.resize();
+                });
+            }
+        }
+
+        // 初始化时间趋势图表
+        function initializeTimeTrendChart() {
+            const chartDom = document.getElementById('time-trend-chart');
+            if (chartDom) {
+                const myChart = echarts.init(chartDom);
+
+                // 图表配置
+                const option = {
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    legend: {
+                        data: ['Hallucination Control', 'Quality', 'Professionalism', 'Usefulness', 'Average']
+                    },
+                    grid: {
+                        left: '3%',
+                        right: '4%',
+                        bottom: '3%',
+                        containLabel: true
+                    },
+                    xAxis: {
+                        type: 'category',
+                        boundaryGap: false,
+                        data: ['5/12', '5/13', '5/14', '5/15', '5/16', '5/17', '5/18']
+                    },
+                    yAxis: {
+                        type: 'value',
+                        min: 0,
+                        max: 100
+                    },
+                    series: [
+                        {
+                            name: 'Hallucination Control',
+                            type: 'line',
+                            data: [78, 80, 82, 88, 78, 92, 85],
                             smooth: true,
                             lineStyle: {
                                 color: '#3B82F6'
                             }
                         },
                         {
-                            name: '平均分数',
+                            name: 'Quality',
                             type: 'line',
-                            data: [82, 85, 87, 86, 89, 92, 87],
+                            data: [72, 75, 78, 82, 72, 85, 78],
                             smooth: true,
                             lineStyle: {
                                 color: '#10B981'
+                            }
+                        },
+                        {
+                            name: 'Professionalism',
+                            type: 'line',
+                            data: [68, 70, 72, 75, 68, 80, 72],
+                            smooth: true,
+                            lineStyle: {
+                                color: '#EF4444'
+                            }
+                        },
+                        {
+                            name: 'Usefulness',
+                            type: 'line',
+                            data: [60, 62, 65, 70, 60, 75, 65],
+                            smooth: true,
+                            lineStyle: {
+                                color: '#F59E0B'
+                            }
+                        },
+                        {
+                            name: 'Average',
+                            type: 'line',
+                            data: [69.5, 71.8, 74.3, 78.8, 69.5, 83.0, 75.0],
+                            smooth: true,
+                            lineStyle: {
+                                width: 3,
+                                color: '#1F2937'
+                            },
+                            symbolSize: 8
+                        }
+                    ]
+                };
+
+                myChart.setOption(option);
+
+                // 响应窗口大小变化
+                window.addEventListener('resize', function() {
+                    myChart.resize();
+                });
+            }
+        }
+
+        // 初始化产品系列对比图表
+        function initializeProductComparisonChart() {
+            const chartDom = document.getElementById('product-comparison-chart');
+            if (chartDom) {
+                const myChart = echarts.init(chartDom);
+
+                // 图表配置
+                const option = {
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'shadow'
+                        }
+                    },
+                    legend: {
+                        data: ['Hallucination Control', 'Quality', 'Professionalism', 'Usefulness']
+                    },
+                    grid: {
+                        left: '3%',
+                        right: '4%',
+                        bottom: '3%',
+                        containLabel: true
+                    },
+                    xAxis: {
+                        type: 'value',
+                        min: 0,
+                        max: 100
+                    },
+                    yAxis: {
+                        type: 'category',
+                        data: ['Enterprise Storage', 'Cloud Services', 'Security Solutions']
+                    },
+                    series: [
+                        {
+                            name: 'Hallucination Control',
+                            type: 'bar',
+                            stack: 'total',
+                            label: {
+                                show: true
+                            },
+                            emphasis: {
+                                focus: 'series'
+                            },
+                            data: [85, 92, 78],
+                            itemStyle: {
+                                color: '#3B82F6'
+                            }
+                        },
+                        {
+                            name: 'Quality',
+                            type: 'bar',
+                            stack: 'total',
+                            label: {
+                                show: true
+                            },
+                            emphasis: {
+                                focus: 'series'
+                            },
+                            data: [78, 85, 72],
+                            itemStyle: {
+                                color: '#10B981'
+                            }
+                        },
+                        {
+                            name: 'Professionalism',
+                            type: 'bar',
+                            stack: 'total',
+                            label: {
+                                show: true
+                            },
+                            emphasis: {
+                                focus: 'series'
+                            },
+                            data: [72, 80, 68],
+                            itemStyle: {
+                                color: '#EF4444'
+                            }
+                        },
+                        {
+                            name: 'Usefulness',
+                            type: 'bar',
+                            stack: 'total',
+                            label: {
+                                show: true
+                            },
+                            emphasis: {
+                                focus: 'series'
+                            },
+                            data: [65, 75, 60],
+                            itemStyle: {
+                                color: '#F59E0B'
+                            }
+                        }
+                    ]
+                };
+
+                myChart.setOption(option);
+
+                // 响应窗口大小变化
+                window.addEventListener('resize', function() {
+                    myChart.resize();
+                });
+            }
+        }
+
+        // 初始化复杂度分布图表
+        function initializeComplexityChart() {
+            const chartDom = document.getElementById('complexity-chart');
+            if (chartDom) {
+                const myChart = echarts.init(chartDom);
+
+                // 图表配置
+                const option = {
+                    tooltip: {
+                        trigger: 'item'
+                    },
+                    legend: {
+                        orient: 'vertical',
+                        right: 10,
+                        top: 'center'
+                    },
+                    series: [
+                        {
+                            name: 'Complexity Distribution',
+                            type: 'pie',
+                            radius: ['40%', '70%'],
+                            avoidLabelOverlap: false,
+                            itemStyle: {
+                                borderRadius: 10,
+                                borderColor: '#fff',
+                                borderWidth: 2
+                            },
+                            label: {
+                                show: false,
+                                position: 'center'
+                            },
+                            emphasis: {
+                                label: {
+                                    show: true,
+                                    fontSize: '16',
+                                    fontWeight: 'bold'
+                                }
+                            },
+                            labelLine: {
+                                show: false
+                            },
+                            data: [
+                                { value: 25, name: 'Low Complexity', itemStyle: { color: '#10B981' } },
+                                { value: 50, name: 'Medium Complexity', itemStyle: { color: '#F59E0B' } },
+                                { value: 25, name: 'High Complexity', itemStyle: { color: '#EF4444' } }
+                            ]
+                        }
+                    ]
+                };
+
+                myChart.setOption(option);
+
+                // 响应窗口大小变化
+                window.addEventListener('resize', function() {
+                    myChart.resize();
+                });
+            }
+        }
+
+        // 初始化分数分布图表
+        function initializeScoreDistributionChart() {
+            const chartDom = document.getElementById('score-distribution-chart');
+            if (chartDom) {
+                const myChart = echarts.init(chartDom);
+
+                // 图表配置
+                const option = {
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'shadow'
+                        }
+                    },
+                    grid: {
+                        left: '3%',
+                        right: '4%',
+                        bottom: '3%',
+                        containLabel: true
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: ['0-10', '11-20', '21-30', '31-40', '41-50', '51-60', '61-70', '71-80', '81-90', '91-100']
+                    },
+                    yAxis: {
+                        type: 'value'
+                    },
+                    series: [
+                        {
+                            name: 'Score Distribution',
+                            type: 'bar',
+                            data: [
+                                {
+                                    value: 0,
+                                    itemStyle: { color: '#EF4444' }
+                                },
+                                {
+                                    value: 0,
+                                    itemStyle: { color: '#EF4444' }
+                                },
+                                {
+                                    value: 0,
+                                    itemStyle: { color: '#EF4444' }
+                                },
+                                {
+                                    value: 0,
+                                    itemStyle: { color: '#F59E0B' }
+                                },
+                                {
+                                    value: 1,
+                                    itemStyle: { color: '#F59E0B' }
+                                },
+                                {
+                                    value: 2,
+                                    itemStyle: { color: '#F59E0B' }
+                                },
+                                {
+                                    value: 5,
+                                    itemStyle: { color: '#10B981' }
+                                },
+                                {
+                                    value: 8,
+                                    itemStyle: { color: '#10B981' }
+                                },
+                                {
+                                    value: 3,
+                                    itemStyle: { color: '#3B82F6' }
+                                },
+                                {
+                                    value: 1,
+                                    itemStyle: { color: '#3B82F6' }
+                                }
+                            ],
+                            showBackground: true,
+                            backgroundStyle: {
+                                color: 'rgba(180, 180, 180, 0.2)'
                             }
                         }
                     ]

@@ -1,24 +1,24 @@
-/* RAGLIM Test Suite - 设计系统 CSS */
+/* RAGLLM Test Suite - Design System CSS */
 
 :root {
-    /* 主色调 */
-    --primary-deep: #1E3A8A; /* 深蓝色 #1E3A8A */
-    --primary-light: #3B82F6; /* 浅蓝色 #3B82F6 */
+    /* Main Colors */
+    --primary-deep: #1E3A8A; /* Deep Blue #1E3A8A */
+    --primary-light: #3B82F6; /* Light Blue #3B82F6 */
 
-    /* 强调色 */
-    --accent-green: #10B981; /* 绿色 #10B981 */
-    --accent-yellow: #F59E0B; /* 黄色 #F59E0B */
-    --accent-red: #EF4444; /* 红色 #EF4444 */
+    /* Accent Colors */
+    --accent-green: #10B981; /* Green #10B981 */
+    --accent-yellow: #F59E0B; /* Yellow #F59E0B */
+    --accent-red: #EF4444; /* Red #EF4444 */
 
-    /* 背景色 */
-    --bg-light-gray: #F3F4F6; /* 浅灰色 #F3F4F6 */
-    --bg-white: #FFFFFF; /* 白色 #FFFFFF */
+    /* Background Colors */
+    --bg-light-gray: #F3F4F6; /* Light Gray #F3F4F6 */
+    --bg-white: #FFFFFF; /* White #FFFFFF */
 
-    /* 文字色 */
-    --text-dark: #1F2937; /* 深灰色 #1F2937 */
-    --text-medium: #6B7280; /* 中灰色 #6B7280 */
+    /* Text Colors */
+    --text-dark: #1F2937; /* Dark Gray #1F2937 */
+    --text-medium: #6B7280; /* Medium Gray #6B7280 */
 
-    /* 扩展颜色 - 用于标签和状态 */
+    /* Extended Colors - For Labels and States */
     --primary-light-bg: rgba(59, 130, 246, 0.1);
     --success-light: rgba(16, 185, 129, 0.1);
     --warning-light: rgba(245, 158, 11, 0.1);
@@ -162,7 +162,7 @@ body {
     flex: 1;
 }
 
-/* 统计卡片 */
+/* Stat Cards */
 .stat-card {
     background-color: white;
     border-radius: 8px;
@@ -173,6 +173,23 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: center;
+}
+
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #f0f4ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 15px;
+}
+
+.stat-icon i {
+    color: var(--primary-light);
+    font-size: 24px;
 }
 
 .stat-number {
@@ -487,6 +504,100 @@ body {
 .score-status {
     margin-top: 5px;
     color: var(--accent-green);
+    font-size: 14px;
+}
+
+/* 指标配置卡片 */
+.metric-config-card {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.metric-config-header {
+    padding: 15px 20px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--bg-light-gray);
+}
+
+.metric-config-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+}
+
+.metric-config-icon i {
+    font-size: 18px;
+}
+
+.metric-config-title h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 5px 0;
+}
+
+.metric-config-title p {
+    font-size: 13px;
+    color: var(--text-medium);
+    margin: 0;
+}
+
+.metric-config-body {
+    padding: 20px;
+}
+
+.metric-config-chart {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.metric-score {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+
+.metric-score .score-value {
+    font-size: 32px;
+    font-weight: bold;
+    color: var(--text-dark);
+}
+
+.metric-score .score-max {
+    font-size: 16px;
+    color: var(--text-medium);
+    margin-left: 2px;
+}
+
+.weight-slider, .threshold-slider {
+    margin-bottom: 15px;
+}
+
+.weight-slider label, .threshold-slider label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+.weight-value, .threshold-value {
+    font-weight: 600;
+    color: var(--primary-light);
+}
+
+.formula-display {
+    background-color: var(--bg-light-gray);
+    padding: 10px;
+    border-radius: 4px;
+    font-family: monospace;
     font-size: 14px;
 }
 
