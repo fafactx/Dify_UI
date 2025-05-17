@@ -197,14 +197,12 @@ app.get('/api/stats', async (req, res) => {
     }
 
     // 计算各维度的平均分
-    // 支持新旧两种维度体系
+    // 只使用实际存在的4个维度
     const dimensions = [
-      // 旧维度
-      'factual_accuracy', 'hallucination_control', 'professionalism',
-      'practicality', 'technical_depth', 'context_relevance',
-      'solution_completeness', 'actionability', 'clarity_structure',
-      // 新维度
-      'quality', 'usefulness'
+      'hallucination_control',
+      'quality',
+      'professionalism',
+      'usefulness'
     ];
 
     logger.debug(`收集到 ${allEvaluations.length} 条评估数据`);
