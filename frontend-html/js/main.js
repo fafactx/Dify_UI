@@ -254,89 +254,34 @@ function updateStatsCards() {
 
     const { count, overall_average, dimension_averages } = state.stats;
 
-    console.log('[DEBUG] 更新统计卡片，数据:', state.stats);
-    console.log('[DEBUG] 维度平均值:', dimension_averages);
-
-    // 找出最高评分维度
+    // 1. 样本总数直接使用count
+    const totalSamples = count || 0;
+    
+    // 2. 总平均分使用overall_average
+    const formattedAverage = overall_average || 0;
+    
+    // 3. 处理维度平均值
     let highestDimension = '';
     let highestScore = 0;
-
-    // 找出最低评分维度
     let lowestDimension = '';
-    let lowestScore = 10; // 初始设为最高可能分数
-    let hasValidScores = false; // 标记是否有有效的分数
-
-    // 获取实际存在的4个维度
-    const validDimensions = getAllDimensions();
-    console.log('[DEBUG] 实际存在的维度:', validDimensions);
-
-    if (dimension_averages) {
-        // 记录所有维度及其分数
-        console.log('[DEBUG] 所有维度及分数:');
-        Object.keys(dimension_averages).forEach(dim => {
-            console.log(`[DEBUG] 维度: ${dim}, 分数: ${dimension_averages[dim]}`);
-        });
-
-        // 只处理实际存在的4个维度
-        const scoreDimensions = validDimensions.filter(dim =>
-            typeof dimension_averages[dim] === 'number' && !isNaN(dimension_averages[dim])
-        );
-
-        console.log('[DEBUG] 过滤后的评分维度:', scoreDimensions);
-
-        // 如果没有评分维度，使用默认值
-        if (scoreDimensions.length === 0) {
-            console.warn('[DEBUG] 没有找到有效的评分维度');
-            highestDimension = 'quality';
-            highestScore = 0;
-            lowestDimension = 'usefulness';
-            lowestScore = 0;
-        } else {
-            hasValidScores = true;
-            // 计算最高和最低分数
-            scoreDimensions.forEach(dim => {
-                const score = dimension_averages[dim];
-                console.log(`[DEBUG] 处理维度 ${dim}, 分数: ${score}`);
-
-                // 检查最高分
-                if (score > highestScore) {
-                    highestScore = score;
-                    highestDimension = dim;
-                }
-
-                // 检查最低分
-                if (score < lowestScore) {
-                    lowestScore = score;
-                    lowestDimension = dim;
-                }
-            });
-        }
-    } else {
-        console.warn('[DEBUG] 维度平均值不存在');
-        // 使用默认值，但确保使用实际存在的维度
-        highestDimension = 'quality';
-        highestScore = 0;
-        lowestDimension = 'usefulness';
-        lowestScore = 0;
+    let lowestScore = 10;
+    
+    // 获取所有维度并按分数排序
+    const sortedDimensions = Object.entries(dimension_averages || {})
+        .filter(([_, score]) => typeof score === 'number')
+        .sort((a, b) => b[1] - a[1]);
+    
+    if (sortedDimensions.length > 0) {
+        // 最高分维度
+        highestDimension = sortedDimensions[0][0];
+        highestScore = sortedDimensions[0][1];
+        
+        // 最低分维度
+        lowestDimension = sortedDimensions[sortedDimensions.length - 1][0];
+        lowestScore = sortedDimensions[sortedDimensions.length - 1][1];
     }
 
-    // 如果没有有效的分数，将最低分设为0
-    if (!hasValidScores) {
-        lowestScore = 0;
-    }
-
-    console.log(`[DEBUG] 最高维度: ${highestDimension}, 分数: ${highestScore}`);
-    console.log(`[DEBUG] 最低维度: ${lowestDimension}, 分数: ${lowestScore}`);
-
-    // 格式化平均分，确保显示为小数点后一位
-    let formattedAverage = overall_average || 0;
-    // 如果平均分大于10，可能是格式问题，尝试除以10
-    if (formattedAverage > 10) {
-        formattedAverage = formattedAverage / 10;
-        console.log(`[DEBUG] 平均分大于10，调整为: ${formattedAverage}`);
-    }
-
-    // 创建统计卡片 HTML - 使用英文标签
+    // 创建统计卡片 HTML
     const cardsHtml = `
         <div class="col-md-3 mb-4">
             <div class="card shadow-sm">
@@ -344,7 +289,7 @@ function updateStatsCards() {
                     <div class="stat-icon text-primary">
                         <i class="fas fa-clipboard-list"></i>
                     </div>
-                    <div class="stat-value">${count || 0}</div>
+                    <div class="stat-value">${totalSamples}</div>
                     <div class="stat-label">Total Samples</div>
                 </div>
             </div>
