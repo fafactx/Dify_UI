@@ -33,16 +33,39 @@ const CHART_COLORS = {
  * @returns {Object|null} - 初始化的ECharts实例或null
  */
 function safeInitChart(elementId) {
-    const element = document.getElementById(elementId);
-    if (!element) {
-        console.warn(`图表容器元素不存在: #${elementId}`);
+    console.log(`[DEBUG] 开始初始化图表: #${elementId}`);
+
+    // 检查 echarts 是否已加载
+    if (typeof echarts === 'undefined') {
+        console.error(`[DEBUG] ECharts 库未加载，无法初始化图表: #${elementId}`);
         return null;
     }
 
+    const element = document.getElementById(elementId);
+    if (!element) {
+        console.warn(`[DEBUG] 图表容器元素不存在: #${elementId}`);
+        return null;
+    }
+
+    // 检查容器尺寸
+    const width = element.clientWidth;
+    const height = element.clientHeight;
+    console.log(`[DEBUG] 图表容器尺寸: width=${width}, height=${height}`);
+
+    if (width === 0 || height === 0) {
+        console.warn(`[DEBUG] 图表容器尺寸为零: #${elementId}, width=${width}, height=${height}`);
+        // 尝试设置最小高度
+        element.style.minHeight = '400px';
+        console.log(`[DEBUG] 已设置最小高度为 400px`);
+    }
+
     try {
-        return echarts.init(element);
+        console.log(`[DEBUG] 调用 echarts.init() 初始化图表: #${elementId}`);
+        const chart = echarts.init(element);
+        console.log(`[DEBUG] 图表初始化成功: #${elementId}`);
+        return chart;
     } catch (error) {
-        console.error(`初始化图表失败 #${elementId}:`, error);
+        console.error(`[DEBUG] 初始化图表失败 #${elementId}:`, error);
         return null;
     }
 }
@@ -73,12 +96,33 @@ function initCharts() {
  * @param {Object} dimensionAverages - 维度平均分对象
  */
 function updateRadarChart(dimensionAverages) {
-    if (!radarChart) return;
+    console.log(`[DEBUG] 开始更新雷达图，数据:`, dimensionAverages);
 
-    // 过滤掉非数值属性
-    const dimensions = Object.keys(dimensionAverages).filter(key =>
-        typeof dimensionAverages[key] === 'number' && key !== 'average_score'
+    if (!radarChart) {
+        console.error(`[DEBUG] 雷达图实例不存在，无法更新`);
+        return;
+    }
+
+    if (!dimensionAverages || typeof dimensionAverages !== 'object') {
+        console.error(`[DEBUG] 维度平均分数据无效:`, dimensionAverages);
+        return;
+    }
+
+    // 获取所有维度
+    const allDimensions = getAllDimensions();
+    console.log(`[DEBUG] 所有维度:`, allDimensions);
+
+    // 过滤掉非数值属性，但保留所有定义的维度
+    const dimensions = allDimensions.filter(dim =>
+        dim !== 'average_score'
     );
+
+    console.log(`[DEBUG] 过滤后的维度:`, dimensions);
+
+    if (dimensions.length === 0) {
+        console.warn(`[DEBUG] 没有有效的维度数据，无法更新雷达图`);
+        return;
+    }
 
     // 准备雷达图数据
     const indicator = dimensions.map(dim => ({
@@ -86,8 +130,10 @@ function updateRadarChart(dimensionAverages) {
         max: 10
     }));
 
+    console.log(`[DEBUG] 雷达图指标:`, indicator);
+
     const seriesData = [{
-        value: dimensions.map(dim => dimensionAverages[dim]),
+        value: dimensions.map(dim => dimensionAverages[dim] || 0), // 如果维度没有值，使用0
         name: '平均分',
         areaStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
@@ -96,6 +142,8 @@ function updateRadarChart(dimensionAverages) {
             ])
         }
     }];
+
+    console.log(`[DEBUG] 雷达图系列数据:`, seriesData);
 
     // 设置雷达图选项
     const option = {
@@ -128,11 +176,21 @@ function updateRadarChart(dimensionAverages) {
             indicator: indicator,
             shape: 'circle',
             splitNumber: 5,
+            radius: '70%', // 增大雷达图半径
+            center: ['50%', '55%'], // 调整中心位置
             axisName: {
                 color: '#666',
                 fontSize: 12,
-                padding: [3, 5]
+                padding: [3, 5],
+                formatter: function(value) {
+                    // 如果名称太长，截断并添加省略号
+                    if (value.length > 6) {
+                        return value.substring(0, 6) + '...';
+                    }
+                    return value;
+                }
             },
+            nameGap: 15, // 增加名称与轴的距离
             splitLine: {
                 lineStyle: {
                     color: 'rgba(211, 220, 235, 0.8)',
@@ -185,7 +243,13 @@ function updateRadarChart(dimensionAverages) {
     };
 
     // 设置图表选项
-    radarChart.setOption(option);
+    console.log(`[DEBUG] 设置雷达图选项:`, option);
+    try {
+        radarChart.setOption(option);
+        console.log(`[DEBUG] 雷达图选项设置成功`);
+    } catch (error) {
+        console.error(`[DEBUG] 设置雷达图选项失败:`, error);
+    }
 }
 
 /**
@@ -193,19 +257,50 @@ function updateRadarChart(dimensionAverages) {
  * @param {Object} dimensionAverages - 维度平均分对象
  */
 function updateBarChart(dimensionAverages) {
-    if (!barChart) return;
+    console.log(`[DEBUG] 开始更新柱状图，数据:`, dimensionAverages);
 
-    // 过滤掉非数值属性
-    const dimensions = Object.keys(dimensionAverages).filter(key =>
-        typeof dimensionAverages[key] === 'number' && key !== 'average_score'
+    if (!barChart) {
+        console.error(`[DEBUG] 柱状图实例不存在，无法更新`);
+        return;
+    }
+
+    if (!dimensionAverages || typeof dimensionAverages !== 'object') {
+        console.error(`[DEBUG] 维度平均分数据无效:`, dimensionAverages);
+        return;
+    }
+
+    // 获取所有维度
+    const allDimensions = getAllDimensions();
+    console.log(`[DEBUG] 所有维度:`, allDimensions);
+
+    // 过滤掉非数值属性，但保留所有定义的维度
+    const dimensions = allDimensions.filter(dim =>
+        dim !== 'average_score'
     );
 
+    console.log(`[DEBUG] 过滤后的维度:`, dimensions);
+
+    if (dimensions.length === 0) {
+        console.warn(`[DEBUG] 没有有效的维度数据，无法更新柱状图`);
+        return;
+    }
+
+    // 创建包含所有维度的对象，如果维度没有值，使用0
+    const completeData = {};
+    dimensions.forEach(dim => {
+        completeData[dim] = dimensionAverages[dim] || 0;
+    });
+
     // 按值排序
-    dimensions.sort((a, b) => dimensionAverages[b] - dimensionAverages[a]);
+    dimensions.sort((a, b) => completeData[b] - completeData[a]);
+    console.log(`[DEBUG] 排序后的维度:`, dimensions);
 
     // 准备柱状图数据
     const xAxisData = dimensions.map(dim => formatDimensionName(dim));
-    const seriesData = dimensions.map(dim => dimensionAverages[dim]);
+    const seriesData = dimensions.map(dim => completeData[dim]);
+
+    console.log(`[DEBUG] 柱状图X轴数据:`, xAxisData);
+    console.log(`[DEBUG] 柱状图系列数据:`, seriesData);
 
     // 设置柱状图选项
     const option = {
@@ -251,10 +346,17 @@ function updateBarChart(dimensionAverages) {
             data: xAxisData,
             axisLabel: {
                 interval: 0,
-                rotate: 30,
-                fontSize: 12,
+                rotate: 45, // 增加旋转角度，使标签更清晰
+                fontSize: 11, // 减小字体大小
                 color: '#666',
-                margin: 15
+                margin: 15,
+                formatter: function(value) {
+                    // 如果名称太长，截断并添加省略号
+                    if (value.length > 8) {
+                        return value.substring(0, 8) + '...';
+                    }
+                    return value;
+                }
             },
             axisLine: {
                 lineStyle: {
@@ -333,7 +435,13 @@ function updateBarChart(dimensionAverages) {
     };
 
     // 设置图表选项
-    barChart.setOption(option);
+    console.log(`[DEBUG] 设置柱状图选项:`, option);
+    try {
+        barChart.setOption(option);
+        console.log(`[DEBUG] 柱状图选项设置成功`);
+    } catch (error) {
+        console.error(`[DEBUG] 设置柱状图选项失败:`, error);
+    }
 }
 
 /**
@@ -485,6 +593,27 @@ function updateCompareChart(compareItems) {
 }
 
 /**
+ * 获取所有维度列表
+ * @returns {Array} 所有维度的数组
+ */
+function getAllDimensions() {
+    // 所有支持的维度列表
+    return [
+        'factual_accuracy',
+        'hallucination_control',
+        'professionalism',
+        'practicality',
+        'technical_depth',
+        'context_relevance',
+        'solution_completeness',
+        'actionability',
+        'clarity_structure',
+        'quality',
+        'usefulness'
+    ];
+}
+
+/**
  * 格式化维度名称
  * @param {string} dimension - 维度名称
  * @returns {string} 格式化后的维度名称
@@ -495,7 +624,7 @@ function formatDimensionName(dimension) {
         'factual_accuracy': '事实准确性',
         'hallucination_control': '幻觉控制',
         'professionalism': '专业性',
-        'practicality': '实用性',
+        'practicality': '实践性',  // 修改为"实践性"，与 usefulness 区分
         'technical_depth': '技术深度',
         'context_relevance': '上下文相关性',
         'solution_completeness': '解决方案完整性',
@@ -508,8 +637,69 @@ function formatDimensionName(dimension) {
     return dimensionMap[dimension] || dimension.replace(/_/g, ' ');
 }
 
+/**
+ * 测试图表初始化和渲染
+ * 用于检查 ECharts 库是否正确加载和图表容器是否正确初始化
+ */
+function testCharts() {
+    console.log(`[DEBUG] 开始测试图表初始化和渲染`);
+
+    // 检查 ECharts 库是否已加载
+    if (typeof echarts === 'undefined') {
+        console.error(`[DEBUG] ECharts 库未加载，无法初始化图表`);
+        return;
+    } else {
+        console.log(`[DEBUG] ECharts 库已加载，版本:`, echarts.version);
+    }
+
+    // 检查图表容器
+    const containers = ['radar-chart', 'bar-chart', 'compare-chart'];
+    containers.forEach(id => {
+        const element = document.getElementById(id);
+        if (!element) {
+            console.warn(`[DEBUG] 图表容器元素不存在: #${id}`);
+        } else {
+            const width = element.clientWidth;
+            const height = element.clientHeight;
+            console.log(`[DEBUG] 图表容器 #${id} 尺寸: width=${width}, height=${height}`);
+
+            if (width === 0 || height === 0) {
+                console.warn(`[DEBUG] 图表容器 #${id} 尺寸为零: width=${width}, height=${height}`);
+                // 尝试设置最小高度
+                element.style.minHeight = '400px';
+                console.log(`[DEBUG] 已设置 #${id} 最小高度为 400px`);
+            }
+        }
+    });
+
+    // 测试雷达图
+    const testRadarData = {
+        hallucination_control: 8,
+        quality: 7,
+        professionalism: 6,
+        usefulness: 5,
+        // 添加其他维度的测试数据
+        factual_accuracy: 9,
+        practicality: 4,
+        technical_depth: 7,
+        context_relevance: 8,
+        solution_completeness: 6,
+        actionability: 5,
+        clarity_structure: 7
+    };
+
+    console.log(`[DEBUG] 测试雷达图，使用测试数据:`, testRadarData);
+    updateRadarChart(testRadarData);
+
+    // 测试柱状图
+    console.log(`[DEBUG] 测试柱状图，使用测试数据:`, testRadarData);
+    updateBarChart(testRadarData);
+}
+
 // 将函数暴露到全局作用域，以便 main.js 可以访问
 window.updateRadarChart = updateRadarChart;
 window.updateBarChart = updateBarChart;
 window.updateCompareChart = updateCompareChart;
 window.formatDimensionName = formatDimensionName;
+window.getAllDimensions = getAllDimensions;
+window.testCharts = testCharts;
