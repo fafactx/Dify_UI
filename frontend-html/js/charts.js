@@ -33,13 +33,13 @@ const CHART_COLORS = {
 function initCharts() {
     // 初始化雷达图
     radarChart = echarts.init(document.getElementById('radar-chart'));
-    
+
     // 初始化柱状图
     barChart = echarts.init(document.getElementById('bar-chart'));
-    
+
     // 初始化对比图
     compareChart = echarts.init(document.getElementById('compare-chart'));
-    
+
     // 设置图表响应式
     window.addEventListener('resize', () => {
         radarChart.resize();
@@ -54,18 +54,18 @@ function initCharts() {
  */
 function updateRadarChart(dimensionAverages) {
     if (!radarChart) return;
-    
+
     // 过滤掉非数值属性
-    const dimensions = Object.keys(dimensionAverages).filter(key => 
+    const dimensions = Object.keys(dimensionAverages).filter(key =>
         typeof dimensionAverages[key] === 'number' && key !== 'average_score'
     );
-    
+
     // 准备雷达图数据
     const indicator = dimensions.map(dim => ({
         name: formatDimensionName(dim),
         max: 10
     }));
-    
+
     const seriesData = [{
         value: dimensions.map(dim => dimensionAverages[dim]),
         name: '平均分',
@@ -76,7 +76,7 @@ function updateRadarChart(dimensionAverages) {
             ])
         }
     }];
-    
+
     // 设置雷达图选项
     const option = {
         tooltip: {
@@ -123,7 +123,7 @@ function updateRadarChart(dimensionAverages) {
             }
         }]
     };
-    
+
     // 设置图表选项
     radarChart.setOption(option);
 }
@@ -134,19 +134,19 @@ function updateRadarChart(dimensionAverages) {
  */
 function updateBarChart(dimensionAverages) {
     if (!barChart) return;
-    
+
     // 过滤掉非数值属性
-    const dimensions = Object.keys(dimensionAverages).filter(key => 
+    const dimensions = Object.keys(dimensionAverages).filter(key =>
         typeof dimensionAverages[key] === 'number' && key !== 'average_score'
     );
-    
+
     // 按值排序
     dimensions.sort((a, b) => dimensionAverages[b] - dimensionAverages[a]);
-    
+
     // 准备柱状图数据
     const xAxisData = dimensions.map(dim => formatDimensionName(dim));
     const seriesData = dimensions.map(dim => dimensionAverages[dim]);
-    
+
     // 设置柱状图选项
     const option = {
         tooltip: {
@@ -204,7 +204,7 @@ function updateBarChart(dimensionAverages) {
             barWidth: '50%'
         }]
     };
-    
+
     // 设置图表选项
     barChart.setOption(option);
 }
@@ -215,30 +215,30 @@ function updateBarChart(dimensionAverages) {
  */
 function updateCompareChart(compareItems) {
     if (!compareChart || !compareItems || compareItems.length === 0) return;
-    
+
     // 获取所有维度
     const dimensions = new Set();
     compareItems.forEach(item => {
         Object.keys(item).forEach(key => {
-            if (typeof item[key] === 'number' && 
-                key !== 'timestamp' && 
-                key !== 'id' && 
-                key !== 'average_score' && 
+            if (typeof item[key] === 'number' &&
+                key !== 'timestamp' &&
+                key !== 'id' &&
+                key !== 'average_score' &&
                 !key.includes('_id')) {
                 dimensions.add(key);
             }
         });
     });
-    
+
     // 转换为数组并排序
     const dimensionArray = Array.from(dimensions).sort();
-    
+
     // 准备雷达图数据
     const indicator = dimensionArray.map(dim => ({
         name: formatDimensionName(dim),
         max: 10
     }));
-    
+
     const seriesData = compareItems.map((item, index) => ({
         value: dimensionArray.map(dim => item[dim] || 0),
         name: `评估 ${index + 1}`,
@@ -252,7 +252,7 @@ function updateCompareChart(compareItems) {
             ])
         }
     }));
-    
+
     // 设置雷达图选项
     const option = {
         tooltip: {
@@ -296,7 +296,7 @@ function updateCompareChart(compareItems) {
             symbolSize: 6
         }]
     };
-    
+
     // 设置图表选项
     compareChart.setOption(option);
 }
@@ -321,6 +321,12 @@ function formatDimensionName(dimension) {
         'quality': '质量',
         'usefulness': '实用性'
     };
-    
+
     return dimensionMap[dimension] || dimension.replace(/_/g, ' ');
 }
+
+// 将函数暴露到全局作用域，以便 main.js 可以访问
+window.updateRadarChart = updateRadarChart;
+window.updateBarChart = updateBarChart;
+window.updateCompareChart = updateCompareChart;
+window.formatDimensionName = formatDimensionName;
