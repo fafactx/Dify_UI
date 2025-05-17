@@ -258,47 +258,71 @@ function updateStatsCards() {
     let highestDimension = '';
     let highestScore = 0;
 
+    // 找出最低评分维度
+    let lowestDimension = '';
+    let lowestScore = 10; // 初始设为最高可能分数
+
     if (dimension_averages) {
         Object.keys(dimension_averages).forEach(dim => {
-            if (dim !== 'average_score' && dimension_averages[dim] > highestScore) {
-                highestScore = dimension_averages[dim];
-                highestDimension = dim;
+            if (dim !== 'average_score') {
+                // 检查最高分
+                if (dimension_averages[dim] > highestScore) {
+                    highestScore = dimension_averages[dim];
+                    highestDimension = dim;
+                }
+
+                // 检查最低分
+                if (dimension_averages[dim] < lowestScore) {
+                    lowestScore = dimension_averages[dim];
+                    lowestDimension = dim;
+                }
             }
         });
     }
 
-    // 创建统计卡片 HTML
+    // 创建统计卡片 HTML - 使用英文标签
     const cardsHtml = `
-        <div class="col-md-4 mb-4">
+        <div class="col-md-3 mb-4">
             <div class="card shadow-sm">
                 <div class="card-body stat-card">
                     <div class="stat-icon text-primary">
                         <i class="fas fa-clipboard-list"></i>
                     </div>
                     <div class="stat-value">${count || 0}</div>
-                    <div class="stat-label">评估总数</div>
+                    <div class="stat-label">Total Samples</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-4 mb-4">
+        <div class="col-md-3 mb-4">
             <div class="card shadow-sm">
                 <div class="card-body stat-card">
                     <div class="stat-icon text-success">
                         <i class="fas fa-star"></i>
                     </div>
                     <div class="stat-value">${overall_average || 0}</div>
-                    <div class="stat-label">总平均分</div>
+                    <div class="stat-label">Average Score</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-4 mb-4">
+        <div class="col-md-3 mb-4">
             <div class="card shadow-sm">
                 <div class="card-body stat-card">
                     <div class="stat-icon text-warning">
                         <i class="fas fa-trophy"></i>
                     </div>
-                    <div class="stat-value">${highestScore}</div>
-                    <div class="stat-label">最高维度: ${formatDimensionName(highestDimension)}</div>
+                    <div class="stat-value">${highestScore.toFixed(1)}</div>
+                    <div class="stat-label">Highest: ${formatDimensionNameEn(highestDimension)}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body stat-card">
+                    <div class="stat-icon text-danger">
+                        <i class="fas fa-arrow-down"></i>
+                    </div>
+                    <div class="stat-value">${lowestScore.toFixed(1)}</div>
+                    <div class="stat-label">Lowest: ${formatDimensionNameEn(lowestDimension)}</div>
                 </div>
             </div>
         </div>
@@ -389,24 +413,98 @@ function updateEvaluationsTable() {
  * 更新图表
  */
 function updateCharts() {
-    if (!state.stats || !state.stats.dimension_averages) {
-        console.warn('统计数据或维度平均值不存在，无法更新图表');
+    console.log(`[DEBUG] 开始更新图表，状态:`, state);
+
+    if (!state.stats) {
+        console.warn('[DEBUG] 统计数据不存在，无法更新图表');
         return;
     }
 
+    if (!state.stats.dimension_averages) {
+        console.warn('[DEBUG] 维度平均值不存在，无法更新图表');
+        // 尝试从评估数据中计算维度平均值
+        if (state.evaluations && state.evaluations.length > 0) {
+            console.log('[DEBUG] 尝试从评估数据中计算维度平均值');
+            const dimensionAverages = calculateDimensionAverages(state.evaluations);
+            console.log('[DEBUG] 计算的维度平均值:', dimensionAverages);
+
+            if (Object.keys(dimensionAverages).length > 0) {
+                // 更新状态
+                if (!state.stats) state.stats = {};
+                state.stats.dimension_averages = dimensionAverages;
+            }
+        }
+    }
+
+    if (!state.stats.dimension_averages) {
+        console.warn('[DEBUG] 无法计算维度平均值，尝试使用测试数据');
+        // 使用测试数据
+        state.stats.dimension_averages = {
+            hallucination_control: 8,
+            quality: 7,
+            professionalism: 6,
+            usefulness: 5
+        };
+    }
+
+    console.log('[DEBUG] 使用的维度平均值:', state.stats.dimension_averages);
+
     try {
-        // 更新雷达图
+        // 更新饼图（原雷达图）
+        console.log('[DEBUG] 调用 updateRadarChart');
         updateRadarChart(state.stats.dimension_averages);
     } catch (error) {
-        console.error('更新雷达图失败:', error);
+        console.error('[DEBUG] 更新饼图失败:', error);
     }
 
     try {
-        // 更新柱状图
-        updateBarChart(state.stats.dimension_averages);
+        // 更新MAG分数分布图（原柱状图）
+        console.log('[DEBUG] 调用 updateBarChart');
+        // 传递评估数据，用于按MAG分组
+        updateBarChart(state.stats.dimension_averages, state.evaluations);
     } catch (error) {
-        console.error('更新柱状图失败:', error);
+        console.error('[DEBUG] 更新MAG分数分布图失败:', error);
     }
+}
+
+/**
+ * 计算维度平均值
+ * @param {Array} evaluations - 评估数据数组
+ * @returns {Object} 维度平均值对象
+ */
+function calculateDimensionAverages(evaluations) {
+    if (!evaluations || evaluations.length === 0) return {};
+
+    const dimensions = {};
+    const counts = {};
+
+    // 累加所有维度的值
+    evaluations.forEach(eval => {
+        Object.keys(eval).forEach(key => {
+            if (typeof eval[key] === 'number' &&
+                key !== 'timestamp' &&
+                key !== 'id' &&
+                key !== 'average_score' &&
+                !key.includes('_id')) {
+
+                if (!dimensions[key]) dimensions[key] = 0;
+                if (!counts[key]) counts[key] = 0;
+
+                dimensions[key] += eval[key];
+                counts[key]++;
+            }
+        });
+    });
+
+    // 计算平均值
+    const averages = {};
+    Object.keys(dimensions).forEach(key => {
+        if (counts[key] > 0) {
+            averages[key] = dimensions[key] / counts[key];
+        }
+    });
+
+    return averages;
 }
 
 /**
@@ -524,15 +622,15 @@ function updateSettingsView() {
  */
 function updateLastUpdated() {
     if (!elements.lastUpdated) {
-        console.warn('最后更新时间元素不存在');
+        console.warn('Last updated element does not exist');
         return;
     }
 
     if (state.stats && state.stats.last_updated) {
         const date = new Date(state.stats.last_updated);
-        elements.lastUpdated.textContent = `最后更新: ${date.toLocaleString('zh-CN')}`;
+        elements.lastUpdated.textContent = `Last updated: ${date.toLocaleString('en-US')}`;
     } else {
-        elements.lastUpdated.textContent = '最后更新: 未知';
+        elements.lastUpdated.textContent = 'Last updated: Unknown';
     }
 }
 

@@ -92,14 +92,14 @@ function initCharts() {
 }
 
 /**
- * 更新雷达图
+ * 更新维度占比饼图
  * @param {Object} dimensionAverages - 维度平均分对象
  */
 function updateRadarChart(dimensionAverages) {
-    console.log(`[DEBUG] 开始更新雷达图，数据:`, dimensionAverages);
+    console.log(`[DEBUG] 开始更新维度占比饼图，数据:`, dimensionAverages);
 
     if (!radarChart) {
-        console.error(`[DEBUG] 雷达图实例不存在，无法更新`);
+        console.error(`[DEBUG] 饼图实例不存在，无法更新`);
         return;
     }
 
@@ -120,35 +120,28 @@ function updateRadarChart(dimensionAverages) {
     console.log(`[DEBUG] 过滤后的维度:`, dimensions);
 
     if (dimensions.length === 0) {
-        console.warn(`[DEBUG] 没有有效的维度数据，无法更新雷达图`);
+        console.warn(`[DEBUG] 没有有效的维度数据，无法更新饼图`);
         return;
     }
 
-    // 准备雷达图数据
-    const indicator = dimensions.map(dim => ({
-        name: formatDimensionName(dim),
-        max: 10
+    // 准备饼图数据
+    const data = dimensions.map((dim, index) => ({
+        name: formatDimensionNameEn(dim),
+        value: dimensionAverages[dim] || 0,
+        itemStyle: {
+            color: CHART_COLORS.gradients[index % 5][0]
+        }
     }));
 
-    console.log(`[DEBUG] 雷达图指标:`, indicator);
+    // 按值排序
+    data.sort((a, b) => b.value - a.value);
 
-    const seriesData = [{
-        value: dimensions.map(dim => dimensionAverages[dim] || 0), // 如果维度没有值，使用0
-        name: '平均分',
-        areaStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                { offset: 0, color: 'rgba(74, 107, 255, 0.6)' },
-                { offset: 1, color: 'rgba(74, 107, 255, 0.1)' }
-            ])
-        }
-    }];
+    console.log(`[DEBUG] 饼图数据:`, data);
 
-    console.log(`[DEBUG] 雷达图系列数据:`, seriesData);
-
-    // 设置雷达图选项
+    // 设置饼图选项
     const option = {
         title: {
-            text: '维度评分雷达图',
+            text: 'Dimension Proportion',
             left: 'center',
             textStyle: {
                 fontSize: 18,
@@ -159,153 +152,270 @@ function updateRadarChart(dimensionAverages) {
         },
         tooltip: {
             trigger: 'item',
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            borderColor: '#e2e2e2',
-            borderWidth: 1,
+            formatter: '{a} <br/>{b}: {c} ({d}%)'
+        },
+        legend: {
+            orient: 'horizontal',
+            bottom: 10,
+            data: data.map(item => item.name),
+            type: 'scroll',
+            pageIconSize: 12,
+            pageTextStyle: {
+                color: '#666'
+            },
             textStyle: {
-                color: '#333'
-            },
-            formatter: function(params) {
-                const dimIndex = params.dataIndex;
-                const dim = dimensions[dimIndex];
-                return `<div style="font-weight:bold;margin-bottom:5px;">${params.name}</div>` +
-                       `<div>${params.marker} ${formatDimensionName(dim)}: ${params.value}</div>`;
-            }
-        },
-        radar: {
-            indicator: indicator,
-            shape: 'circle',
-            splitNumber: 5,
-            radius: '70%', // 增大雷达图半径
-            center: ['50%', '55%'], // 调整中心位置
-            axisName: {
                 color: '#666',
-                fontSize: 12,
-                padding: [3, 5],
-                formatter: function(value) {
-                    // 如果名称太长，截断并添加省略号
-                    if (value.length > 6) {
-                        return value.substring(0, 6) + '...';
-                    }
-                    return value;
-                }
-            },
-            nameGap: 15, // 增加名称与轴的距离
-            splitLine: {
-                lineStyle: {
-                    color: 'rgba(211, 220, 235, 0.8)',
-                    width: 1
-                }
-            },
-            splitArea: {
-                show: true,
-                areaStyle: {
-                    color: ['rgba(255, 255, 255, 0.5)', 'rgba(245, 250, 255, 0.5)'],
-                    shadowColor: 'rgba(0, 0, 0, 0.05)',
-                    shadowBlur: 10
-                }
-            },
-            axisLine: {
-                lineStyle: {
-                    color: 'rgba(211, 220, 235, 0.8)'
-                }
+                fontSize: 12
             }
         },
-        series: [{
-            type: 'radar',
-            data: seriesData,
-            symbol: 'circle',
-            symbolSize: 8,
-            lineStyle: {
-                width: 3,
-                color: CHART_COLORS.primary,
-                shadowColor: 'rgba(74, 107, 255, 0.3)',
-                shadowBlur: 5
-            },
-            emphasis: {
-                lineStyle: {
-                    width: 5
-                },
+        series: [
+            {
+                name: 'Score',
+                type: 'pie',
+                radius: ['40%', '70%'],
+                center: ['50%', '50%'],
+                avoidLabelOverlap: true,
                 itemStyle: {
-                    shadowColor: 'rgba(74, 107, 255, 0.5)',
-                    shadowBlur: 10
+                    borderRadius: 10,
+                    borderColor: '#fff',
+                    borderWidth: 2
+                },
+                label: {
+                    show: true,
+                    position: 'outside',
+                    formatter: '{b}: {c}',
+                    fontSize: 12,
+                    fontWeight: 'bold'
+                },
+                emphasis: {
+                    label: {
+                        show: true,
+                        fontSize: 14,
+                        fontWeight: 'bold'
+                    },
+                    itemStyle: {
+                        shadowBlur: 10,
+                        shadowOffsetX: 0,
+                        shadowColor: 'rgba(0, 0, 0, 0.5)'
+                    }
+                },
+                labelLine: {
+                    show: true,
+                    length: 15,
+                    length2: 10,
+                    smooth: true
+                },
+                data: data,
+                animationType: 'scale',
+                animationEasing: 'elasticOut',
+                animationDelay: function (idx) {
+                    return idx * 100;
                 }
-            },
-            itemStyle: {
-                color: CHART_COLORS.primary,
-                borderColor: '#fff',
-                borderWidth: 2
             }
-        }],
-        animation: true,
-        animationDuration: 1000,
-        animationEasing: 'elasticOut'
+        ]
     };
 
     // 设置图表选项
-    console.log(`[DEBUG] 设置雷达图选项:`, option);
+    console.log(`[DEBUG] 设置饼图选项:`, option);
     try {
         radarChart.setOption(option);
-        console.log(`[DEBUG] 雷达图选项设置成功`);
+        console.log(`[DEBUG] 饼图选项设置成功`);
     } catch (error) {
-        console.error(`[DEBUG] 设置雷达图选项失败:`, error);
+        console.error(`[DEBUG] 设置饼图选项失败:`, error);
     }
 }
 
 /**
- * 更新柱状图
+ * 更新MAG分数分布图
  * @param {Object} dimensionAverages - 维度平均分对象
+ * @param {Array} evaluations - 评估数据数组，用于计算MAG分布
  */
-function updateBarChart(dimensionAverages) {
-    console.log(`[DEBUG] 开始更新柱状图，数据:`, dimensionAverages);
+function updateBarChart(dimensionAverages, evaluations) {
+    console.log(`[DEBUG] 开始更新MAG分数分布图，数据:`, dimensionAverages);
 
     if (!barChart) {
-        console.error(`[DEBUG] 柱状图实例不存在，无法更新`);
+        console.error(`[DEBUG] 图表实例不存在，无法更新`);
         return;
     }
 
-    if (!dimensionAverages || typeof dimensionAverages !== 'object') {
-        console.error(`[DEBUG] 维度平均分数据无效:`, dimensionAverages);
+    // MAG是一个独立的字段，不是评分维度
+    const MAG_FIELD = 'MAG';
+
+    // 如果没有评估数据，使用维度平均分
+    if (!evaluations || evaluations.length === 0) {
+        console.warn(`[DEBUG] 没有评估数据，无法计算MAG分布`);
+
+        // 创建一个简单的散点图，显示所有维度的平均分
+        const data = [];
+        Object.keys(dimensionAverages).forEach(dim => {
+            if (dim !== 'average_score') {
+                data.push([formatDimensionNameEn(dim), dimensionAverages[dim]]);
+            }
+        });
+
+        // 排序数据
+        data.sort((a, b) => a[1] - b[1]);
+
+        // 设置图表选项
+        const option = {
+            title: {
+                text: 'Dimension Score Distribution',
+                left: 'center',
+                textStyle: {
+                    fontSize: 18,
+                    fontWeight: 'bold',
+                    color: '#333'
+                },
+                padding: [20, 0, 0, 0]
+            },
+            tooltip: {
+                trigger: 'axis',
+                formatter: function(params) {
+                    const param = params[0];
+                    return `<div style="font-weight:bold;margin-bottom:5px;">${param.name}</div>` +
+                           `<div>${param.marker} Score: ${param.value[1].toFixed(1)}</div>`;
+                }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '10%',
+                top: '15%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: data.map(item => item[0]),
+                axisLabel: {
+                    interval: 0,
+                    rotate: 45,
+                    fontSize: 11,
+                    color: '#666'
+                }
+            },
+            yAxis: {
+                type: 'value',
+                name: 'Score',
+                nameLocation: 'middle',
+                nameGap: 30,
+                min: 0,
+                max: 10,
+                splitNumber: 5
+            },
+            series: [{
+                name: 'Score',
+                type: 'line',
+                data: data.map(item => item[1]),
+                smooth: true,
+                symbol: 'circle',
+                symbolSize: 8,
+                itemStyle: {
+                    color: CHART_COLORS.primary
+                },
+                lineStyle: {
+                    width: 3,
+                    color: CHART_COLORS.primary
+                },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: 'rgba(74, 107, 255, 0.6)' },
+                        { offset: 1, color: 'rgba(74, 107, 255, 0.1)' }
+                    ])
+                },
+                label: {
+                    show: true,
+                    position: 'top',
+                    formatter: function(params) {
+                        return params.value.toFixed(1);
+                    },
+                    fontSize: 12,
+                    fontWeight: 'bold'
+                }
+            }]
+        };
+
+        try {
+            barChart.setOption(option);
+            console.log(`[DEBUG] MAG分数分布图选项设置成功`);
+        } catch (error) {
+            console.error(`[DEBUG] 设置MAG分数分布图选项失败:`, error);
+        }
+
         return;
     }
 
-    // 获取所有维度
-    const allDimensions = getAllDimensions();
-    console.log(`[DEBUG] 所有维度:`, allDimensions);
+    console.log(`[DEBUG] 评估数据样本:`, evaluations[0]);
 
-    // 过滤掉非数值属性，但保留所有定义的维度
-    const dimensions = allDimensions.filter(dim =>
-        dim !== 'average_score'
-    );
+    // 按MAG值分组
+    const magGroups = {};
 
-    console.log(`[DEBUG] 过滤后的维度:`, dimensions);
+    // 遍历所有评估数据
+    evaluations.forEach(eval => {
+        if (eval[MAG_FIELD]) {
+            // 使用MAG字段的值作为分组键
+            const magValue = eval[MAG_FIELD];
 
-    if (dimensions.length === 0) {
-        console.warn(`[DEBUG] 没有有效的维度数据，无法更新柱状图`);
-        return;
-    }
+            // 初始化分组
+            if (!magGroups[magValue]) {
+                magGroups[magValue] = {
+                    count: 0,
+                    totalScore: 0
+                };
+            }
 
-    // 创建包含所有维度的对象，如果维度没有值，使用0
-    const completeData = {};
-    dimensions.forEach(dim => {
-        completeData[dim] = dimensionAverages[dim] || 0;
+            // 计算该评估的平均分
+            let totalScore = 0;
+            let dimensionCount = 0;
+
+            // 计算评分维度的平均值
+            Object.keys(eval).forEach(dim => {
+                if (typeof eval[dim] === 'number' &&
+                    dim !== 'timestamp' &&
+                    dim !== 'id' &&
+                    dim !== 'average_score' &&
+                    !dim.includes('_id')) {
+                    totalScore += eval[dim];
+                    dimensionCount++;
+                }
+            });
+
+            // 如果有average_score字段，直接使用
+            const avgScore = eval.average_score || (dimensionCount > 0 ? totalScore / dimensionCount : 0);
+
+            // 更新分组数据
+            magGroups[magValue].count++;
+            magGroups[magValue].totalScore += avgScore;
+        }
     });
 
-    // 按值排序
-    dimensions.sort((a, b) => completeData[b] - completeData[a]);
-    console.log(`[DEBUG] 排序后的维度:`, dimensions);
+    console.log(`[DEBUG] MAG分组:`, magGroups);
 
-    // 准备柱状图数据
-    const xAxisData = dimensions.map(dim => formatDimensionName(dim));
-    const seriesData = dimensions.map(dim => completeData[dim]);
+    // 计算每个MAG组的平均分
+    const data = [];
+    Object.keys(magGroups).forEach(mag => {
+        const group = magGroups[mag];
+        const avgScore = group.totalScore / group.count;
+        data.push([mag, avgScore, group.count]);
+    });
 
-    console.log(`[DEBUG] 柱状图X轴数据:`, xAxisData);
-    console.log(`[DEBUG] 柱状图系列数据:`, seriesData);
+    // 排序数据（按MAG值）
+    data.sort((a, b) => {
+        // 尝试提取MAG值中的数字部分进行排序
+        const numA = a[0].match(/\d+/);
+        const numB = b[0].match(/\d+/);
 
-    // 设置柱状图选项
+        if (numA && numB) {
+            return parseInt(numA[0]) - parseInt(numB[0]);
+        }
+
+        // 如果无法提取数字，按字符串排序
+        return a[0].localeCompare(b[0]);
+    });
+
+    // 设置图表选项
     const option = {
         title: {
-            text: '维度评分排名',
+            text: 'MAG Correlation Chart',
             left: 'center',
             textStyle: {
                 fontSize: 18,
@@ -316,22 +426,11 @@ function updateBarChart(dimensionAverages) {
         },
         tooltip: {
             trigger: 'axis',
-            axisPointer: {
-                type: 'shadow',
-                shadowStyle: {
-                    color: 'rgba(0, 0, 0, 0.05)'
-                }
-            },
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            borderColor: '#e2e2e2',
-            borderWidth: 1,
-            textStyle: {
-                color: '#333'
-            },
             formatter: function(params) {
                 const param = params[0];
-                return `<div style="font-weight:bold;margin-bottom:5px;">${param.name}</div>` +
-                       `<div>${param.marker} ${param.seriesName}: ${param.value}</div>`;
+                return `<div style="font-weight:bold;margin-bottom:5px;">MAG: ${param.value[0]}</div>` +
+                       `<div>${param.marker} Average Score: ${param.value[1].toFixed(2)}</div>` +
+                       `<div>Sample Count: ${param.value[2]}</div>`;
             }
         },
         grid: {
@@ -343,104 +442,68 @@ function updateBarChart(dimensionAverages) {
         },
         xAxis: {
             type: 'category',
-            data: xAxisData,
+            name: 'MAG',
+            nameLocation: 'middle',
+            nameGap: 30,
+            data: data.map(item => item[0]),
             axisLabel: {
                 interval: 0,
-                rotate: 45, // 增加旋转角度，使标签更清晰
-                fontSize: 11, // 减小字体大小
-                color: '#666',
-                margin: 15,
-                formatter: function(value) {
-                    // 如果名称太长，截断并添加省略号
-                    if (value.length > 8) {
-                        return value.substring(0, 8) + '...';
-                    }
-                    return value;
-                }
-            },
-            axisLine: {
-                lineStyle: {
-                    color: '#ddd'
-                }
-            },
-            axisTick: {
-                alignWithLabel: true,
-                lineStyle: {
-                    color: '#ddd'
-                }
+                fontSize: 12,
+                color: '#666'
             }
         },
         yAxis: {
             type: 'value',
+            name: 'Average Score',
+            nameLocation: 'middle',
+            nameGap: 40,
+            min: 0,
             max: 10,
-            splitNumber: 5,
-            axisLine: {
-                show: false
-            },
-            axisTick: {
-                show: false
-            },
-            splitLine: {
-                lineStyle: {
-                    color: '#eee',
-                    type: 'dashed'
-                }
-            },
-            axisLabel: {
-                color: '#666'
-            }
+            splitNumber: 5
         },
         series: [{
-            name: '平均分',
-            type: 'bar',
-            data: seriesData,
-            itemStyle: {
-                color: function(params) {
-                    // 使用渐变色
-                    return new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                        { offset: 0, color: CHART_COLORS.gradients[params.dataIndex % 5][0] },
-                        { offset: 1, color: CHART_COLORS.gradients[params.dataIndex % 5][1] }
-                    ]);
-                },
-                borderRadius: [5, 5, 0, 0],
-                shadowColor: 'rgba(0, 0, 0, 0.1)',
-                shadowBlur: 5,
-                shadowOffsetY: 2
+            name: 'Average Score',
+            type: 'line',
+            data: data.map(item => [item[0], item[1], item[2]]),
+            smooth: true,
+            symbol: 'circle',
+            symbolSize: function(value) {
+                // 根据样本数量调整点的大小
+                const count = value[2];
+                return Math.max(8, Math.min(20, 8 + count / 2));
             },
-            emphasis: {
-                itemStyle: {
-                    shadowBlur: 15,
-                    shadowOffsetX: 0,
-                    shadowColor: 'rgba(0, 0, 0, 0.3)'
-                }
+            itemStyle: {
+                color: CHART_COLORS.primary
+            },
+            lineStyle: {
+                width: 3,
+                color: CHART_COLORS.primary
+            },
+            areaStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: 'rgba(74, 107, 255, 0.6)' },
+                    { offset: 1, color: 'rgba(74, 107, 255, 0.1)' }
+                ])
             },
             label: {
                 show: true,
                 position: 'top',
-                formatter: '{c}',
+                formatter: function(params) {
+                    return params.value[1].toFixed(1);
+                },
                 fontSize: 12,
-                fontWeight: 'bold',
-                color: '#555'
-            },
-            barWidth: '60%',
-            animationType: 'scale',
-            animationEasing: 'elasticOut',
-            animationDelay: function (idx) {
-                return idx * 100;
+                fontWeight: 'bold'
             }
-        }],
-        animation: true,
-        animationDuration: 1000,
-        animationEasing: 'elasticOut'
+        }]
     };
 
     // 设置图表选项
-    console.log(`[DEBUG] 设置柱状图选项:`, option);
+    console.log(`[DEBUG] 设置MAG分数分布图选项:`, option);
     try {
         barChart.setOption(option);
-        console.log(`[DEBUG] 柱状图选项设置成功`);
+        console.log(`[DEBUG] MAG分数分布图选项设置成功`);
     } catch (error) {
-        console.error(`[DEBUG] 设置柱状图选项失败:`, error);
+        console.error(`[DEBUG] 设置MAG分数分布图选项失败:`, error);
     }
 }
 
@@ -614,7 +677,7 @@ function getAllDimensions() {
 }
 
 /**
- * 格式化维度名称
+ * 格式化维度名称（中文）
  * @param {string} dimension - 维度名称
  * @returns {string} 格式化后的维度名称
  */
@@ -635,6 +698,30 @@ function formatDimensionName(dimension) {
     };
 
     return dimensionMap[dimension] || dimension.replace(/_/g, ' ');
+}
+
+/**
+ * 格式化维度名称（英文）
+ * @param {string} dimension - 维度名称
+ * @returns {string} 格式化后的英文维度名称
+ */
+function formatDimensionNameEn(dimension) {
+    // 维度名称映射（英文）
+    const dimensionMapEn = {
+        'factual_accuracy': 'Factual Accuracy',
+        'hallucination_control': 'Hallucination Control',
+        'professionalism': 'Professionalism',
+        'practicality': 'Practicality',
+        'technical_depth': 'Technical Depth',
+        'context_relevance': 'Context Relevance',
+        'solution_completeness': 'Solution Completeness',
+        'actionability': 'Actionability',
+        'clarity_structure': 'Clarity & Structure',
+        'quality': 'Quality',
+        'usefulness': 'Usefulness'
+    };
+
+    return dimensionMapEn[dimension] || dimension.replace(/_/g, ' ');
 }
 
 /**
@@ -701,5 +788,6 @@ window.updateRadarChart = updateRadarChart;
 window.updateBarChart = updateBarChart;
 window.updateCompareChart = updateCompareChart;
 window.formatDimensionName = formatDimensionName;
+window.formatDimensionNameEn = formatDimensionNameEn;
 window.getAllDimensions = getAllDimensions;
 window.testCharts = testCharts;

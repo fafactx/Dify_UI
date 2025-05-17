@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="description" content="Dify 评估结果可视化仪表板">
-    <title>Dify 评估结果可视化仪表板</title>
+    <meta name="description" content="Dify Evaluation Results Dashboard">
+    <title>Dify Evaluation Results Dashboard</title>
 
     <!-- 预加载关键资源 -->
     <link rel="preload" href="js/api.js" as="script">
@@ -27,7 +27,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container-fluid">
             <a class="navbar-brand" href="#">
-                <i class="fas fa-chart-line me-2"></i>Dify 评估仪表板
+                <i class="fas fa-chart-line me-2"></i>Dify Evaluation Dashboard
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -36,26 +36,26 @@
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
                         <a class="nav-link active" href="#" id="dashboard-link">
-                            <i class="fas fa-tachometer-alt me-1"></i>仪表板
+                            <i class="fas fa-tachometer-alt me-1"></i>Dashboard
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="#" id="compare-link">
-                            <i class="fas fa-balance-scale me-1"></i>对比
+                            <i class="fas fa-balance-scale me-1"></i>Compare
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="#" id="settings-link">
-                            <i class="fas fa-cog me-1"></i>设置
+                            <i class="fas fa-cog me-1"></i>Settings
                         </a>
                     </li>
                 </ul>
                 <div class="d-flex">
                     <span class="navbar-text me-3" id="last-updated">
-                        最后更新: 加载中...
+                        Last updated: Loading...
                     </span>
                     <button class="btn btn-outline-light" id="refresh-btn">
-                        <i class="fas fa-sync-alt me-1"></i>刷新
+                        <i class="fas fa-sync-alt me-1"></i>Refresh
                     </button>
                 </div>
             </div>
@@ -84,7 +84,7 @@
                 <div class="col-md-6 mb-4">
                     <div class="card shadow-sm">
                         <div class="card-header bg-light">
-                            <h5 class="card-title mb-0">评分维度分布</h5>
+                            <h5 class="card-title mb-0">Dimension Proportion</h5>
                         </div>
                         <div class="card-body">
                             <div id="radar-chart" style="height: 400px;"></div>
@@ -94,7 +94,7 @@
                 <div class="col-md-6 mb-4">
                     <div class="card shadow-sm">
                         <div class="card-header bg-light">
-                            <h5 class="card-title mb-0">评分维度对比</h5>
+                            <h5 class="card-title mb-0">MAG Correlation Chart</h5>
                         </div>
                         <div class="card-body">
                             <div id="bar-chart" style="height: 400px;"></div>
