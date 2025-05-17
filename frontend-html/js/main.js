@@ -216,6 +216,31 @@ function showView(viewName) {
         case 'dashboard':
             elements.dashboardView.classList.remove('d-none');
             elements.dashboardLink.classList.add('active');
+
+            // 当切换到仪表板视图时，确保图表正确显示
+            setTimeout(() => {
+                console.log('[DEBUG] 切换到仪表板视图，确保图表正确显示');
+
+                // 确保图表容器有尺寸
+                const containers = ['radar-chart', 'bar-chart'];
+                containers.forEach(id => {
+                    const container = document.getElementById(id);
+                    if (container) {
+                        container.style.width = '100%';
+                        container.style.height = '400px';
+                        container.style.display = 'block';
+                        console.log(`[DEBUG] 设置 #${id} 容器尺寸`);
+                    }
+                });
+
+                // 强制重绘图表
+                if (typeof window.forceResizeCharts === 'function') {
+                    window.forceResizeCharts();
+                }
+
+                // 更新图表数据
+                updateCharts();
+            }, 100);
             break;
         case 'compare':
             elements.compareView.classList.remove('d-none');

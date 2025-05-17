@@ -263,5 +263,58 @@
     <script src="js/api.js"></script>
     <script src="js/charts.js"></script>
     <script src="js/main.js"></script>
+
+    <!-- 全局辅助脚本 -->
+    <script>
+        // 页面加载完成后执行
+        window.addEventListener('load', function() {
+            console.log('[DEBUG] 页面完全加载，执行额外初始化');
+
+            // 延迟执行，确保所有DOM元素都已渲染
+            setTimeout(function() {
+                // 确保图表容器有尺寸
+                const containers = ['radar-chart', 'bar-chart', 'compare-chart'];
+                containers.forEach(id => {
+                    const container = document.getElementById(id);
+                    if (container) {
+                        // 设置明确的尺寸
+                        container.style.width = '100%';
+                        container.style.height = '400px';
+                        container.style.position = 'relative';
+                        container.style.display = 'block';
+                        console.log(`[DEBUG] 页面加载后设置 #${id} 容器尺寸`);
+                    }
+                });
+
+                // 强制重绘图表
+                if (typeof window.forceResizeCharts === 'function') {
+                    window.forceResizeCharts();
+                    console.log('[DEBUG] 页面加载后强制重绘图表');
+                }
+
+                // 添加全局重绘按钮
+                const refreshAllBtn = document.createElement('button');
+                refreshAllBtn.className = 'btn btn-primary position-fixed';
+                refreshAllBtn.style.bottom = '20px';
+                refreshAllBtn.style.right = '20px';
+                refreshAllBtn.style.zIndex = '1000';
+                refreshAllBtn.innerHTML = '<i class="fas fa-sync-alt me-1"></i>刷新所有图表';
+                refreshAllBtn.onclick = function() {
+                    if (typeof window.diagnoseDashboard === 'function') {
+                        window.diagnoseDashboard();
+                    }
+                };
+                document.body.appendChild(refreshAllBtn);
+            }, 1000);
+
+            // 监听窗口大小变化，重绘图表
+            window.addEventListener('resize', function() {
+                if (typeof window.forceResizeCharts === 'function') {
+                    window.forceResizeCharts();
+                    console.log('[DEBUG] 窗口大小变化，重绘图表');
+                }
+            });
+        });
+    </script>
 </body>
 </html>

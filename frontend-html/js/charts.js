@@ -66,20 +66,40 @@ function safeInitChart(elementId) {
     const height = element.clientHeight;
     console.log(`[DEBUG] 图表容器尺寸: width=${width}, height=${height}`);
 
-    // 确保容器有足够的尺寸
-    if (width === 0 || height === 0) {
-        console.warn(`[DEBUG] 图表容器尺寸为零: #${elementId}, width=${width}, height=${height}`);
+    // 确保容器有足够的尺寸 - 无论尺寸如何，都强制设置
+    console.log(`[DEBUG] 强制设置图表容器尺寸: #${elementId}`);
 
-        // 设置内联样式确保容器有尺寸
-        element.style.width = '100%';
-        element.style.height = '400px';
-        element.style.position = 'relative';
+    // 设置内联样式确保容器有尺寸
+    element.style.width = '100%';
+    element.style.height = '400px';
+    element.style.position = 'relative';
+    element.style.display = 'block'; // 确保容器是可见的
 
-        console.log(`[DEBUG] 已设置容器尺寸: width=100%, height=400px`);
-
-        // 强制浏览器重新计算布局
-        element.offsetHeight;
+    // 设置父元素样式
+    const parentElement = element.parentElement;
+    if (parentElement) {
+        parentElement.style.minHeight = '400px';
+        parentElement.style.width = '100%';
+        parentElement.style.display = 'block';
     }
+
+    // 设置卡片体样式
+    const cardBody = element.closest('.card-body');
+    if (cardBody) {
+        cardBody.style.minHeight = '400px';
+        cardBody.style.padding = '1rem';
+        cardBody.style.display = 'block';
+    }
+
+    console.log(`[DEBUG] 已设置容器及父元素尺寸`);
+
+    // 强制浏览器重新计算布局
+    element.offsetHeight;
+
+    // 再次检查尺寸
+    const newWidth = element.clientWidth;
+    const newHeight = element.clientHeight;
+    console.log(`[DEBUG] 设置后的图表容器尺寸: width=${newWidth}, height=${newHeight}`);
 
     try {
         // 检查是否已经有图表实例
@@ -95,13 +115,22 @@ function safeInitChart(elementId) {
 
         console.log(`[DEBUG] 调用 echarts.init() 初始化图表: #${elementId}`);
 
+        // 确保容器在DOM中可见
+        const originalDisplay = element.style.display;
+        element.style.display = 'block';
+
         // 使用更多选项初始化
         const chart = window.echarts.init(element, null, {
             renderer: 'canvas',
             useDirtyRect: false,
-            width: 'auto',
-            height: 'auto'
+            width: element.clientWidth || 400,
+            height: element.clientHeight || 400
         });
+
+        // 恢复原始显示状态（如果需要）
+        if (originalDisplay && originalDisplay !== 'block') {
+            element.style.display = originalDisplay;
+        }
 
         console.log(`[DEBUG] 图表初始化成功: #${elementId}`);
 
