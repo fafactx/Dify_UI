@@ -979,115 +979,299 @@
             if (chartDom) {
                 const myChart = echarts.init(chartDom);
 
-                // 生成随机产品数据
-                function generateProductData() {
-                    // 模拟产品数据 - 在实际应用中，这些数据应该从后端API获取
-                    // 这里我们模拟4个产品，每个产品有不同的平均得分
+                // 显示加载动画
+                myChart.showLoading({
+                    text: 'Loading data...',
+                    color: '#3B82F6',
+                    textColor: '#000',
+                    maskColor: 'rgba(255, 255, 255, 0.8)',
+                    zlevel: 0
+                });
 
-                    // 颜色数组
-                    const colors = [
-                        '#3B82F6', '#10B981', '#EF4444', '#F59E0B',
-                        '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'
-                    ];
+                // 从后端获取产品数据
+                fetchProductData()
+                    .then(productData => {
+                        // 隐藏加载动画
+                        myChart.hideLoading();
 
-                    // 产品数据 - 包含产品号和平均得分
-                    const productData = [
-                        {
-                            name: 'PN-1001',
-                            value: 85,  // 平均得分
-                            itemStyle: { color: colors[0] }
-                        },
-                        {
-                            name: 'PN-1002',
-                            value: 78,
-                            itemStyle: { color: colors[1] }
-                        },
-                        {
-                            name: 'PN-1003',
-                            value: 92,
-                            itemStyle: { color: colors[2] }
-                        },
-                        {
-                            name: 'PN-1004',
-                            value: 67,
-                            itemStyle: { color: colors[3] }
-                        }
-                    ];
+                        // 处理产品数据
+                        const processedData = processProductData(productData);
 
-                    return productData;
+                        // 设置图表配置
+                        const option = createProductChartOption(processedData);
+
+                        // 应用图表配置
+                        myChart.setOption(option);
+
+                        // 响应窗口大小变化
+                        window.addEventListener('resize', function() {
+                            myChart.resize();
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error fetching product data:', error);
+                        myChart.hideLoading();
+
+                        // 显示错误信息
+                        myChart.setOption({
+                            title: {
+                                text: 'Error loading data',
+                                left: 'center',
+                                top: 'center',
+                                textStyle: {
+                                    color: '#EF4444',
+                                    fontSize: 16
+                                }
+                            }
+                        });
+                    });
+            }
+        }
+
+        // 从后端获取产品数据
+        // 这个函数从后端API获取评估数据
+        async function fetchProductData() {
+            try {
+                // 显示加载消息
+                console.log('正在从后端获取评估数据...');
+
+                // 构建API URL
+                const apiBaseUrl = getApiBaseUrl();
+                const url = `${apiBaseUrl}/api/evaluations`;
+
+                // 发起请求
+                const response = await fetch(url);
+
+                // 检查响应状态
+                if (!response.ok) {
+                    throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
                 }
 
-                // 生成产品数据
-                const productData = generateProductData();
+                // 解析响应数据
+                const data = await response.json();
 
-                // 图表配置
-                const option = {
-                    title: {
-                        text: 'Product Average Scores',
-                        left: 'center',
-                        top: 0,
-                        textStyle: {
-                            fontSize: 14
-                        }
-                    },
-                    tooltip: {
-                        trigger: 'item',
-                        formatter: function(params) {
-                            // 自定义提示框内容
-                            return `${params.seriesName}<br/>
-                                    ${params.name}: ${params.value} points<br/>
-                                    Proportion: ${params.percent}%`;
-                        }
-                    },
-                    legend: {
-                        type: 'scroll',
-                        orient: 'vertical',
-                        right: 10,
-                        top: 'center',
-                        formatter: function(name) {
-                            // 查找对应的数据项
-                            const item = productData.find(item => item.name === name);
-                            return `${name}: ${item ? item.value : 0} points`;
-                        }
-                    },
-                    series: [
-                        {
-                            name: 'Product Score',
-                            type: 'pie',
-                            radius: ['40%', '70%'],
-                            avoidLabelOverlap: false,
-                            itemStyle: {
-                                borderRadius: 10,
-                                borderColor: '#fff',
-                                borderWidth: 2
-                            },
-                            label: {
-                                show: false,
-                                position: 'center'
-                            },
-                            emphasis: {
-                                label: {
-                                    show: true,
-                                    fontSize: '16',
-                                    fontWeight: 'bold',
-                                    formatter: '{b}: {c} points'
-                                }
-                            },
-                            labelLine: {
-                                show: false
-                            },
-                            data: productData
-                        }
-                    ]
+                // 检查数据格式
+                if (!data || !data.evaluations || !Array.isArray(data.evaluations)) {
+                    console.warn('后端返回的数据格式不正确:', data);
+                    // 如果数据格式不正确，使用模拟数据
+                    return generateMockRawData(100);
+                }
+
+                // 转换评估数据为所需格式
+                const rawData = transformEvaluationData(data.evaluations);
+                console.log(`成功获取 ${rawData.length} 条评估数据`);
+
+                return rawData;
+            } catch (error) {
+                console.error('获取评估数据失败:', error);
+                // 出错时使用模拟数据
+                console.log('使用模拟数据代替...');
+                return generateMockRawData(100);
+            }
+        }
+
+        // 获取API基础URL
+        function getApiBaseUrl() {
+            // 如果在同一域名下，使用相对路径
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                // 本地开发环境，使用固定端口
+                return 'http://localhost:3000';
+            } else {
+                // 生产环境，假设API在同一主机的3000端口
+                return `${window.location.protocol}//${window.location.hostname}:3000`;
+            }
+        }
+
+        // 转换评估数据为所需格式
+        function transformEvaluationData(evaluations) {
+            // 定义维度字段
+            const dimensions = [
+                'hallucination_control',
+                'quality',
+                'professionalism',
+                'usefulness'
+            ];
+
+            // 转换数据
+            return evaluations.map((evaluation, index) => {
+                // 提取产品ID
+                // 假设产品ID存储在某个字段中，如果不存在则生成一个
+                const productId = evaluation.product_id ||
+                                 `PN-${1000 + (index % 4)}`;  // 如果没有产品ID，生成一个
+
+                // 提取各维度得分
+                const scores = {};
+                dimensions.forEach(dim => {
+                    if (evaluation[dim] !== undefined) {
+                        scores[formatDimensionNameEn(dim)] = evaluation[dim];
+                    }
+                });
+
+                // 使用已有的平均分或计算平均分
+                const averageScore = evaluation.average_score ||
+                                    (Object.values(scores).length > 0 ?
+                                     Object.values(scores).reduce((sum, score) => sum + score, 0) / Object.values(scores).length :
+                                     0);
+
+                // 返回转换后的数据
+                return {
+                    id: evaluation.id || index + 1,
+                    productId: productId,
+                    scores: scores,
+                    averageScore: averageScore
                 };
+            });
+        }
 
-                myChart.setOption(option);
+        // 格式化维度名称（英文）
+        function formatDimensionNameEn(dimension) {
+            // 只保留4个实际使用的维度的映射
+            const dimensionMapEn = {
+                'hallucination_control': 'Hallucination Control',
+                'quality': 'Quality',
+                'professionalism': 'Professionalism',
+                'usefulness': 'Usefulness'
+            };
 
-                // 响应窗口大小变化
-                window.addEventListener('resize', function() {
-                    myChart.resize();
+            return dimensionMapEn[dimension] || dimension.replace(/_/g, ' ');
+        }
+
+        // 生成模拟原始数据（当API请求失败时使用）
+        function generateMockRawData(sampleCount) {
+            const productIds = ['PN-1001', 'PN-1002', 'PN-1003', 'PN-1004'];
+            const dimensions = ['Hallucination Control', 'Quality', 'Professionalism', 'Usefulness'];
+            const rawData = [];
+
+            for (let i = 0; i < sampleCount; i++) {
+                // 随机选择一个产品ID
+                const productId = productIds[Math.floor(Math.random() * productIds.length)];
+
+                // 为每个维度生成随机得分 (50-100)
+                const scores = {};
+                dimensions.forEach(dim => {
+                    scores[dim] = Math.floor(Math.random() * 51) + 50;
+                });
+
+                // 计算平均得分
+                const avgScore = Object.values(scores).reduce((sum, score) => sum + score, 0) / dimensions.length;
+
+                // 添加到原始数据
+                rawData.push({
+                    id: i + 1,
+                    productId: productId,
+                    scores: scores,
+                    averageScore: avgScore
                 });
             }
+
+            return rawData;
+        }
+
+        // 处理产品数据 - 计算每个产品的平均得分
+        function processProductData(rawData) {
+            // 按产品ID分组
+            const productGroups = {};
+
+            // 遍历原始数据，按产品ID分组
+            rawData.forEach(sample => {
+                if (!productGroups[sample.productId]) {
+                    productGroups[sample.productId] = [];
+                }
+                productGroups[sample.productId].push(sample);
+            });
+
+            // 计算每个产品的平均得分
+            const processedData = [];
+            const colors = [
+                '#3B82F6', '#10B981', '#EF4444', '#F59E0B',
+                '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'
+            ];
+
+            let colorIndex = 0;
+            for (const [productId, samples] of Object.entries(productGroups)) {
+                // 计算该产品所有样本的平均得分
+                const totalScore = samples.reduce((sum, sample) => sum + sample.averageScore, 0);
+                const averageScore = Math.round(totalScore / samples.length);
+
+                // 添加到处理后的数据
+                processedData.push({
+                    name: productId,
+                    value: averageScore,
+                    sampleCount: samples.length,
+                    itemStyle: { color: colors[colorIndex % colors.length] }
+                });
+
+                colorIndex++;
+            }
+
+            return processedData;
+        }
+
+        // 创建产品图表配置
+        function createProductChartOption(processedData) {
+            return {
+                title: {
+                    text: 'Product Average Scores',
+                    left: 'center',
+                    top: 0,
+                    textStyle: {
+                        fontSize: 14
+                    }
+                },
+                tooltip: {
+                    trigger: 'item',
+                    formatter: function(params) {
+                        // 查找对应的数据项
+                        const item = processedData.find(item => item.name === params.name);
+
+                        // 自定义提示框内容
+                        return `${params.seriesName}<br/>
+                                ${params.name}: ${params.value} points<br/>
+                                Samples: ${item ? item.sampleCount : 0}<br/>
+                                Proportion: ${params.percent}%`;
+                    }
+                },
+                legend: {
+                    type: 'scroll',
+                    orient: 'vertical',
+                    right: 10,
+                    top: 'center',
+                    formatter: function(name) {
+                        // 查找对应的数据项
+                        const item = processedData.find(item => item.name === name);
+                        return `${name}: ${item ? item.value : 0} pts (${item ? item.sampleCount : 0})`;
+                    }
+                },
+                series: [
+                    {
+                        name: 'Product Score',
+                        type: 'pie',
+                        radius: ['40%', '70%'],
+                        avoidLabelOverlap: false,
+                        itemStyle: {
+                            borderRadius: 10,
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        },
+                        label: {
+                            show: false,
+                            position: 'center'
+                        },
+                        emphasis: {
+                            label: {
+                                show: true,
+                                fontSize: '16',
+                                fontWeight: 'bold',
+                                formatter: '{b}: {c} points'
+                            }
+                        },
+                        labelLine: {
+                            show: false
+                        },
+                        data: processedData
+                    }
+                ]
+            };
         }
 
         // 初始化相关性图表
