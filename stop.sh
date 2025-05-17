@@ -15,15 +15,21 @@ else
 fi
 
 echo "步骤 2: 停止前端服务"
+# 检查是否有 Python HTTP 服务器运行
 FRONTEND_PID=$(pgrep -f "SimpleHTTPServer 3001\|http.server 3001")
 if [ ! -z "$FRONTEND_PID" ]; then
-    echo "发现前端服务进程 $FRONTEND_PID，正在终止..."
+    echo "发现 Python HTTP 服务进程 $FRONTEND_PID，正在终止..."
     kill $FRONTEND_PID 2>/dev/null || kill -9 $FRONTEND_PID 2>/dev/null
     sleep 1
-    echo "前端服务已终止"
-else
-    echo "未发现运行中的前端服务"
+    echo "Python HTTP 服务已终止"
 fi
+
+# 停止 Nginx 前端服务
+echo "停止 Nginx 前端服务..."
+cd frontend-html
+chmod +x stop-nginx.sh
+./stop-nginx.sh
+cd ..
 
 echo "所有服务已停止"
 echo "如需重新启动服务，请运行 ./deploy.sh"

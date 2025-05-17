@@ -66,10 +66,10 @@ if [ ! -z "$PORT_PID" ]; then
     echo "进程已终止"
 fi
 
-echo "步骤 5: 启动 HTML5 前端服务"
+echo "步骤 5: 启动 Nginx 前端服务"
 cd frontend-html
-chmod +x deploy.sh
-./deploy.sh
+chmod +x deploy-nginx.sh
+./deploy-nginx.sh
 cd ..
 
 echo "步骤 6: 服务访问信息"
