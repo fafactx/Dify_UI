@@ -140,6 +140,27 @@ start_services() {
                 echo "安装后端依赖失败，请检查 Node.js 是否正确安装"
                 exit 1
             fi
+
+            # 检查是否安装了 better-sqlite3
+            if ! npm list | grep -q "better-sqlite3"; then
+                echo "安装 SQLite 数据库依赖..."
+                npm install better-sqlite3@8.5.0
+                if [ $? -ne 0 ]; then
+                    echo "安装 SQLite 数据库依赖失败，请检查是否有合适的编译环境"
+                    echo "尝试安装预编译版本..."
+                    npm install better-sqlite3@8.5.0 --build-from-source
+                    if [ $? -ne 0 ]; then
+                        echo "警告: SQLite 数据库依赖安装失败，系统将使用文件存储模式"
+                    else
+                        echo "SQLite 数据库依赖安装成功"
+                    fi
+                else
+                    echo "SQLite 数据库依赖安装成功"
+                fi
+            else
+                echo "SQLite 数据库依赖已安装"
+            fi
+
             echo "后端依赖安装完成"
             cd ..
 
@@ -157,6 +178,18 @@ start_services() {
     cd backend
     echo "创建数据目录"
     mkdir -p data
+
+    # 确保数据库目录存在
+    mkdir -p data/db
+
+    # 检查是否需要初始化数据库
+    if [ ! -f "data/evaluations.db" ]; then
+        echo "初始化 SQLite 数据库..."
+        # 如果数据库文件不存在，将在首次运行时自动创建
+        echo "数据库将在首次运行时自动创建"
+    else
+        echo "SQLite 数据库已存在"
+    fi
 
     echo "步骤 2: 检查并终止占用 $BACKEND_PORT 端口的进程"
     PORT_PID=$(lsof -t -i:$BACKEND_PORT 2>/dev/null)

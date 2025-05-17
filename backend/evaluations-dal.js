@@ -1,0 +1,346 @@
+// evaluations-dal.js - 评估数据访问层
+
+const { getDatabase } = require('./database');
+
+class EvaluationsDAL {
+  constructor(dbPath) {
+    this.db = getDatabase(dbPath);
+  }
+  
+  // 保存新的评估数据
+  saveEvaluation(resultKey, evaluationData) {
+    const timestamp = Date.now();
+    const date = new Date(timestamp).toISOString();
+    
+    try {
+      // 开始事务
+      const transaction = this.db.transaction(() => {
+        // 插入评估数据
+        const insertStmt = this.db.prepare(`
+          INSERT INTO evaluations (result_key, timestamp, date, data)
+          VALUES (?, ?, ?, ?)
+          ON CONFLICT(result_key) DO UPDATE SET
+          timestamp = excluded.timestamp,
+          date = excluded.date,
+          data = excluded.data
+        `);
+        
+        const result = insertStmt.run(resultKey, timestamp, date, JSON.stringify(evaluationData));
+        
+        // 更新产品信息
+        this._updateProductInfo(evaluationData['Part Number'], evaluationData['Product Family']);
+        
+        // 更新MAG信息
+        if (evaluationData['MAG']) {
+          this._updateMagInfo(evaluationData['MAG']);
+        }
+        
+        // 清除统计缓存，强制下次请求重新计算
+        this._clearStatsCache();
+        
+        return result;
+      });
+      
+      return transaction();
+    } catch (error) {
+      console.error('Error saving evaluation:', error);
+      throw error;
+    }
+  }
+  
+  // 获取所有评估数据（支持分页和过滤）
+  getEvaluations(options = {}) {
+    const {
+      page = 1,
+      limit = 20,
+      productFamily,
+      partNumber,
+      mag,
+      questionCategory,
+      complexity,
+      sortBy = 'timestamp',
+      sortOrder = 'desc'
+    } = options;
+    
+    const offset = (page - 1) * limit;
+    
+    // 构建查询条件
+    let whereClause = '1=1';
+    const params = [];
+    
+    if (productFamily) {
+      whereClause += ' AND product_family = ?';
+      params.push(productFamily);
+    }
+    
+    if (partNumber) {
+      whereClause += ' AND part_number = ?';
+      params.push(partNumber);
+    }
+    
+    if (mag) {
+      whereClause += ' AND mag = ?';
+      params.push(mag);
+    }
+    
+    if (questionCategory) {
+      whereClause += ' AND question_category = ?';
+      params.push(questionCategory);
+    }
+    
+    if (complexity) {
+      whereClause += ' AND question_complexity = ?';
+      params.push(complexity);
+    }
+    
+    // 验证排序字段
+    const validSortFields = ['timestamp', 'average_score', 'hallucination_control', 'quality', 'professionalism', 'usefulness'];
+    const sortField = validSortFields.includes(sortBy) ? sortBy : 'timestamp';
+    
+    // 验证排序顺序
+    const order = sortOrder.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+    
+    // 查询总记录数
+    const countStmt = this.db.prepare(`
+      SELECT COUNT(*) as total FROM evaluations
+      WHERE ${whereClause}
+    `);
+    
+    const { total } = countStmt.get(...params);
+    
+    // 查询评估数据
+    const query = `
+      SELECT id, result_key, timestamp, date, data
+      FROM evaluations
+      WHERE ${whereClause}
+      ORDER BY ${sortField} ${order}
+      LIMIT ? OFFSET ?
+    `;
+    
+    const stmt = this.db.prepare(query);
+    const evaluations = stmt.all(...params, limit, offset);
+    
+    // 处理结果
+    const results = evaluations.map(row => {
+      const data = JSON.parse(row.data);
+      return {
+        id: row.id,
+        result_key: row.result_key,
+        timestamp: row.timestamp,
+        date: row.date,
+        ...data
+      };
+    });
+    
+    return {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      data: results
+    };
+  }
+  
+  // 获取单个评估详情
+  getEvaluationById(id) {
+    const stmt = this.db.prepare(`
+      SELECT id, result_key, timestamp, date, data
+      FROM evaluations
+      WHERE id = ?
+    `);
+    
+    const evaluation = stmt.get(id);
+    
+    if (!evaluation) {
+      return null;
+    }
+    
+    return {
+      id: evaluation.id,
+      result_key: evaluation.result_key,
+      timestamp: evaluation.timestamp,
+      date: evaluation.date,
+      ...JSON.parse(evaluation.data)
+    };
+  }
+  
+  // 获取总体统计概览
+  getStatsOverview() {
+    // 尝试从缓存获取
+    const cachedStats = this._getStatsFromCache('overview');
+    if (cachedStats) {
+      return cachedStats;
+    }
+    
+    // 计算统计数据
+    const totalStmt = this.db.prepare('SELECT COUNT(*) as count FROM evaluations');
+    const { count } = totalStmt.get();
+    
+    const avgStmt = this.db.prepare(`
+      SELECT 
+        AVG(average_score) as overall_average,
+        AVG(hallucination_control) as hallucination_control,
+        AVG(quality) as quality,
+        AVG(professionalism) as professionalism,
+        AVG(usefulness) as usefulness
+      FROM evaluations
+    `);
+    
+    const averages = avgStmt.get();
+    
+    const productFamilyStmt = this.db.prepare(`
+      SELECT COUNT(DISTINCT product_family) as count
+      FROM evaluations
+    `);
+    
+    const { count: productFamilyCount } = productFamilyStmt.get();
+    
+    const partNumberStmt = this.db.prepare(`
+      SELECT COUNT(DISTINCT part_number) as count
+      FROM evaluations
+    `);
+    
+    const { count: partNumberCount } = partNumberStmt.get();
+    
+    const magStmt = this.db.prepare(`
+      SELECT COUNT(DISTINCT mag) as count
+      FROM evaluations
+    `);
+    
+    const { count: magCount } = magStmt.get();
+    
+    const lastUpdatedStmt = this.db.prepare(`
+      SELECT MAX(timestamp) as last_updated
+      FROM evaluations
+    `);
+    
+    const { last_updated } = lastUpdatedStmt.get();
+    
+    // 构建结果
+    const stats = {
+      count,
+      overall_average: averages.overall_average || 0,
+      dimension_averages: {
+        hallucination_control: averages.hallucination_control || 0,
+        quality: averages.quality || 0,
+        professionalism: averages.professionalism || 0,
+        usefulness: averages.usefulness || 0
+      },
+      product_family_count: productFamilyCount,
+      part_number_count: partNumberCount,
+      mag_count: magCount,
+      last_updated
+    };
+    
+    // 缓存结果
+    this._saveStatsToCache('overview', stats);
+    
+    return stats;
+  }
+  
+  // 私有方法：更新产品信息
+  _updateProductInfo(partNumber, productFamily) {
+    if (!partNumber) return;
+    
+    const timestamp = Date.now();
+    
+    // 计算产品的评估数量和平均分
+    const statsStmt = this.db.prepare(`
+      SELECT 
+        COUNT(*) as count,
+        AVG(average_score) as avg_score
+      FROM evaluations
+      WHERE part_number = ?
+    `);
+    
+    const { count, avg_score } = statsStmt.get(partNumber);
+    
+    // 更新或插入产品信息
+    const upsertStmt = this.db.prepare(`
+      INSERT INTO products (part_number, product_family, last_updated, evaluation_count, avg_score)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(part_number) DO UPDATE SET
+        product_family = excluded.product_family,
+        last_updated = excluded.last_updated,
+        evaluation_count = excluded.evaluation_count,
+        avg_score = excluded.avg_score
+    `);
+    
+    upsertStmt.run(partNumber, productFamily, timestamp, count, avg_score || 0);
+  }
+  
+  // 私有方法：更新MAG信息
+  _updateMagInfo(mag) {
+    if (!mag) return;
+    
+    const timestamp = Date.now();
+    
+    // 计算MAG的评估数量和平均分
+    const statsStmt = this.db.prepare(`
+      SELECT 
+        COUNT(*) as count,
+        AVG(average_score) as avg_score
+      FROM evaluations
+      WHERE mag = ?
+    `);
+    
+    const { count, avg_score } = statsStmt.get(mag);
+    
+    // 更新或插入MAG信息
+    const upsertStmt = this.db.prepare(`
+      INSERT INTO mags (mag_id, last_updated, evaluation_count, avg_score)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(mag_id) DO UPDATE SET
+        last_updated = excluded.last_updated,
+        evaluation_count = excluded.evaluation_count,
+        avg_score = excluded.avg_score
+    `);
+    
+    upsertStmt.run(mag, timestamp, count, avg_score || 0);
+  }
+  
+  // 私有方法：从缓存获取统计数据
+  _getStatsFromCache(id) {
+    const cacheMaxAge = 5 * 60 * 1000; // 5分钟缓存
+    
+    const stmt = this.db.prepare(`
+      SELECT data, last_updated
+      FROM stats_cache
+      WHERE id = ?
+    `);
+    
+    const cache = stmt.get(id);
+    
+    if (cache) {
+      // 检查缓存是否过期
+      if (Date.now() - cache.last_updated < cacheMaxAge) {
+        return JSON.parse(cache.data);
+      }
+    }
+    
+    return null;
+  }
+  
+  // 私有方法：保存统计数据到缓存
+  _saveStatsToCache(id, data) {
+    const timestamp = Date.now();
+    
+    const stmt = this.db.prepare(`
+      INSERT INTO stats_cache (id, data, last_updated)
+      VALUES (?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        data = excluded.data,
+        last_updated = excluded.last_updated
+    `);
+    
+    stmt.run(id, JSON.stringify(data), timestamp);
+  }
+  
+  // 私有方法：清除统计缓存
+  _clearStatsCache() {
+    const stmt = this.db.prepare('DELETE FROM stats_cache');
+    stmt.run();
+  }
+}
+
+module.exports = EvaluationsDAL;

@@ -16,8 +16,8 @@ const { Logger } = require('./utils/logger');
 // 导入备份工具
 const { createBackup } = require('./utils/backup');
 
-// 导入产品API模块
-const registerProductAPI = require('./product-api');
+// 导入API路由
+const apiRoutes = require('./api-routes');
 
 // 加载配置
 let config;
@@ -275,8 +275,8 @@ async function updateIndex(filename, fileData) {
   fs.writeFileSync(indexPath, JSON.stringify(index, null, 2));
 }
 
-// 注册产品API路由
-registerProductAPI(app, config, logger);
+// 注册API路由
+app.use('/api', apiRoutes);
 
 // 添加404处理中间件
 app.use(notFound);
