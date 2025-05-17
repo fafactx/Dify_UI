@@ -15,6 +15,10 @@ INSTALL=false
 # 显示帮助信息
 show_help() {
     echo "Dify 评估结果可视化框架服务脚本"
+    echo "======================================"
+    echo "描述: 此脚本用于启动或停止 Dify 评估结果可视化框架的前端和后端服务"
+    echo "      支持使用 Python HTTP 服务器或 Nginx 部署前端"
+    echo ""
     echo "用法: $0 [选项]"
     echo ""
     echo "选项:"
@@ -24,15 +28,26 @@ show_help() {
     echo "  --host=HOST             指定主机地址 (默认: 10.193.21.115)"
     echo "  --frontend-type=TYPE    指定前端服务类型，python 或 nginx (默认: python)"
     echo "  --install               安装依赖 (仅在 start 操作时有效)"
-    echo "  --help                  显示此帮助信息"
+    echo "  --help, -h              显示此帮助信息"
+    echo ""
+    echo "前端类型说明:"
+    echo "  python - 使用 Python 内置的 HTTP 服务器部署前端，简单易用，适合开发环境"
+    echo "  nginx  - 使用 Nginx 部署前端，性能更好，适合生产环境"
     echo ""
     echo "示例:"
-    echo "  $0 --action=start                   # 启动服务"
-    echo "  $0 --action=start --install         # 安装依赖并启动服务"
-    echo "  $0 --action=stop                    # 停止服务"
-    echo "  $0 --frontend-port=8080 --backend-port=8000  # 使用自定义端口"
-    echo "  $0 --action=start --frontend-type=nginx      # 使用 Nginx 部署前端"
-    echo "  $0 --action=start --frontend-type=python     # 使用 Python HTTP 服务器部署前端"
+    echo "  $0 --action=start                              # 启动服务"
+    echo "  $0 --action=start --install                    # 安装依赖并启动服务"
+    echo "  $0 --action=stop                               # 停止服务"
+    echo "  $0 --frontend-port=8080 --backend-port=8000    # 使用自定义端口"
+    echo "  $0 --action=start --frontend-type=nginx        # 使用 Nginx 部署前端"
+    echo "  $0 --action=start --frontend-type=python       # 使用 Python HTTP 服务器部署前端"
+    echo "  $0 -h                                          # 显示帮助信息"
+    echo ""
+    echo "注意:"
+    echo "  1. 如果使用 Nginx 部署前端，请确保已安装 Nginx"
+    echo "  2. 如果使用 Python HTTP 服务器部署前端，请确保已安装 Python"
+    echo "  3. 启动服务后，可以通过浏览器访问 http://HOST:FRONTEND_PORT 使用可视化仪表板"
+    echo "  4. 停止服务时，会终止所有相关进程"
 }
 
 # 解析命令行参数
@@ -62,14 +77,14 @@ while [[ $# -gt 0 ]]; do
             INSTALL=true
             shift
             ;;
-        --help)
+        --help|-h)
             show_help
             exit 0
             ;;
         *)
             # 未知参数
             echo "错误: 未知参数 $1"
-            echo "使用 --help 查看帮助信息"
+            echo "使用 --help 或 -h 查看帮助信息"
             exit 1
             ;;
     esac
@@ -85,14 +100,14 @@ FRONTEND_TYPE=${FRONTEND_TYPE:-$DEFAULT_FRONTEND_TYPE}
 # 验证 ACTION 参数
 if [[ "$ACTION" != "start" && "$ACTION" != "stop" ]]; then
     echo "错误: --action 参数必须是 start 或 stop"
-    echo "使用 --help 查看帮助信息"
+    echo "使用 --help 或 -h 查看帮助信息"
     exit 1
 fi
 
 # 验证 FRONTEND_TYPE 参数
 if [[ "$FRONTEND_TYPE" != "python" && "$FRONTEND_TYPE" != "nginx" ]]; then
     echo "错误: --frontend-type 参数必须是 python 或 nginx"
-    echo "使用 --help 查看帮助信息"
+    echo "使用 --help 或 -h 查看帮助信息"
     exit 1
 fi
 
