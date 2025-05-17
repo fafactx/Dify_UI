@@ -4,12 +4,11 @@
   "description": "Dify 评估结果可视化仪表板",
   "private": true,
   "scripts": {
-    "install:all": "npm run install:backend && npm run install:frontend",
+    "install:all": "npm run install:backend",
     "install:backend": "cd backend && npm install",
-    "install:frontend": "cd frontend && npm install",
     "start": "npm run start:backend & npm run start:frontend",
     "start:backend": "cd backend && node server.js",
-    "start:frontend": "cd frontend && npm run dev",
+    "start:frontend": "cd frontend-html && python -m http.server 3001 || python -m SimpleHTTPServer 3001",
     "setup": "node scripts/setup.js"
   },
   "keywords": [

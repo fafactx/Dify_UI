@@ -27,15 +27,7 @@ if [ "$1" = "--install" ]; then
         echo "后端依赖安装完成"
         cd ..
 
-        echo "安装前端依赖..."
-        cd frontend
-        npm install
-        if [ $? -ne 0 ]; then
-            echo "安装前端依赖失败，请检查 Node.js 是否正确安装"
-            exit 1
-        fi
-        echo "前端依赖安装完成"
-        cd ..
+        echo "前端使用 HTML5，无需安装依赖"
     fi
 
     # 运行设置脚本
@@ -91,11 +83,12 @@ echo "服务已在后台运行，您可以关闭此终端"
 echo ""
 echo "如需查看日志，请运行:"
 echo "  tail -f backend/backend.log  # 查看后端日志"
-echo "  tail -f frontend/frontend.log  # 查看前端日志"
+echo "  tail -f frontend-html/frontend.log  # 查看前端日志"
 echo ""
 echo "如需停止服务，请运行:"
 echo "  pkill -f 'node server.js'  # 停止后端"
-echo "  pkill -f 'vite'  # 停止前端"
+echo "  pkill -f 'SimpleHTTPServer 3001\\|http.server 3001'  # 停止前端"
+echo "  或者直接运行 ./stop.sh"
 echo ""
 echo "提示: 如果需要安装依赖，请使用 ./deploy.sh --install"
 
