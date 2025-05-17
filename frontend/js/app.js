@@ -147,13 +147,34 @@ createApp({
 
     // 方法：初始化图表
     const initCharts = () => {
+      console.log("开始初始化图表");
+      console.log("统计数据:", JSON.stringify(stats.value));
+      console.log("评估数据:", JSON.stringify(evaluations.value));
+
       // 初始化雷达图和柱状图
-      initRadarChart(stats.value);
-      initBarChart(stats.value);
+      try {
+        console.log("初始化雷达图");
+        initRadarChart(stats.value);
+        console.log("雷达图初始化完成");
+
+        console.log("初始化柱状图");
+        initBarChart(stats.value);
+        console.log("柱状图初始化完成");
+      } catch (error) {
+        console.error("初始化图表出错:", error);
+      }
 
       // 初始化时间趋势图
       if (evaluations.value.length > 0) {
-        initTrendChart(evaluations.value);
+        try {
+          console.log("初始化时间趋势图");
+          initTrendChart(evaluations.value);
+          console.log("时间趋势图初始化完成");
+        } catch (error) {
+          console.error("初始化时间趋势图出错:", error);
+        }
+      } else {
+        console.log("没有评估数据，跳过时间趋势图初始化");
       }
     };
 

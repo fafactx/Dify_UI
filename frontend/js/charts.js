@@ -35,18 +35,31 @@ const dimensionLabels = {
 
 // 初始化雷达图
 function initRadarChart(stats) {
-  const ctx = document.getElementById('radarChart').getContext('2d');
-  
+  console.log("initRadarChart 函数开始执行");
+  console.log("stats 参数:", JSON.stringify(stats));
+
+  const radarElement = document.getElementById('radarChart');
+  if (!radarElement) {
+    console.error("找不到 radarChart 元素");
+    return;
+  }
+
+  const ctx = radarElement.getContext('2d');
+  console.log("获取到 canvas 上下文");
+
   // 如果图表已存在，销毁它
   if (radarChart) {
+    console.log("销毁现有雷达图");
     radarChart.destroy();
   }
-  
+
   // 准备数据
+  console.log("dimension_averages:", JSON.stringify(stats.dimension_averages));
   const dimensions = Object.keys(stats.dimension_averages || {}).filter(
     key => key !== 'average_score'
   );
-  
+  console.log("过滤后的维度:", dimensions);
+
   const data = {
     labels: dimensions.map(dim => dimensionLabels[dim] || dim),
     datasets: [{
@@ -61,7 +74,8 @@ function initRadarChart(stats) {
       pointHoverBorderColor: chartColors.primary
     }]
   };
-  
+  console.log("准备的图表数据:", JSON.stringify(data));
+
   // 创建图表
   radarChart = new Chart(ctx, {
     type: 'radar',
@@ -95,17 +109,17 @@ function initRadarChart(stats) {
 // 初始化柱状图
 function initBarChart(stats) {
   const ctx = document.getElementById('barChart').getContext('2d');
-  
+
   // 如果图表已存在，销毁它
   if (barChart) {
     barChart.destroy();
   }
-  
+
   // 准备数据
   const dimensions = Object.keys(stats.dimension_averages || {}).filter(
     key => key !== 'average_score'
   );
-  
+
   const data = {
     labels: dimensions.map(dim => dimensionLabels[dim] || dim),
     datasets: [{
@@ -116,7 +130,7 @@ function initBarChart(stats) {
       borderWidth: 1
     }]
   };
-  
+
   // 创建图表
   barChart = new Chart(ctx, {
     type: 'bar',
@@ -147,19 +161,19 @@ function initBarChart(stats) {
 // 初始化详情雷达图
 function initDetailRadarChart(item) {
   const ctx = document.getElementById('detailRadarChart').getContext('2d');
-  
+
   // 如果图表已存在，销毁它
   if (detailRadarChart) {
     detailRadarChart.destroy();
   }
-  
+
   // 准备数据
   const dimensions = [
-    'factual_accuracy', 'hallucination_control', 'professionalism', 
-    'practicality', 'technical_depth', 'context_relevance', 
+    'factual_accuracy', 'hallucination_control', 'professionalism',
+    'practicality', 'technical_depth', 'context_relevance',
     'solution_completeness', 'actionability', 'clarity_structure'
   ];
-  
+
   const data = {
     labels: dimensions.map(dim => dimensionLabels[dim] || dim),
     datasets: [{
@@ -174,7 +188,7 @@ function initDetailRadarChart(item) {
       pointHoverBorderColor: chartColors.primary
     }]
   };
-  
+
   // 创建图表
   detailRadarChart = new Chart(ctx, {
     type: 'radar',
@@ -208,14 +222,14 @@ function initDetailRadarChart(item) {
 // 初始化对比图表
 function initCompareChart(items) {
   const ctx = document.getElementById('compareChart').getContext('2d');
-  
+
   // 准备数据
   const dimensions = [
-    'factual_accuracy', 'hallucination_control', 'professionalism', 
-    'practicality', 'technical_depth', 'context_relevance', 
+    'factual_accuracy', 'hallucination_control', 'professionalism',
+    'practicality', 'technical_depth', 'context_relevance',
     'solution_completeness', 'actionability', 'clarity_structure'
   ];
-  
+
   const datasets = items.map((item, index) => {
     const colors = Object.values(chartColors);
     return {
@@ -226,7 +240,7 @@ function initCompareChart(items) {
       borderWidth: 2
     };
   });
-  
+
   // 创建图表
   new Chart(ctx, {
     type: 'radar',
@@ -251,19 +265,19 @@ function initCompareChart(items) {
 // 初始化时间趋势图
 function initTrendChart(evaluations) {
   const ctx = document.getElementById('trendChart').getContext('2d');
-  
+
   // 如果图表已存在，销毁它
   if (trendChart) {
     trendChart.destroy();
   }
-  
+
   // 按时间排序
   const sortedData = [...evaluations].sort((a, b) => a.timestamp - b.timestamp);
-  
+
   // 准备数据
   const timestamps = sortedData.map(item => new Date(item.timestamp));
   const scores = sortedData.map(item => item.average_score);
-  
+
   // 创建图表
   trendChart = new Chart(ctx, {
     type: 'line',

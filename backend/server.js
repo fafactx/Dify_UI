@@ -134,11 +134,16 @@ app.get('/api/stats', async (req, res) => {
       'solution_completeness', 'actionability', 'clarity_structure'
     ];
 
+    console.log('收集到的评估数据:', JSON.stringify(allEvaluations));
+    console.log('要计算的维度:', dimensions);
+
     const averages = {};
     dimensions.forEach(dim => {
       const values = allEvaluations.map(e => e[dim]).filter(v => v !== undefined);
+      console.log(`维度 ${dim} 的有效值:`, values);
       averages[dim] = values.length ?
         Math.round(values.reduce((sum, val) => sum + val, 0) / values.length) : 0;
+      console.log(`维度 ${dim} 的平均分:`, averages[dim]);
     });
 
     // 计算总平均分
@@ -152,10 +157,14 @@ app.get('/api/stats', async (req, res) => {
     const stats = {
       count: allEvaluations.length,
       overall_average: overallAverage,
-      dimension_averages: averages,
+      dimension_averages: {
+        ...averages,
+        average_score: overallAverage  // 添加 average_score 到 dimension_averages
+      },
       last_updated: index.last_updated ? new Date(index.last_updated).toISOString() : null
     };
 
+    console.log('返回的统计数据:', JSON.stringify(stats));
     res.json({ stats });
   } catch (error) {
     console.error('获取统计数据出错:', error);
