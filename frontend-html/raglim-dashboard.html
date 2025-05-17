@@ -130,12 +130,12 @@
                         <div class="col-md-6">
                             <div class="card">
                                 <div class="card-header d-flex justify-content-between align-items-center">
-                                    <span>Dimension Proportion</span>
+                                    <span>Product Score Distribution</span>
                                     <div>
-                                        <button class="btn btn-sm btn-outline-secondary">
+                                        <button class="btn btn-sm btn-outline-secondary download-chart" data-chart="dimension-chart">
                                             <i class="fas fa-download"></i>
                                         </button>
-                                        <button class="btn btn-sm btn-outline-secondary ms-2">
+                                        <button class="btn btn-sm btn-outline-secondary ms-2 expand-chart" data-chart="dimension-chart">
                                             <i class="fas fa-expand"></i>
                                         </button>
                                     </div>
@@ -150,10 +150,10 @@
                                 <div class="card-header d-flex justify-content-between align-items-center">
                                     <span>MAG Correlation Chart</span>
                                     <div>
-                                        <button class="btn btn-sm btn-outline-secondary">
+                                        <button class="btn btn-sm btn-outline-secondary download-chart" data-chart="correlation-chart">
                                             <i class="fas fa-download"></i>
                                         </button>
-                                        <button class="btn btn-sm btn-outline-secondary ms-2">
+                                        <button class="btn btn-sm btn-outline-secondary ms-2 expand-chart" data-chart="correlation-chart">
                                             <i class="fas fa-expand"></i>
                                         </button>
                                     </div>
@@ -171,10 +171,10 @@
                                 <div class="card-header d-flex justify-content-between align-items-center">
                                     <span>Dimension Score Distribution</span>
                                     <div>
-                                        <button class="btn btn-sm btn-outline-secondary">
+                                        <button class="btn btn-sm btn-outline-secondary download-chart" data-chart="distribution-chart">
                                             <i class="fas fa-download"></i>
                                         </button>
-                                        <button class="btn btn-sm btn-outline-secondary ms-2">
+                                        <button class="btn btn-sm btn-outline-secondary ms-2 expand-chart" data-chart="distribution-chart">
                                             <i class="fas fa-expand"></i>
                                         </button>
                                     </div>
@@ -973,25 +973,86 @@
             initializeScoreDistributionChart();
         }
 
-        // 初始化维度比例图表
+        // 初始化产品分布图表
         function initializeDimensionChart() {
             const chartDom = document.getElementById('dimension-chart');
             if (chartDom) {
                 const myChart = echarts.init(chartDom);
 
+                // 生成随机产品数据
+                function generateProductData() {
+                    // 模拟产品数据 - 在实际应用中，这些数据应该从后端API获取
+                    // 这里我们模拟4个产品，每个产品有不同的平均得分
+
+                    // 颜色数组
+                    const colors = [
+                        '#3B82F6', '#10B981', '#EF4444', '#F59E0B',
+                        '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'
+                    ];
+
+                    // 产品数据 - 包含产品号和平均得分
+                    const productData = [
+                        {
+                            name: 'PN-1001',
+                            value: 85,  // 平均得分
+                            itemStyle: { color: colors[0] }
+                        },
+                        {
+                            name: 'PN-1002',
+                            value: 78,
+                            itemStyle: { color: colors[1] }
+                        },
+                        {
+                            name: 'PN-1003',
+                            value: 92,
+                            itemStyle: { color: colors[2] }
+                        },
+                        {
+                            name: 'PN-1004',
+                            value: 67,
+                            itemStyle: { color: colors[3] }
+                        }
+                    ];
+
+                    return productData;
+                }
+
+                // 生成产品数据
+                const productData = generateProductData();
+
                 // 图表配置
                 const option = {
+                    title: {
+                        text: 'Product Average Scores',
+                        left: 'center',
+                        top: 0,
+                        textStyle: {
+                            fontSize: 14
+                        }
+                    },
                     tooltip: {
-                        trigger: 'item'
+                        trigger: 'item',
+                        formatter: function(params) {
+                            // 自定义提示框内容
+                            return `${params.seriesName}<br/>
+                                    ${params.name}: ${params.value} points<br/>
+                                    Proportion: ${params.percent}%`;
+                        }
                     },
                     legend: {
+                        type: 'scroll',
                         orient: 'vertical',
                         right: 10,
-                        top: 'center'
+                        top: 'center',
+                        formatter: function(name) {
+                            // 查找对应的数据项
+                            const item = productData.find(item => item.name === name);
+                            return `${name}: ${item ? item.value : 0} points`;
+                        }
                     },
                     series: [
                         {
-                            name: 'Dimension Proportion',
+                            name: 'Product Score',
                             type: 'pie',
                             radius: ['40%', '70%'],
                             avoidLabelOverlap: false,
@@ -1008,18 +1069,14 @@
                                 label: {
                                     show: true,
                                     fontSize: '16',
-                                    fontWeight: 'bold'
+                                    fontWeight: 'bold',
+                                    formatter: '{b}: {c} points'
                                 }
                             },
                             labelLine: {
                                 show: false
                             },
-                            data: [
-                                { value: 80, name: 'Hallucination Control', itemStyle: { color: '#3B82F6' } },
-                                { value: 70, name: 'Quality', itemStyle: { color: '#10B981' } },
-                                { value: 65, name: 'Professionalism', itemStyle: { color: '#EF4444' } },
-                                { value: 50, name: 'Usefulness', itemStyle: { color: '#F59E0B' } }
-                            ]
+                            data: productData
                         }
                     ]
                 };
@@ -1518,6 +1575,114 @@
                 });
             }
         }
+
+        // 图表放大和下载功能
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化模态对话框
+            const chartModal = new bootstrap.Modal(document.getElementById('chartModal'));
+
+            // 处理放大按钮点击事件
+            document.querySelectorAll('.expand-chart').forEach(button => {
+                button.addEventListener('click', function() {
+                    const chartId = this.getAttribute('data-chart');
+                    const chartElement = document.getElementById(chartId);
+                    const chartTitle = this.closest('.card-header').querySelector('span').textContent;
+
+                    // 设置模态对话框标题
+                    document.getElementById('chartModalLabel').textContent = chartTitle;
+
+                    // 显示模态对话框
+                    chartModal.show();
+
+                    // 在模态对话框中创建图表
+                    setTimeout(() => {
+                        const modalChartContainer = document.getElementById('modalChartContainer');
+
+                        // 获取原始图表实例
+                        const originalChart = echarts.getInstanceByDom(chartElement);
+                        const originalOption = originalChart.getOption();
+
+                        // 创建新的图表实例
+                        const modalChart = echarts.init(modalChartContainer);
+                        modalChart.setOption(originalOption);
+
+                        // 响应窗口大小变化
+                        window.addEventListener('resize', function() {
+                            modalChart.resize();
+                        });
+
+                        // 当模态对话框关闭时销毁图表实例
+                        document.getElementById('chartModal').addEventListener('hidden.bs.modal', function() {
+                            modalChart.dispose();
+                        });
+
+                        // 处理模态对话框中的下载按钮
+                        document.getElementById('downloadModalChart').onclick = function() {
+                            // 将图表转换为图片
+                            const url = modalChart.getDataURL({
+                                type: 'png',
+                                pixelRatio: 2,
+                                backgroundColor: '#fff'
+                            });
+
+                            // 创建下载链接
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = chartTitle.replace(/\s+/g, '_') + '.png';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                        };
+                    }, 300);
+                });
+            });
+
+            // 处理下载按钮点击事件
+            document.querySelectorAll('.download-chart').forEach(button => {
+                button.addEventListener('click', function() {
+                    const chartId = this.getAttribute('data-chart');
+                    const chartElement = document.getElementById(chartId);
+                    const chartTitle = this.closest('.card-header').querySelector('span').textContent;
+
+                    // 获取图表实例
+                    const chart = echarts.getInstanceByDom(chartElement);
+
+                    // 将图表转换为图片
+                    const url = chart.getDataURL({
+                        type: 'png',
+                        pixelRatio: 2,
+                        backgroundColor: '#fff'
+                    });
+
+                    // 创建下载链接
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = chartTitle.replace(/\s+/g, '_') + '.png';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                });
+            });
+        });
     </script>
+
+    <!-- 图表放大模态对话框 -->
+    <div class="modal fade" id="chartModal" tabindex="-1" aria-labelledby="chartModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="chartModalLabel">Chart</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="modalChartContainer" style="height: 500px;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="downloadModalChart">Download</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
