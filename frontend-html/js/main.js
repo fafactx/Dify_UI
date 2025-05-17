@@ -289,7 +289,7 @@ function updateStatsCards() {
     let highestDimension = '';
     let highestScore = 0;
     let lowestDimension = '';
-    let lowestScore = 10;
+    let lowestScore = 0;
 
     // 获取所有维度并按分数排序
     const sortedDimensions = Object.entries(dimension_averages || {})
