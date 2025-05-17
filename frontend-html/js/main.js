@@ -264,6 +264,7 @@ function updateStatsCards() {
     // 找出最低评分维度
     let lowestDimension = '';
     let lowestScore = 10; // 初始设为最高可能分数
+    let hasValidScores = false; // 标记是否有有效的分数
 
     // 获取实际存在的4个维度
     const validDimensions = getAllDimensions();
@@ -278,7 +279,7 @@ function updateStatsCards() {
 
         // 只处理实际存在的4个维度
         const scoreDimensions = validDimensions.filter(dim =>
-            typeof dimension_averages[dim] === 'number'
+            typeof dimension_averages[dim] === 'number' && !isNaN(dimension_averages[dim])
         );
 
         console.log('[DEBUG] 过滤后的评分维度:', scoreDimensions);
@@ -291,9 +292,11 @@ function updateStatsCards() {
             lowestDimension = 'usefulness';
             lowestScore = 0;
         } else {
+            hasValidScores = true;
             // 计算最高和最低分数
             scoreDimensions.forEach(dim => {
                 const score = dimension_averages[dim];
+                console.log(`[DEBUG] 处理维度 ${dim}, 分数: ${score}`);
 
                 // 检查最高分
                 if (score > highestScore) {
@@ -317,8 +320,21 @@ function updateStatsCards() {
         lowestScore = 0;
     }
 
+    // 如果没有有效的分数，将最低分设为0
+    if (!hasValidScores) {
+        lowestScore = 0;
+    }
+
     console.log(`[DEBUG] 最高维度: ${highestDimension}, 分数: ${highestScore}`);
     console.log(`[DEBUG] 最低维度: ${lowestDimension}, 分数: ${lowestScore}`);
+
+    // 格式化平均分，确保显示为小数点后一位
+    let formattedAverage = overall_average || 0;
+    // 如果平均分大于10，可能是格式问题，尝试除以10
+    if (formattedAverage > 10) {
+        formattedAverage = formattedAverage / 10;
+        console.log(`[DEBUG] 平均分大于10，调整为: ${formattedAverage}`);
+    }
 
     // 创建统计卡片 HTML - 使用英文标签
     const cardsHtml = `
@@ -339,7 +355,7 @@ function updateStatsCards() {
                     <div class="stat-icon text-success">
                         <i class="fas fa-star"></i>
                     </div>
-                    <div class="stat-value">${overall_average || 0}</div>
+                    <div class="stat-value">${formattedAverage.toFixed(1)}</div>
                     <div class="stat-label">Average Score</div>
                 </div>
             </div>
