@@ -4,7 +4,19 @@
  */
 
 // API 基础 URL
-const API_BASE_URL = 'http://10.193.21.115:3000';
+// 自动检测后端API地址
+function getApiBaseUrl() {
+    // 如果在同一域名下，使用相对路径
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        // 本地开发环境，使用固定端口
+        return 'http://localhost:3000';
+    } else {
+        // 生产环境，假设API在同一主机的3000端口
+        return `${window.location.protocol}//${window.location.hostname}:3000`;
+    }
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 // API 端点
 const API_ENDPOINTS = {

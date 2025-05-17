@@ -9,6 +9,106 @@
 
 基于 HTML5、CSS3、JavaScript 和 ECharts 5 构建的实现，提供丰富的视觉效果和交互体验。
 
+## 系统设计
+
+### 系统架构图
+
+```mermaid
+graph TD
+    subgraph "Dify 工作流"
+        A[评估节点] --> B[Code 节点]
+    end
+
+    subgraph "后端服务"
+        C[Express 服务器] --> D[(JSON 文件存储)]
+        C --> E[API 端点]
+    end
+
+    subgraph "前端应用"
+        F[HTML/CSS/JS] --> G[ECharts 图表]
+        F --> H[Bootstrap UI]
+        F --> I[数据处理逻辑]
+    end
+
+    B -- HTTP POST --> E
+    I -- HTTP GET --> E
+
+    style A fill:#f9d77e,stroke:#f9b93e
+    style B fill:#f9d77e,stroke:#f9b93e
+    style C fill:#a1cfff,stroke:#4a6bff
+    style D fill:#a1cfff,stroke:#4a6bff
+    style E fill:#a1cfff,stroke:#4a6bff
+    style F fill:#b5f7c9,stroke:#28a745
+    style G fill:#b5f7c9,stroke:#28a745
+    style H fill:#b5f7c9,stroke:#28a745
+    style I fill:#b5f7c9,stroke:#28a745
+```
+
+### 数据流程图
+
+```mermaid
+sequenceDiagram
+    participant Dify as Dify 工作流
+    participant Code as Code 节点
+    participant Backend as 后端服务
+    participant Storage as 文件存储
+    participant Frontend as 前端应用
+    participant User as 用户
+
+    Dify->>Code: 生成评估结果
+    Code->>Backend: POST /api/save-evaluation
+    Backend->>Storage: 保存为 JSON 文件
+    Backend->>Storage: 更新索引文件
+    Backend-->>Code: 返回成功响应
+
+    User->>Frontend: 访问仪表板
+    Frontend->>Backend: GET /api/evaluations
+    Backend->>Storage: 读取评估数据
+    Storage-->>Backend: 返回数据
+    Backend-->>Frontend: 返回评估列表
+
+    Frontend->>Backend: GET /api/stats
+    Backend->>Storage: 计算统计数据
+    Storage-->>Backend: 返回原始数据
+    Backend-->>Frontend: 返回统计结果
+
+    Frontend->>User: 显示图表和表格
+    User->>Frontend: 交互（排序/筛选/对比）
+    Frontend->>User: 更新视图
+```
+
+### 组件交互图
+
+```mermaid
+graph LR
+    subgraph "前端组件"
+        A[API 模块] --> B[主应用模块]
+        C[图表模块] --> B
+        B --> D[仪表板视图]
+        B --> E[对比视图]
+        B --> F[设置视图]
+    end
+
+    subgraph "后端组件"
+        G[Express 服务器] --> H[API 路由]
+        H --> I[数据处理]
+        I --> J[文件存储]
+    end
+
+    A <--> H
+
+    style A fill:#f9d5d3,stroke:#dc3545
+    style B fill:#f9d5d3,stroke:#dc3545
+    style C fill:#f9d5d3,stroke:#dc3545
+    style D fill:#f9d5d3,stroke:#dc3545
+    style E fill:#f9d5d3,stroke:#dc3545
+    style F fill:#f9d5d3,stroke:#dc3545
+    style G fill:#d5f9f3,stroke:#17a2b8
+    style H fill:#d5f9f3,stroke:#17a2b8
+    style I fill:#d5f9f3,stroke:#17a2b8
+    style J fill:#d5f9f3,stroke:#17a2b8
+```
+
 ## 功能特点
 
 - 📊 实时显示评估结果统计数据
@@ -23,13 +123,66 @@
 - 🎨 图表效果 - 雷达图、柱状图、渐变填充
 - 💎 精美 UI 组件 - 使用 Bootstrap 5 构建的界面
 
+## 文件结构说明
+
+项目文件结构分为以下几个部分：
+
+### 核心文件
+
+这些文件是项目的核心组件，对于系统功能至关重要：
+
+- **后端核心文件**：
+  - `backend/server.js` - 主服务器文件，处理API请求和数据存储
+  - `backend/config.example.js` - 配置模板，用于创建实际配置文件
+  - `backend/middleware/validation.js` - 请求验证中间件
+  - `backend/middleware/rate-limiter.js` - 请求限流中间件
+  - `backend/utils/logger.js` - 日志工具
+  - `backend/utils/backup.js` - 数据备份工具
+  - `backend/dify_code.py` - Dify工作流集成代码
+
+- **前端核心文件**：
+  - `frontend-html/index.html` - 主页面
+  - `frontend-html/css/styles.css` - 样式表
+  - `frontend-html/js/api.js` - API交互
+  - `frontend-html/js/charts.js` - 图表处理
+  - `frontend-html/js/main.js` - 主逻辑
+
+### 部署工具
+
+这些文件用于部署和管理系统，但不直接参与系统功能：
+
+- **主要部署脚本**：
+  - `deploy.sh` - 主部署脚本入口点
+  - `stop.sh` - 停止服务脚本入口点
+  - `scripts/deploy/deploy.sh` - 完整部署脚本
+  - `scripts/deploy/stop.sh` - 完整停止脚本
+
+- **前端部署脚本**：
+  - `scripts/deploy/frontend-deploy.sh` - 前端独立部署脚本
+  - `scripts/deploy/frontend-nginx-deploy.sh` - Nginx前端部署脚本
+  - `scripts/deploy/frontend-nginx-stop.sh` - Nginx前端停止脚本
+
+- **Nginx配置文件**：
+  - `frontend-html/nginx.conf` - Nginx配置
+  - `frontend-html/nginx-include.conf` - Nginx包含配置
+  - `frontend-html/nginx-standalone.conf` - Nginx独立配置
+
+### 辅助工具
+
+这些文件提供额外的功能和支持：
+
+- `scripts/setup.js` - 项目设置脚本
+- `scripts/deploy/upgrade-node.sh` - Node.js升级脚本
+- `package.json` - 项目依赖和脚本
+- `README.md` - 项目文档
+
 ## 部署步骤
 
 ### 前提条件
 
 - Node.js 14+ (推荐 16+)
-  - 如果您的 Node.js 版本过低，可以使用项目根目录中的 `upgrade-node.sh` 脚本进行升级
-  - 运行方式: `chmod +x upgrade-node.sh && ./upgrade-node.sh`
+  - 如果您的 Node.js 版本过低，可以使用项目中的 `scripts/deploy/upgrade-node.sh` 脚本进行升级
+  - 运行方式: `chmod +x scripts/deploy/upgrade-node.sh && ./scripts/deploy/upgrade-node.sh`
 - 运行中的 Dify 工作流
 
 ### 步骤 1：克隆或下载代码
@@ -40,8 +193,15 @@
 DIFY_UI/
 ├── backend/                # 后端服务
 │   ├── data/               # 存储评估数据的文件夹
+│   ├── middleware/         # 中间件
+│   │   ├── validation.js   # 请求验证中间件
+│   │   └── rate-limiter.js # 请求限流中间件
+│   ├── utils/              # 工具
+│   │   ├── logger.js       # 日志工具
+│   │   └── backup.js       # 备份工具
 │   ├── dify_code.py        # Dify Code 节点脚本
 │   ├── server.js           # Express 服务器
+│   ├── config.example.js   # 配置模板
 │   └── package.json        # 后端依赖
 ├── frontend-html/          # HTML5 前端
 │   ├── css/                # 样式文件
@@ -51,12 +211,20 @@ DIFY_UI/
 │   │   ├── charts.js       # 图表处理
 │   │   └── main.js         # 主逻辑
 │   ├── index.html          # 主页面
-│   └── deploy.sh           # 前端部署脚本
+│   ├── nginx.conf          # Nginx配置
+│   ├── nginx-include.conf  # Nginx包含配置
+│   └── nginx-standalone.conf # Nginx独立配置
 ├── scripts/                # 脚本目录
+│   ├── deploy/             # 部署脚本目录
+│   │   ├── deploy.sh       # 完整部署脚本
+│   │   ├── stop.sh         # 停止服务脚本
+│   │   ├── frontend-deploy.sh # 前端独立部署脚本
+│   │   ├── frontend-nginx-deploy.sh # Nginx前端部署脚本
+│   │   ├── frontend-nginx-stop.sh # Nginx前端停止脚本
+│   │   └── upgrade-node.sh # Node.js 升级脚本
 │   └── setup.js            # 设置脚本
-├── deploy.sh               # 完整部署脚本
-├── stop.sh                 # 停止服务脚本
-├── upgrade-node.sh         # Node.js 升级脚本
+├── deploy.sh               # 部署脚本入口点
+├── stop.sh                 # 停止服务脚本入口点
 ├── package.json            # 根目录依赖和脚本
 └── README.md               # 项目说明
 ```
@@ -153,6 +321,22 @@ chmod +x deploy.sh
 ```
 
 部署完成后，您可以在局域网中的浏览器访问 http://10.193.21.115:3001 使用可视化仪表板。
+
+**注意**：所有部署脚本已经重组到 `scripts/deploy` 目录中，但为了保持兼容性，根目录下的 `deploy.sh` 和 `stop.sh` 仍然可以作为入口点使用。如果您想直接使用重组后的脚本，可以这样做：
+
+```bash
+cd DIFY_UI
+chmod +x scripts/deploy/deploy.sh
+./scripts/deploy/deploy.sh --install  # 首次运行时安装依赖
+```
+
+同样，停止服务也可以使用：
+
+```bash
+cd DIFY_UI
+chmod +x scripts/deploy/stop.sh
+./scripts/deploy/stop.sh
+```
 
 ## 使用指南
 
@@ -266,7 +450,9 @@ SyntaxError: Unexpected reserved word
 4. 启动服务
    ```bash
    # 使用根目录脚本启动所有服务
-   npm run start
+   ./deploy.sh
+   # 或
+   ./scripts/deploy/deploy.sh
 
    # 或者分别启动
    cd backend
@@ -279,6 +465,22 @@ SyntaxError: Unexpected reserved word
    python -m SimpleHTTPServer 3001  # Python 2
    cd ..
    ```
+
+### 文件结构维护
+
+如果您对项目进行了修改或扩展，请确保更新以下内容：
+
+1. 保持脚本目录结构一致
+   - 所有部署相关脚本应放在 `scripts/deploy` 目录中
+   - 根目录的 `deploy.sh` 和 `stop.sh` 仅作为入口点
+
+2. 更新配置文件
+   - 如果添加了新的配置选项，请同时更新 `backend/config.example.js`
+   - 确保新用户可以通过复制示例配置文件来快速设置系统
+
+3. 文档更新
+   - 如果添加了新功能或更改了现有功能，请更新 README.md
+   - 保持文件结构说明部分的准确性
 
 
 

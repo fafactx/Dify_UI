@@ -1,4 +1,15 @@
 #!/bin/bash
+#
+# Nginx前端部署脚本
+# 此脚本已移动到scripts/deploy目录，为了保持兼容性而更新
+#
+
+# 获取脚本所在目录的绝对路径
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+# 获取项目根目录（假设脚本位于scripts/deploy目录下）
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/../.." &> /dev/null && pwd )"
+# 获取前端目录
+FRONTEND_DIR="$PROJECT_ROOT/frontend-html"
 
 # 默认配置
 DEFAULT_PORT=3001
@@ -39,9 +50,7 @@ if ! command -v nginx &> /dev/null; then
     exit 1
 fi
 
-# 获取脚本所在目录的绝对路径
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-FRONTEND_DIR="$SCRIPT_DIR"
+# 这里不需要重新定义FRONTEND_DIR，因为已经在脚本开头定义了
 
 # 检查并终止占用指定端口的进程
 PORT_PID=$(lsof -t -i:$PORT 2>/dev/null)

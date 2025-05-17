@@ -22,9 +22,18 @@ def main(arg1: dict) -> dict:
             evaluation_data = arg1
             print(f"使用旧数据格式: {json.dumps(evaluation_data)[:100]}...")
 
-        # 发送到后端服务 (使用主机 IP 地址)
+        # 后端服务URL (可根据实际部署环境修改)
+        # 注意: 在实际部署时，请将此URL替换为您的后端服务地址
+        backend_url = "http://localhost:3000"  # 默认本地开发环境
+
+        # 如果需要在环境变量中配置
+        import os
+        if "DIFY_BACKEND_URL" in os.environ:
+            backend_url = os.environ["DIFY_BACKEND_URL"]
+
+        # 发送到后端服务
         response = requests.post(
-            "http://10.193.21.115:3000/api/save-evaluation",
+            f"{backend_url}/api/save-evaluation",
             headers={"Content-Type": "application/json"},
             data=json.dumps(evaluation_data)
         )

@@ -15,29 +15,38 @@ const state = {
     searchTerm: ''
 };
 
+// 安全地获取DOM元素
+function getElement(id) {
+    const element = document.getElementById(id);
+    if (!element) {
+        console.warn(`DOM元素未找到: #${id}`);
+    }
+    return element;
+}
+
 // DOM 元素
 const elements = {
-    loading: document.getElementById('loading'),
-    dashboardView: document.getElementById('dashboard-view'),
-    compareView: document.getElementById('compare-view'),
-    settingsView: document.getElementById('settings-view'),
-    statsCards: document.getElementById('stats-cards'),
-    evaluationsTable: document.getElementById('evaluations-table'),
-    compareTable: document.getElementById('compare-table'),
-    weightSliders: document.getElementById('weight-sliders'),
-    searchInput: document.getElementById('search-input'),
-    sortOptions: document.getElementById('sort-options'),
-    exportCsv: document.getElementById('export-csv'),
-    clearCompare: document.getElementById('clear-compare'),
-    applyWeights: document.getElementById('apply-weights'),
-    resetWeights: document.getElementById('reset-weights'),
-    refreshBtn: document.getElementById('refresh-btn'),
-    lastUpdated: document.getElementById('last-updated'),
-    dashboardLink: document.getElementById('dashboard-link'),
-    compareLink: document.getElementById('compare-link'),
-    settingsLink: document.getElementById('settings-link'),
-    detailModal: new bootstrap.Modal(document.getElementById('detail-modal')),
-    detailContent: document.getElementById('detail-content')
+    loading: getElement('loading'),
+    dashboardView: getElement('dashboard-view'),
+    compareView: getElement('compare-view'),
+    settingsView: getElement('settings-view'),
+    statsCards: getElement('stats-cards'),
+    evaluationsTable: getElement('evaluations-table'),
+    compareTable: getElement('compare-table'),
+    weightSliders: getElement('weight-sliders'),
+    searchInput: getElement('search-input'),
+    sortOptions: getElement('sort-options'),
+    exportCsv: getElement('export-csv'),
+    clearCompare: getElement('clear-compare'),
+    applyWeights: getElement('apply-weights'),
+    resetWeights: getElement('reset-weights'),
+    refreshBtn: getElement('refresh-btn'),
+    lastUpdated: getElement('last-updated'),
+    dashboardLink: getElement('dashboard-link'),
+    compareLink: getElement('compare-link'),
+    settingsLink: getElement('settings-link'),
+    detailModal: document.getElementById('detail-modal') ? new bootstrap.Modal(document.getElementById('detail-modal')) : null,
+    detailContent: getElement('detail-content')
 };
 
 /**
@@ -66,34 +75,48 @@ async function initApp() {
 }
 
 /**
+ * 安全地添加事件监听器
+ * @param {HTMLElement} element - DOM元素
+ * @param {string} event - 事件名称
+ * @param {Function} handler - 事件处理函数
+ */
+function addSafeEventListener(element, event, handler) {
+    if (element) {
+        element.addEventListener(event, handler);
+    } else {
+        console.warn(`无法为不存在的元素添加${event}事件监听器`);
+    }
+}
+
+/**
  * 设置事件监听器
  */
 function setupEventListeners() {
     // 导航链接
-    elements.dashboardLink.addEventListener('click', () => showView('dashboard'));
-    elements.compareLink.addEventListener('click', () => showView('compare'));
-    elements.settingsLink.addEventListener('click', () => showView('settings'));
+    addSafeEventListener(elements.dashboardLink, 'click', () => showView('dashboard'));
+    addSafeEventListener(elements.compareLink, 'click', () => showView('compare'));
+    addSafeEventListener(elements.settingsLink, 'click', () => showView('settings'));
 
     // 搜索输入
-    elements.searchInput.addEventListener('input', handleSearch);
+    addSafeEventListener(elements.searchInput, 'input', handleSearch);
 
     // 排序选项
-    elements.sortOptions.addEventListener('click', handleSort);
+    addSafeEventListener(elements.sortOptions, 'click', handleSort);
 
     // 导出 CSV
-    elements.exportCsv.addEventListener('click', handleExportCsv);
+    addSafeEventListener(elements.exportCsv, 'click', handleExportCsv);
 
     // 清除对比
-    elements.clearCompare.addEventListener('click', handleClearCompare);
+    addSafeEventListener(elements.clearCompare, 'click', handleClearCompare);
 
     // 应用权重
-    elements.applyWeights.addEventListener('click', handleApplyWeights);
+    addSafeEventListener(elements.applyWeights, 'click', handleApplyWeights);
 
     // 重置权重
-    elements.resetWeights.addEventListener('click', handleResetWeights);
+    addSafeEventListener(elements.resetWeights, 'click', handleResetWeights);
 
     // 刷新按钮
-    elements.refreshBtn.addEventListener('click', loadData);
+    addSafeEventListener(elements.refreshBtn, 'click', loadData);
 }
 
 /**
@@ -208,10 +231,26 @@ function showView(viewName) {
 }
 
 /**
+ * 安全地更新DOM元素内容
+ * @param {HTMLElement} element - DOM元素
+ * @param {string} content - 要设置的HTML内容
+ * @returns {boolean} 是否成功更新
+ */
+function safeUpdateElement(element, content) {
+    if (element) {
+        element.innerHTML = content;
+        return true;
+    } else {
+        console.warn('无法更新不存在的DOM元素');
+        return false;
+    }
+}
+
+/**
  * 更新统计卡片
  */
 function updateStatsCards() {
-    if (!state.stats) return;
+    if (!state.stats || !elements.statsCards) return;
 
     const { count, overall_average, dimension_averages } = state.stats;
 
@@ -266,15 +305,26 @@ function updateStatsCards() {
     `;
 
     // 更新 DOM
-    elements.statsCards.innerHTML = cardsHtml;
+    safeUpdateElement(elements.statsCards, cardsHtml);
 }
 
 /**
  * 更新评估表格
  */
 function updateEvaluationsTable() {
+    if (!elements.evaluationsTable) {
+        console.warn('评估表格元素不存在');
+        return;
+    }
+
+    const tbody = elements.evaluationsTable.querySelector('tbody');
+    if (!tbody) {
+        console.warn('评估表格的tbody元素不存在');
+        return;
+    }
+
     if (!state.evaluations || state.evaluations.length === 0) {
-        elements.evaluationsTable.querySelector('tbody').innerHTML = `
+        tbody.innerHTML = `
             <tr>
                 <td colspan="5" class="text-center">暂无评估数据</td>
             </tr>
@@ -332,20 +382,31 @@ function updateEvaluationsTable() {
     }).join('');
 
     // 更新 DOM
-    elements.evaluationsTable.querySelector('tbody').innerHTML = rowsHtml;
+    safeUpdateElement(tbody, rowsHtml);
 }
 
 /**
  * 更新图表
  */
 function updateCharts() {
-    if (!state.stats || !state.stats.dimension_averages) return;
+    if (!state.stats || !state.stats.dimension_averages) {
+        console.warn('统计数据或维度平均值不存在，无法更新图表');
+        return;
+    }
 
-    // 更新雷达图
-    updateRadarChart(state.stats.dimension_averages);
+    try {
+        // 更新雷达图
+        updateRadarChart(state.stats.dimension_averages);
+    } catch (error) {
+        console.error('更新雷达图失败:', error);
+    }
 
-    // 更新柱状图
-    updateBarChart(state.stats.dimension_averages);
+    try {
+        // 更新柱状图
+        updateBarChart(state.stats.dimension_averages);
+    } catch (error) {
+        console.error('更新柱状图失败:', error);
+    }
 }
 
 /**
@@ -462,6 +523,11 @@ function updateSettingsView() {
  * 更新最后更新时间
  */
 function updateLastUpdated() {
+    if (!elements.lastUpdated) {
+        console.warn('最后更新时间元素不存在');
+        return;
+    }
+
     if (state.stats && state.stats.last_updated) {
         const date = new Date(state.stats.last_updated);
         elements.lastUpdated.textContent = `最后更新: ${date.toLocaleString('zh-CN')}`;

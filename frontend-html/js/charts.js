@@ -28,23 +28,43 @@ const CHART_COLORS = {
 };
 
 /**
+ * 安全地初始化图表
+ * @param {string} elementId - 图表容器元素ID
+ * @returns {Object|null} - 初始化的ECharts实例或null
+ */
+function safeInitChart(elementId) {
+    const element = document.getElementById(elementId);
+    if (!element) {
+        console.warn(`图表容器元素不存在: #${elementId}`);
+        return null;
+    }
+
+    try {
+        return echarts.init(element);
+    } catch (error) {
+        console.error(`初始化图表失败 #${elementId}:`, error);
+        return null;
+    }
+}
+
+/**
  * 初始化所有图表
  */
 function initCharts() {
     // 初始化雷达图
-    radarChart = echarts.init(document.getElementById('radar-chart'));
+    radarChart = safeInitChart('radar-chart');
 
     // 初始化柱状图
-    barChart = echarts.init(document.getElementById('bar-chart'));
+    barChart = safeInitChart('bar-chart');
 
     // 初始化对比图
-    compareChart = echarts.init(document.getElementById('compare-chart'));
+    compareChart = safeInitChart('compare-chart');
 
     // 设置图表响应式
     window.addEventListener('resize', () => {
-        radarChart.resize();
-        barChart.resize();
-        compareChart.resize();
+        if (radarChart) radarChart.resize();
+        if (barChart) barChart.resize();
+        if (compareChart) compareChart.resize();
     });
 }
 
@@ -71,16 +91,38 @@ function updateRadarChart(dimensionAverages) {
         name: '平均分',
         areaStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                { offset: 0, color: 'rgba(74, 107, 255, 0.8)' },
-                { offset: 1, color: 'rgba(74, 107, 255, 0.2)' }
+                { offset: 0, color: 'rgba(74, 107, 255, 0.6)' },
+                { offset: 1, color: 'rgba(74, 107, 255, 0.1)' }
             ])
         }
     }];
 
     // 设置雷达图选项
     const option = {
+        title: {
+            text: '维度评分雷达图',
+            left: 'center',
+            textStyle: {
+                fontSize: 18,
+                fontWeight: 'bold',
+                color: '#333'
+            },
+            padding: [20, 0, 0, 0]
+        },
         tooltip: {
-            trigger: 'item'
+            trigger: 'item',
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            borderColor: '#e2e2e2',
+            borderWidth: 1,
+            textStyle: {
+                color: '#333'
+            },
+            formatter: function(params) {
+                const dimIndex = params.dataIndex;
+                const dim = dimensions[dimIndex];
+                return `<div style="font-weight:bold;margin-bottom:5px;">${params.name}</div>` +
+                       `<div>${params.marker} ${formatDimensionName(dim)}: ${params.value}</div>`;
+            }
         },
         radar: {
             indicator: indicator,
@@ -88,22 +130,26 @@ function updateRadarChart(dimensionAverages) {
             splitNumber: 5,
             axisName: {
                 color: '#666',
-                fontSize: 12
+                fontSize: 12,
+                padding: [3, 5]
             },
             splitLine: {
                 lineStyle: {
-                    color: ['#ddd', '#ccc', '#bbb', '#aaa', '#999']
+                    color: 'rgba(211, 220, 235, 0.8)',
+                    width: 1
                 }
             },
             splitArea: {
                 show: true,
                 areaStyle: {
-                    color: ['rgba(250, 250, 250, 0.3)', 'rgba(240, 240, 240, 0.3)']
+                    color: ['rgba(255, 255, 255, 0.5)', 'rgba(245, 250, 255, 0.5)'],
+                    shadowColor: 'rgba(0, 0, 0, 0.05)',
+                    shadowBlur: 10
                 }
             },
             axisLine: {
                 lineStyle: {
-                    color: '#ddd'
+                    color: 'rgba(211, 220, 235, 0.8)'
                 }
             }
         },
@@ -114,14 +160,28 @@ function updateRadarChart(dimensionAverages) {
             symbolSize: 8,
             lineStyle: {
                 width: 3,
-                color: CHART_COLORS.primary
+                color: CHART_COLORS.primary,
+                shadowColor: 'rgba(74, 107, 255, 0.3)',
+                shadowBlur: 5
             },
             emphasis: {
                 lineStyle: {
                     width: 5
+                },
+                itemStyle: {
+                    shadowColor: 'rgba(74, 107, 255, 0.5)',
+                    shadowBlur: 10
                 }
+            },
+            itemStyle: {
+                color: CHART_COLORS.primary,
+                borderColor: '#fff',
+                borderWidth: 2
             }
-        }]
+        }],
+        animation: true,
+        animationDuration: 1000,
+        animationEasing: 'elasticOut'
     };
 
     // 设置图表选项
@@ -149,16 +209,41 @@ function updateBarChart(dimensionAverages) {
 
     // 设置柱状图选项
     const option = {
+        title: {
+            text: '维度评分排名',
+            left: 'center',
+            textStyle: {
+                fontSize: 18,
+                fontWeight: 'bold',
+                color: '#333'
+            },
+            padding: [20, 0, 0, 0]
+        },
         tooltip: {
             trigger: 'axis',
             axisPointer: {
-                type: 'shadow'
+                type: 'shadow',
+                shadowStyle: {
+                    color: 'rgba(0, 0, 0, 0.05)'
+                }
+            },
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            borderColor: '#e2e2e2',
+            borderWidth: 1,
+            textStyle: {
+                color: '#333'
+            },
+            formatter: function(params) {
+                const param = params[0];
+                return `<div style="font-weight:bold;margin-bottom:5px;">${param.name}</div>` +
+                       `<div>${param.marker} ${param.seriesName}: ${param.value}</div>`;
             }
         },
         grid: {
             left: '3%',
             right: '4%',
-            bottom: '3%',
+            bottom: '10%',
+            top: '15%',
             containLabel: true
         },
         xAxis: {
@@ -167,13 +252,41 @@ function updateBarChart(dimensionAverages) {
             axisLabel: {
                 interval: 0,
                 rotate: 30,
-                fontSize: 12
+                fontSize: 12,
+                color: '#666',
+                margin: 15
+            },
+            axisLine: {
+                lineStyle: {
+                    color: '#ddd'
+                }
+            },
+            axisTick: {
+                alignWithLabel: true,
+                lineStyle: {
+                    color: '#ddd'
+                }
             }
         },
         yAxis: {
             type: 'value',
             max: 10,
-            splitNumber: 5
+            splitNumber: 5,
+            axisLine: {
+                show: false
+            },
+            axisTick: {
+                show: false
+            },
+            splitLine: {
+                lineStyle: {
+                    color: '#eee',
+                    type: 'dashed'
+                }
+            },
+            axisLabel: {
+                color: '#666'
+            }
         },
         series: [{
             name: '平均分',
@@ -187,22 +300,36 @@ function updateBarChart(dimensionAverages) {
                         { offset: 1, color: CHART_COLORS.gradients[params.dataIndex % 5][1] }
                     ]);
                 },
-                borderRadius: [5, 5, 0, 0]
+                borderRadius: [5, 5, 0, 0],
+                shadowColor: 'rgba(0, 0, 0, 0.1)',
+                shadowBlur: 5,
+                shadowOffsetY: 2
             },
             emphasis: {
                 itemStyle: {
-                    shadowBlur: 10,
+                    shadowBlur: 15,
                     shadowOffsetX: 0,
-                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                    shadowColor: 'rgba(0, 0, 0, 0.3)'
                 }
             },
             label: {
                 show: true,
                 position: 'top',
-                formatter: '{c}'
+                formatter: '{c}',
+                fontSize: 12,
+                fontWeight: 'bold',
+                color: '#555'
             },
-            barWidth: '50%'
-        }]
+            barWidth: '60%',
+            animationType: 'scale',
+            animationEasing: 'elasticOut',
+            animationDelay: function (idx) {
+                return idx * 100;
+            }
+        }],
+        animation: true,
+        animationDuration: 1000,
+        animationEasing: 'elasticOut'
     };
 
     // 设置图表选项
@@ -243,49 +370,94 @@ function updateCompareChart(compareItems) {
         value: dimensionArray.map(dim => item[dim] || 0),
         name: `评估 ${index + 1}`,
         lineStyle: {
-            color: CHART_COLORS.gradients[index % 5][0]
+            width: 2,
+            color: CHART_COLORS.gradients[index % 5][0],
+            shadowColor: 'rgba(0, 0, 0, 0.2)',
+            shadowBlur: 5
         },
         areaStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
                 { offset: 0, color: `${CHART_COLORS.gradients[index % 5][0]}80` },
                 { offset: 1, color: `${CHART_COLORS.gradients[index % 5][1]}20` }
-            ])
+            ]),
+            opacity: 0.7
+        },
+        itemStyle: {
+            color: CHART_COLORS.gradients[index % 5][0],
+            borderColor: '#fff',
+            borderWidth: 2,
+            shadowColor: 'rgba(0, 0, 0, 0.2)',
+            shadowBlur: 5
         }
     }));
 
     // 设置雷达图选项
     const option = {
+        title: {
+            text: '评估结果对比',
+            left: 'center',
+            textStyle: {
+                fontSize: 18,
+                fontWeight: 'bold',
+                color: '#333'
+            },
+            padding: [20, 0, 0, 0]
+        },
         tooltip: {
-            trigger: 'item'
+            trigger: 'item',
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            borderColor: '#e2e2e2',
+            borderWidth: 1,
+            textStyle: {
+                color: '#333'
+            },
+            formatter: function(params) {
+                const dimIndex = params.dataIndex;
+                const dim = dimensionArray[dimIndex];
+                return `<div style="font-weight:bold;margin-bottom:5px;">${params.name}</div>` +
+                       `<div>${params.marker} ${formatDimensionName(dim)}: ${params.value}</div>`;
+            }
         },
         legend: {
             data: compareItems.map((_, index) => `评估 ${index + 1}`),
-            orient: 'vertical',
-            right: 10,
-            top: 10
+            orient: 'horizontal',
+            bottom: 0,
+            itemWidth: 15,
+            itemHeight: 10,
+            textStyle: {
+                color: '#666'
+            },
+            itemGap: 20,
+            padding: [15, 0]
         },
         radar: {
             indicator: indicator,
             shape: 'circle',
             splitNumber: 5,
+            center: ['50%', '50%'],
+            radius: '65%',
             axisName: {
                 color: '#666',
-                fontSize: 12
+                fontSize: 12,
+                padding: [3, 5]
             },
             splitLine: {
                 lineStyle: {
-                    color: ['#ddd', '#ccc', '#bbb', '#aaa', '#999']
+                    color: 'rgba(211, 220, 235, 0.8)',
+                    width: 1
                 }
             },
             splitArea: {
                 show: true,
                 areaStyle: {
-                    color: ['rgba(250, 250, 250, 0.3)', 'rgba(240, 240, 240, 0.3)']
+                    color: ['rgba(255, 255, 255, 0.5)', 'rgba(245, 250, 255, 0.5)'],
+                    shadowColor: 'rgba(0, 0, 0, 0.05)',
+                    shadowBlur: 10
                 }
             },
             axisLine: {
                 lineStyle: {
-                    color: '#ddd'
+                    color: 'rgba(211, 220, 235, 0.8)'
                 }
             }
         },
@@ -293,8 +465,19 @@ function updateCompareChart(compareItems) {
             type: 'radar',
             data: seriesData,
             symbol: 'circle',
-            symbolSize: 6
-        }]
+            symbolSize: 6,
+            emphasis: {
+                lineStyle: {
+                    width: 4
+                },
+                itemStyle: {
+                    shadowBlur: 10
+                }
+            }
+        }],
+        animation: true,
+        animationDuration: 1000,
+        animationEasing: 'elasticOut'
     };
 
     // 设置图表选项
