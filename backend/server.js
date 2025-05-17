@@ -67,7 +67,12 @@ app.get('/api/evaluations', async (req, res) => {
         const fileData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
         // 处理评估结果对象
-        const evaluations = fileData.data.result || {};
+        const evaluations = {};
+        Object.keys(fileData.data || {}).forEach(key => {
+          if (key.startsWith('result')) {
+            evaluations[key] = fileData.data[key];
+          }
+        });
 
         // 将每个评估结果转换为数组项
         Object.entries(evaluations).forEach(([key, evaluation]) => {
@@ -108,7 +113,12 @@ app.get('/api/stats', async (req, res) => {
         const fileData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
         // 处理评估结果对象
-        const evaluations = fileData.data.result || {};
+        const evaluations = {};
+        Object.keys(fileData.data || {}).forEach(key => {
+          if (key.startsWith('result')) {
+            evaluations[key] = fileData.data[key];
+          }
+        });
 
         // 将每个评估结果添加到数组
         Object.values(evaluations).forEach(evaluation => {
@@ -164,7 +174,7 @@ async function updateIndex(filename, fileData) {
   }
 
   // 计算评估结果数量
-  const evaluationCount = Object.keys(fileData.data.result || {}).length;
+  const evaluationCount = Object.keys(fileData.data || {}).filter(key => key.startsWith('result')).length;
 
   // 添加新文件信息
   index.files.push({
