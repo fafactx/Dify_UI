@@ -183,6 +183,7 @@ async function updateIndex(filename, fileData) {
 }
 
 // 启动服务器
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`服务器运行在 http://10.193.21.115:${PORT}`);
+  console.log(`服务器绑定到所有网络接口 (0.0.0.0:${PORT})`);
 });
