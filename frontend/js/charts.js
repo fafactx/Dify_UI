@@ -18,6 +18,13 @@ let barChart = null;
 let detailRadarChart = null;
 let trendChart = null;
 
+// 检查 Chart.js 是否正确加载
+console.log("charts.js 文件加载");
+console.log("Chart 对象是否存在:", typeof Chart !== 'undefined');
+if (typeof Chart !== 'undefined') {
+  console.log("Chart.js 版本:", Chart.version);
+}
+
 // 维度标签映射
 const dimensionLabels = {
   factual_accuracy: '事实准确性',
@@ -77,33 +84,39 @@ function initRadarChart(stats) {
   console.log("准备的图表数据:", JSON.stringify(data));
 
   // 创建图表
-  radarChart = new Chart(ctx, {
-    type: 'radar',
-    data: data,
-    options: {
-      scales: {
-        r: {
-          angleLines: {
-            display: true
-          },
-          suggestedMin: 0,
-          suggestedMax: 100
-        }
-      },
-      plugins: {
-        legend: {
-          display: false
+  console.log("准备创建雷达图");
+  try {
+    radarChart = new Chart(ctx, {
+      type: 'radar',
+      data: data,
+      options: {
+        scales: {
+          r: {
+            angleLines: {
+              display: true
+            },
+            suggestedMin: 0,
+            suggestedMax: 100
+          }
         },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              return `${context.dataset.label}: ${context.raw}分`;
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return `${context.dataset.label}: ${context.raw}分`;
+              }
             }
           }
         }
       }
-    }
-  });
+    });
+    console.log("雷达图创建成功");
+  } catch (error) {
+    console.error("创建雷达图时出错:", error);
+  }
 }
 
 // 初始化柱状图
