@@ -22,7 +22,9 @@ class EvaluationsDAL {
       const processedData = this._preprocessEvaluationData(evaluationData, resultKey);
 
       // 记录处理后的数据
-      this.logger.logEvaluationSave(resultKey, processedData);
+      if (this.logger) {
+        this.logger.logEvaluationSave(resultKey, processedData);
+      }
 
       // 开始事务
       const transaction = this.db.transaction(() => {
@@ -56,7 +58,9 @@ class EvaluationsDAL {
       return transaction();
     } catch (error) {
       console.error(`保存评估数据 [${resultKey}] 时出错:`, error);
-      this.logger.logError('save_evaluation', error);
+      if (this.logger) {
+        this.logger.logError('save_evaluation', error);
+      }
       throw error;
     }
   }
@@ -254,80 +258,102 @@ class EvaluationsDAL {
 
   // 获取总体统计概览
   getStatsOverview() {
-    // 尝试从缓存获取
-    const cachedStats = this._getStatsFromCache('overview');
-    if (cachedStats) {
-      return cachedStats;
+    try {
+      // 尝试从缓存获取
+      const cachedStats = this._getStatsFromCache('overview');
+      if (cachedStats) {
+        return cachedStats;
+      }
+
+      // 计算统计数据
+      const totalStmt = this.db.prepare('SELECT COUNT(*) as count FROM evaluations');
+      const { count } = totalStmt.get();
+
+      // 使用JSON1扩展从JSON数据中提取评分
+      const avgStmt = this.db.prepare(`
+        SELECT
+          AVG(json_extract(data, '$.average_score')) as overall_average,
+          AVG(json_extract(data, '$.hallucination_control')) as hallucination_control,
+          AVG(json_extract(data, '$.quality')) as quality,
+          AVG(json_extract(data, '$.professionalism')) as professionalism,
+          AVG(json_extract(data, '$.usefulness')) as usefulness
+        FROM evaluations
+      `);
+
+      const averages = avgStmt.get();
+
+      // 使用JSON1扩展从JSON数据中提取产品系列
+      const productFamilyStmt = this.db.prepare(`
+        SELECT COUNT(DISTINCT json_extract(data, '$."Product Family"')) as count
+        FROM evaluations
+      `);
+
+      const { count: productFamilyCount } = productFamilyStmt.get();
+
+      // 使用JSON1扩展从JSON数据中提取零件编号
+      const partNumberStmt = this.db.prepare(`
+        SELECT COUNT(DISTINCT json_extract(data, '$."Part Number"')) as count
+        FROM evaluations
+      `);
+
+      const { count: partNumberCount } = partNumberStmt.get();
+
+      // 使用JSON1扩展从JSON数据中提取MAG
+      const magStmt = this.db.prepare(`
+        SELECT COUNT(DISTINCT json_extract(data, '$.MAG')) as count
+        FROM evaluations
+      `);
+
+      const { count: magCount } = magStmt.get();
+
+      const lastUpdatedStmt = this.db.prepare(`
+        SELECT MAX(timestamp) as last_updated
+        FROM evaluations
+      `);
+
+      const { last_updated } = lastUpdatedStmt.get();
+
+      // 构建结果
+      const stats = {
+        count,
+        overall_average: averages.overall_average || 0,
+        dimension_averages: {
+          hallucination_control: averages.hallucination_control || 0,
+          quality: averages.quality || 0,
+          professionalism: averages.professionalism || 0,
+          usefulness: averages.usefulness || 0
+        },
+        product_family_count: productFamilyCount,
+        part_number_count: partNumberCount,
+        mag_count: magCount,
+        last_updated
+      };
+
+      // 打印调试信息
+      console.log('数据库统计结果:', JSON.stringify(stats, null, 2));
+
+      // 缓存结果
+      this._saveStatsToCache('overview', stats);
+
+      return stats;
+    } catch (error) {
+      console.error('获取统计概览出错:', error);
+      // 返回默认值
+      return {
+        count: 0,
+        overall_average: 0,
+        dimension_averages: {
+          hallucination_control: 0,
+          quality: 0,
+          professionalism: 0,
+          usefulness: 0
+        },
+        product_family_count: 0,
+        part_number_count: 0,
+        mag_count: 0,
+        last_updated: Date.now()
+      };
     }
-
-    // 计算统计数据
-    const totalStmt = this.db.prepare('SELECT COUNT(*) as count FROM evaluations');
-    const { count } = totalStmt.get();
-
-    // 使用JSON1扩展从JSON数据中提取评分
-    const avgStmt = this.db.prepare(`
-      SELECT
-        AVG(json_extract(data, '$.average_score')) as overall_average,
-        AVG(json_extract(data, '$.hallucination_control')) as hallucination_control,
-        AVG(json_extract(data, '$.quality')) as quality,
-        AVG(json_extract(data, '$.professionalism')) as professionalism,
-        AVG(json_extract(data, '$.usefulness')) as usefulness
-      FROM evaluations
-    `);
-
-    const averages = avgStmt.get();
-
-    // 使用JSON1扩展从JSON数据中提取产品系列
-    const productFamilyStmt = this.db.prepare(`
-      SELECT COUNT(DISTINCT json_extract(data, '$."Product Family"')) as count
-      FROM evaluations
-    `);
-
-    const { count: productFamilyCount } = productFamilyStmt.get();
-
-    // 使用JSON1扩展从JSON数据中提取零件编号
-    const partNumberStmt = this.db.prepare(`
-      SELECT COUNT(DISTINCT json_extract(data, '$."Part Number"')) as count
-      FROM evaluations
-    `);
-
-    const { count: partNumberCount } = partNumberStmt.get();
-
-    // 使用JSON1扩展从JSON数据中提取MAG
-    const magStmt = this.db.prepare(`
-      SELECT COUNT(DISTINCT json_extract(data, '$.MAG')) as count
-      FROM evaluations
-    `);
-
-    const { count: magCount } = magStmt.get();
-
-    const lastUpdatedStmt = this.db.prepare(`
-      SELECT MAX(timestamp) as last_updated
-      FROM evaluations
-    `);
-
-    const { last_updated } = lastUpdatedStmt.get();
-
-    // 构建结果
-    const stats = {
-      count,
-      overall_average: averages.overall_average || 0,
-      dimension_averages: {
-        hallucination_control: averages.hallucination_control || 0,
-        quality: averages.quality || 0,
-        professionalism: averages.professionalism || 0,
-        usefulness: averages.usefulness || 0
-      },
-      product_family_count: productFamilyCount,
-      part_number_count: partNumberCount,
-      mag_count: magCount,
-      last_updated
-    };
-
-    // 缓存结果
-    this._saveStatsToCache('overview', stats);
-
-    return stats;
   }
 
   // 私有方法：更新产品信息

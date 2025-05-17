@@ -66,7 +66,8 @@ app.locals.logger = logger;
 app.use(cors({
   origin: '*',  // 允许所有来源
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 
 // 请求限流中间件
@@ -84,6 +85,12 @@ app.use(bodyParser.json());
 // 静态文件服务 - 同时支持 frontend 和 frontend-html 目录
 app.use(express.static(path.join(__dirname, '../frontend')));
 app.use(express.static(path.join(__dirname, '..')));
+
+// 添加调试中间件，记录所有请求
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
 
 // 确保数据目录存在
 const dataDir = path.join(__dirname, config.storage.dataDir);

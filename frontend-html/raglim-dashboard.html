@@ -970,9 +970,17 @@
                 // 构建API URL
                 const apiBaseUrl = getApiBaseUrl();
                 const url = `${apiBaseUrl}/api/stats`;
+                console.log('API URL:', url);
 
                 // 发起请求
-                const response = await fetch(url);
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    mode: 'cors'
+                });
 
                 // 检查响应状态
                 if (!response.ok) {
@@ -981,6 +989,7 @@
 
                 // 解析响应数据
                 const data = await response.json();
+                console.log('API响应数据:', data);
 
                 // 检查数据格式
                 if (!data || !data.stats) {
@@ -999,6 +1008,8 @@
 
         // 更新统计卡片
         function updateStatCards(stats) {
+            console.log('更新统计卡片，数据:', stats);
+
             // 更新样本总数
             const totalCasesElement = document.querySelector('.total-cases');
             if (totalCasesElement) {
@@ -1008,11 +1019,15 @@
             // 更新平均分
             const averageScoreElement = document.querySelector('.average-score');
             if (averageScoreElement) {
-                averageScoreElement.textContent = stats.overall_average ? stats.overall_average.toFixed(1) : '0.0';
+                const avgScore = stats.overall_average || 0;
+                console.log('平均分:', avgScore);
+                averageScoreElement.textContent = avgScore.toFixed(1);
             }
 
             // 如果有维度平均分数据
             if (stats.dimension_averages) {
+                console.log('维度平均分:', stats.dimension_averages);
+
                 // 找出最高分和最低分的维度
                 const dimensions = [
                     'hallucination_control',
@@ -1029,6 +1044,7 @@
                 dimensions.forEach(dim => {
                     const score = stats.dimension_averages[dim];
                     if (score !== undefined) {
+                        console.log(`维度 ${dim} 得分:`, score);
                         if (score > highestScore) {
                             highestScore = score;
                             highestDim = dim;
@@ -1039,6 +1055,9 @@
                         }
                     }
                 });
+
+                console.log('最高分维度:', highestDim, highestScore);
+                console.log('最低分维度:', lowestDim, lowestScore);
 
                 // 更新最高分维度
                 const successRateElement = document.querySelector('.success-rate');
@@ -1063,6 +1082,8 @@
                         label.textContent = `Lowest: ${formatDimensionNameEn(lowestDim)}`;
                     }
                 }
+            } else {
+                console.warn('没有维度平均分数据');
             }
         }
 
