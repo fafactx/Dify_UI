@@ -62,10 +62,11 @@ const HOST = config.server.host;
 // 将logger实例添加到app.locals，使其在中间件中可用
 app.locals.logger = logger;
 
-// 配置CORS
+// 配置CORS - 允许所有来源访问API
 app.use(cors({
-  origin: config.cors.origin,
-  methods: config.cors.methods
+  origin: '*',  // 允许所有来源
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // 请求限流中间件
@@ -79,7 +80,10 @@ if (config.rateLimit && config.rateLimit.enabled) {
 
 // 其他中间件
 app.use(bodyParser.json());
+
+// 静态文件服务 - 同时支持 frontend 和 frontend-html 目录
 app.use(express.static(path.join(__dirname, '../frontend')));
+app.use(express.static(path.join(__dirname, '..')));
 
 // 确保数据目录存在
 const dataDir = path.join(__dirname, config.storage.dataDir);
@@ -87,167 +91,9 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-// API 路由：保存评估数据
-app.post('/api/save-evaluation', validateSaveEvaluation, async (req, res) => {
-  try {
-    const evaluationData = req.body;
-    const timestamp = Date.now();
-    const filename = `evaluation_${timestamp}.json`;
-    const filePath = path.join(dataDir, filename);
+// 注意：旧的 /api/save-evaluation 和 /api/evaluations 端点已移除，现在使用 api-routes.js 中的实现
 
-    // 添加时间戳
-    const dataToSave = {
-      timestamp,
-      date: new Date(timestamp).toISOString(),
-      data: evaluationData
-    };
-
-    // 保存到文件
-    fs.writeFileSync(filePath, JSON.stringify(dataToSave, null, 2));
-    logger.info(`评估数据已保存到文件: ${filename}`);
-
-    // 更新索引文件
-    await updateIndex(filename, dataToSave);
-    logger.info(`索引文件已更新，添加了文件: ${filename}`);
-
-    res.json({ success: true, message: '评估数据已保存', filename });
-  } catch (error) {
-    logger.error(`保存评估数据出错: ${error.message}`);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// API 路由：获取所有评估数据
-app.get('/api/evaluations', async (req, res) => {
-  try {
-    const indexPath = path.join(dataDir, config.storage.indexFile);
-
-    // 如果索引文件不存在，返回空数组
-    if (!fs.existsSync(indexPath)) {
-      logger.info('索引文件不存在，返回空评估数组');
-      return res.json({ evaluations: [] });
-    }
-
-    logger.debug('读取索引文件');
-    const index = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
-    const allEvaluations = [];
-
-    // 读取每个文件中的评估数据
-    for (const fileInfo of index.files) {
-      const filePath = path.join(dataDir, fileInfo.filename);
-      if (fs.existsSync(filePath)) {
-        const fileData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-
-        // 处理评估结果对象
-        const evaluations = {};
-        Object.keys(fileData.data || {}).forEach(key => {
-          if (key.startsWith('result')) {
-            evaluations[key] = fileData.data[key];
-          }
-        });
-
-        // 将每个评估结果转换为数组项
-        Object.entries(evaluations).forEach(([key, evaluation]) => {
-          allEvaluations.push({
-            id: key,
-            timestamp: fileData.timestamp,
-            date: fileData.date,
-            ...evaluation
-          });
-        });
-      }
-    }
-
-    logger.info(`返回 ${allEvaluations.length} 条评估数据`);
-    res.json({ evaluations: allEvaluations });
-  } catch (error) {
-    logger.error(`获取评估数据出错: ${error.message}`);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// API 路由：获取统计数据
-app.get('/api/stats', async (req, res) => {
-  try {
-    const indexPath = path.join(dataDir, config.storage.indexFile);
-
-    // 如果索引文件不存在，返回空统计
-    if (!fs.existsSync(indexPath)) {
-      logger.info('索引文件不存在，返回空统计数据');
-      return res.json({ stats: { count: 0 } });
-    }
-
-    logger.debug('读取索引文件以生成统计数据');
-    const index = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
-    const allEvaluations = [];
-
-    // 读取每个文件中的评估数据
-    for (const fileInfo of index.files) {
-      const filePath = path.join(dataDir, fileInfo.filename);
-      if (fs.existsSync(filePath)) {
-        const fileData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-
-        // 处理评估结果对象
-        const evaluations = {};
-        Object.keys(fileData.data || {}).forEach(key => {
-          if (key.startsWith('result')) {
-            evaluations[key] = fileData.data[key];
-          }
-        });
-
-        // 将每个评估结果添加到数组
-        Object.values(evaluations).forEach(evaluation => {
-          allEvaluations.push(evaluation);
-        });
-      }
-    }
-
-    // 计算各维度的平均分
-    // 只使用实际存在的4个维度
-    const dimensions = [
-      'hallucination_control',
-      'quality',
-      'professionalism',
-      'usefulness'
-    ];
-
-    logger.debug(`收集到 ${allEvaluations.length} 条评估数据`);
-    logger.debug(`要计算的维度: ${dimensions.join(', ')}`);
-
-    const averages = {};
-    dimensions.forEach(dim => {
-      const values = allEvaluations.map(e => e[dim]).filter(v => v !== undefined);
-      logger.debug(`维度 ${dim} 的有效值数量: ${values.length}`);
-      averages[dim] = values.length ?
-        Math.round(values.reduce((sum, val) => sum + val, 0) / values.length) : 0;
-      logger.debug(`维度 ${dim} 的平均分: ${averages[dim]}`);
-    });
-
-    // 计算总平均分
-    const overallAverage = allEvaluations.length ?
-      Math.round(
-        allEvaluations.map(e => e.average_score).reduce((sum, val) => sum + val, 0) /
-        allEvaluations.length
-      ) : 0;
-
-    // 返回统计数据
-    const stats = {
-      count: allEvaluations.length,
-      overall_average: overallAverage,
-      dimension_averages: {
-        ...averages,
-        average_score: overallAverage  // 添加 average_score 到 dimension_averages
-      },
-      last_updated: index.last_updated ? new Date(index.last_updated).toISOString() : null
-    };
-
-    logger.info(`返回统计数据: 评估总数=${stats.count}, 总平均分=${stats.overall_average}`);
-    res.json({ stats });
-  } catch (error) {
-    logger.error(`获取统计数据出错: ${error.message}`);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+// 注意：旧的 /api/stats 端点已移除，现在使用 api-routes.js 中的实现
 
 // 辅助函数：更新索引文件
 async function updateIndex(filename, fileData) {

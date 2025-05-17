@@ -111,7 +111,23 @@ router.get('/stats/overview', asyncHandler(async (req, res) => {
 router.get('/stats', asyncHandler(async (req, res) => {
   const stats = evaluationsDAL.getStatsOverview();
 
-  res.json({ stats });
+  // 打印统计数据，用于调试
+  console.log('API返回的统计数据:', JSON.stringify(stats, null, 2));
+
+  // 确保返回的数据格式与前端期望的一致
+  res.json({
+    stats: {
+      count: stats.count || 0,
+      overall_average: stats.overall_average || 0,
+      dimension_averages: stats.dimension_averages || {
+        hallucination_control: 0,
+        quality: 0,
+        professionalism: 0,
+        usefulness: 0
+      },
+      last_updated: stats.last_updated || new Date().toISOString()
+    }
+  });
 }));
 
 // 获取产品评分数据
