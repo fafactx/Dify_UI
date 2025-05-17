@@ -6,13 +6,29 @@ const fs = require('fs');
 const path = require('path');
 const basicAuth = require('express-basic-auth');
 
+// 加载配置文件（如果不存在则使用默认配置）
+let config = {
+  auth: {
+    username: 'admin',
+    password: 'change_me_immediately'
+  }
+};
+
+try {
+  // 尝试加载配置文件
+  config = require('./config');
+  console.log('已加载配置文件');
+} catch (error) {
+  console.warn('未找到配置文件 config.js，使用默认配置。请从 config.example.js 创建您自己的配置文件。');
+}
+
 // 初始化 Express 应用
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // 基本身份验证中间件
 app.use(basicAuth({
-  users: { 'admin': 'ken@1234' },
+  users: { [config.auth.username]: config.auth.password },
   challenge: true,
   realm: 'Dify 评估结果可视化仪表板'
 }));

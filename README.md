@@ -121,7 +121,29 @@ deploy.bat --install  # 首次运行时安装依赖
 
 部署完成后，在浏览器中打开 http://10.193.21.115:3001 即可访问可视化仪表板。
 
-### 步骤 7：一键部署（后端+前端）
+### 步骤 7：配置身份验证
+
+为了保护您的仪表板，系统使用基本身份验证。请按照以下步骤配置：
+
+1. 复制配置文件模板：
+   ```bash
+   cd backend
+   cp config.example.js config.js
+   ```
+
+2. 编辑 `config.js` 文件，设置您的用户名和密码：
+   ```javascript
+   module.exports = {
+     auth: {
+       username: 'your_username',
+       password: 'your_secure_password'
+     }
+   };
+   ```
+
+> **安全提示**：`config.js` 文件包含敏感信息，已被添加到 `.gitignore` 中，不会被提交到版本控制系统。
+
+### 步骤 8：一键部署（后端+前端）
 
 如果您想一次性部署后端和前端，可以使用根目录下的部署脚本：
 
@@ -264,7 +286,12 @@ docker-compose up -d
 - **Express** - Web 应用框架
 - **文件系统存储** - 使用 JSON 文件存储评估数据
 
-### 前端
+### 传统版前端
+- **Vue 3** - 渐进式 JavaScript 框架
+- **Bootstrap 5** - 响应式 CSS 框架
+- **Chart.js** - 简单易用的图表库
+
+### 现代版前端
 - **React 18** + **TypeScript** - 现代化前端框架
 - **Vite** - 快速的构建工具
 - **Chakra UI** - 美观且高度可定制的组件库
