@@ -14,9 +14,6 @@ fi
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 FRONTEND_DIR="$SCRIPT_DIR"
 
-# 创建 Nginx 日志目录（如果不存在）
-sudo mkdir -p /var/log/nginx
-
 # 检查并终止占用 3001 端口的进程
 PORT_PID=$(lsof -t -i:3001 2>/dev/null)
 if [ ! -z "$PORT_PID" ]; then
@@ -28,25 +25,69 @@ fi
 
 # 更新 Nginx 配置文件中的路径
 TEMP_CONF=$(mktemp)
+TEMP_INCLUDE=$(mktemp)
+
+# 准备两种配置文件
 cat "$FRONTEND_DIR/nginx.conf" | sed "s|/home/ken/dify-evaluation-dashboard/frontend-html|$FRONTEND_DIR|g" > "$TEMP_CONF"
+cat "$FRONTEND_DIR/nginx-include.conf" | sed "s|/home/ken/dify-evaluation-dashboard/frontend-html|$FRONTEND_DIR|g" > "$TEMP_INCLUDE"
 
-# 创建 Nginx 配置软链接
-NGINX_CONF_DIR="/etc/nginx/conf.d"
-NGINX_SITES_DIR="/etc/nginx/sites-enabled"
+# 检测 Nginx 配置目录和方法
+NGINX_MAIN_CONF="/etc/nginx/nginx.conf"
+NGINX_CONF_PATH=""
+NGINX_INCLUDE_PATH="/etc/nginx/conf.d/dify-frontend-include.conf"
 
-if [ -d "$NGINX_CONF_DIR" ]; then
-    echo "使用 conf.d 目录配置 Nginx..."
-    sudo cp "$TEMP_CONF" "$NGINX_CONF_DIR/dify-frontend.conf"
-elif [ -d "$NGINX_SITES_DIR" ]; then
-    echo "使用 sites-enabled 目录配置 Nginx..."
-    sudo cp "$TEMP_CONF" "$NGINX_SITES_DIR/dify-frontend"
+# 尝试多种配置方法
+if [ -d "/etc/nginx/conf.d" ]; then
+    NGINX_CONF_PATH="/etc/nginx/conf.d/dify-frontend.conf"
+    echo "使用 conf.d 目录配置 Nginx: $NGINX_CONF_PATH"
+    echo "包含文件路径: $NGINX_INCLUDE_PATH"
+elif [ -d "/etc/nginx/sites-available" ]; then
+    NGINX_CONF_PATH="/etc/nginx/sites-available/dify-frontend"
+    NGINX_ENABLED_PATH="/etc/nginx/sites-enabled/dify-frontend"
+    echo "使用 sites-available 目录配置 Nginx: $NGINX_CONF_PATH"
+    echo "包含文件路径: $NGINX_INCLUDE_PATH"
 else
-    echo "未找到标准 Nginx 配置目录，使用自定义配置..."
-    sudo cp "$TEMP_CONF" "/etc/nginx/nginx.conf"
+    # 如果找不到标准目录，尝试直接使用 nginx.conf
+    NGINX_CONF_PATH="/etc/nginx/nginx.conf.dify"
+    echo "使用自定义配置: $NGINX_CONF_PATH"
+    echo "包含文件路径: $NGINX_INCLUDE_PATH"
+fi
+
+# 复制配置文件 - 尝试两种方法
+echo "复制独立配置文件到 $NGINX_CONF_PATH"
+sudo cp "$TEMP_CONF" "$NGINX_CONF_PATH"
+sudo chmod 644 "$NGINX_CONF_PATH"
+
+echo "复制包含配置文件到 $NGINX_INCLUDE_PATH"
+sudo cp "$TEMP_INCLUDE" "$NGINX_INCLUDE_PATH"
+sudo chmod 644 "$NGINX_INCLUDE_PATH"
+
+# 检查主配置文件是否存在
+if [ -f "$NGINX_MAIN_CONF" ]; then
+    # 检查主配置文件是否已包含我们的配置
+    if ! grep -q "include.*dify-frontend-include.conf" "$NGINX_MAIN_CONF"; then
+        echo "尝试在主配置文件中添加包含指令..."
+        # 创建备份
+        sudo cp "$NGINX_MAIN_CONF" "${NGINX_MAIN_CONF}.bak"
+
+        # 尝试在 http 块中添加 include 指令
+        if grep -q "http {" "$NGINX_MAIN_CONF"; then
+            sudo sed -i '/http {/a \    include /etc/nginx/conf.d/dify-frontend-include.conf;' "$NGINX_MAIN_CONF"
+            echo "已在主配置文件的 http 块中添加包含指令"
+        fi
+    else
+        echo "主配置文件已包含我们的配置"
+    fi
+fi
+
+# 如果使用 sites-available/sites-enabled 模式，创建符号链接
+if [ -d "/etc/nginx/sites-available" ] && [ -d "/etc/nginx/sites-enabled" ]; then
+    echo "创建符号链接: $NGINX_ENABLED_PATH -> $NGINX_CONF_PATH"
+    sudo ln -sf "$NGINX_CONF_PATH" "$NGINX_ENABLED_PATH"
 fi
 
 # 删除临时文件
-rm "$TEMP_CONF"
+rm "$TEMP_CONF" "$TEMP_INCLUDE"
 
 # 测试 Nginx 配置
 echo "测试 Nginx 配置..."
@@ -54,16 +95,60 @@ sudo nginx -t
 
 if [ $? -ne 0 ]; then
     echo "Nginx 配置测试失败，请检查配置文件。"
-    exit 1
-fi
+    echo "尝试使用 Python HTTP 服务器作为备选方案..."
+    cd "$FRONTEND_DIR"
+    if command -v python3 &> /dev/null; then
+        nohup python3 -m http.server 3001 > frontend.log 2>&1 &
+        echo "Python3 HTTP 服务器已启动"
+    elif command -v python &> /dev/null; then
+        nohup python -m SimpleHTTPServer 3001 > frontend.log 2>&1 &
+        echo "Python2 HTTP 服务器已启动"
+    else
+        echo "错误: 未找到 Python。无法启动备选 HTTP 服务器。"
+        exit 1
+    fi
+else
+    # 尝试多种方式启动/重启 Nginx
+    echo "重启 Nginx..."
 
-# 重启 Nginx
-echo "重启 Nginx..."
-sudo systemctl restart nginx || sudo service nginx restart
+    # 方法 1: systemctl
+    sudo systemctl restart nginx
 
-if [ $? -ne 0 ]; then
-    echo "Nginx 重启失败，尝试使用 nginx -s reload..."
-    sudo nginx -s reload
+    # 如果方法 1 失败，尝试方法 2: service
+    if [ $? -ne 0 ]; then
+        echo "使用 systemctl 重启失败，尝试使用 service..."
+        sudo service nginx restart
+    fi
+
+    # 如果方法 2 失败，尝试方法 3: nginx -s reload
+    if [ $? -ne 0 ]; then
+        echo "使用 service 重启失败，尝试使用 nginx -s reload..."
+        sudo nginx -s reload
+    fi
+
+    # 如果方法 3 失败，尝试方法 4: 直接启动 nginx
+    if [ $? -ne 0 ]; then
+        echo "使用 nginx -s reload 失败，尝试直接启动 nginx..."
+        sudo nginx
+    fi
+
+    # 检查 Nginx 是否成功启动
+    if ! pgrep -x "nginx" > /dev/null; then
+        echo "Nginx 启动失败，尝试使用 Python HTTP 服务器作为备选方案..."
+        cd "$FRONTEND_DIR"
+        if command -v python3 &> /dev/null; then
+            nohup python3 -m http.server 3001 > frontend.log 2>&1 &
+            echo "Python3 HTTP 服务器已启动"
+        elif command -v python &> /dev/null; then
+            nohup python -m SimpleHTTPServer 3001 > frontend.log 2>&1 &
+            echo "Python2 HTTP 服务器已启动"
+        else
+            echo "错误: 未找到 Python。无法启动备选 HTTP 服务器。"
+            exit 1
+        fi
+    else
+        echo "Nginx 已成功启动"
+    fi
 fi
 
 echo "前端地址: http://10.193.21.115:3001"
