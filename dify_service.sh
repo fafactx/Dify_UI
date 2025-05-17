@@ -9,6 +9,7 @@ DEFAULT_FRONTEND_PORT=3001
 DEFAULT_BACKEND_PORT=3000
 DEFAULT_HOST="10.193.21.115"
 DEFAULT_ACTION="start"
+DEFAULT_FRONTEND_TYPE="python"  # 默认使用 Python HTTP 服务器
 INSTALL=false
 
 # 显示帮助信息
@@ -21,6 +22,7 @@ show_help() {
     echo "  --frontend-port=PORT    指定前端服务端口 (默认: 3001)"
     echo "  --backend-port=PORT     指定后端服务端口 (默认: 3000)"
     echo "  --host=HOST             指定主机地址 (默认: 10.193.21.115)"
+    echo "  --frontend-type=TYPE    指定前端服务类型，python 或 nginx (默认: python)"
     echo "  --install               安装依赖 (仅在 start 操作时有效)"
     echo "  --help                  显示此帮助信息"
     echo ""
@@ -29,6 +31,8 @@ show_help() {
     echo "  $0 --action=start --install         # 安装依赖并启动服务"
     echo "  $0 --action=stop                    # 停止服务"
     echo "  $0 --frontend-port=8080 --backend-port=8000  # 使用自定义端口"
+    echo "  $0 --action=start --frontend-type=nginx      # 使用 Nginx 部署前端"
+    echo "  $0 --action=start --frontend-type=python     # 使用 Python HTTP 服务器部署前端"
 }
 
 # 解析命令行参数
@@ -48,6 +52,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --host=*)
             HOST="${1#*=}"
+            shift
+            ;;
+        --frontend-type=*)
+            FRONTEND_TYPE="${1#*=}"
             shift
             ;;
         --install)
@@ -72,10 +80,18 @@ ACTION=${ACTION:-$DEFAULT_ACTION}
 FRONTEND_PORT=${FRONTEND_PORT:-$DEFAULT_FRONTEND_PORT}
 BACKEND_PORT=${BACKEND_PORT:-$DEFAULT_BACKEND_PORT}
 HOST=${HOST:-$DEFAULT_HOST}
+FRONTEND_TYPE=${FRONTEND_TYPE:-$DEFAULT_FRONTEND_TYPE}
 
 # 验证 ACTION 参数
 if [[ "$ACTION" != "start" && "$ACTION" != "stop" ]]; then
     echo "错误: --action 参数必须是 start 或 stop"
+    echo "使用 --help 查看帮助信息"
+    exit 1
+fi
+
+# 验证 FRONTEND_TYPE 参数
+if [[ "$FRONTEND_TYPE" != "python" && "$FRONTEND_TYPE" != "nginx" ]]; then
+    echo "错误: --frontend-type 参数必须是 python 或 nginx"
     echo "使用 --help 查看帮助信息"
     exit 1
 fi
@@ -151,35 +167,111 @@ start_services() {
         echo "进程已终止"
     fi
 
-    echo "步骤 5: 启动前端服务"
+    echo "步骤 5: 启动前端服务 (类型: $FRONTEND_TYPE)"
     cd frontend-html
 
-    # 检查是否安装了 Python
-    if command -v python3 &>/dev/null; then
-        PYTHON_CMD="python3"
-    elif command -v python &>/dev/null; then
-        PYTHON_CMD="python"
-    else
-        echo "错误: 未找到 Python。请安装 Python 3 或 Python 2。"
-        exit 1
+    if [ "$FRONTEND_TYPE" = "python" ]; then
+        # 使用 Python HTTP 服务器部署前端
+        # 检查是否安装了 Python
+        if command -v python3 &>/dev/null; then
+            PYTHON_CMD="python3"
+        elif command -v python &>/dev/null; then
+            PYTHON_CMD="python"
+        else
+            echo "错误: 未找到 Python。请安装 Python 3 或 Python 2。"
+            exit 1
+        fi
+
+        # 检查 Python 版本
+        PYTHON_VERSION=$($PYTHON_CMD --version 2>&1)
+        echo "使用 $PYTHON_VERSION 作为静态文件服务器"
+
+        # 启动 Python 简易 HTTP 服务器
+        echo "启动 HTML5 前端服务 (Python HTTP 服务器)..."
+        if [[ "$PYTHON_VERSION" == *"Python 3"* ]]; then
+            # Python 3
+            nohup $PYTHON_CMD -m http.server $FRONTEND_PORT > frontend.log 2>&1 &
+        else
+            # Python 2
+            nohup $PYTHON_CMD -m SimpleHTTPServer $FRONTEND_PORT > frontend.log 2>&1 &
+        fi
+
+        SERVER_PID=$!
+        echo "HTML5 前端服务已启动，PID: $SERVER_PID"
+    elif [ "$FRONTEND_TYPE" = "nginx" ]; then
+        # 使用 Nginx 部署前端
+        echo "启动 HTML5 前端服务 (Nginx)..."
+
+        # 检查是否安装了 Nginx
+        if ! command -v nginx &> /dev/null; then
+            echo "错误: 未找到 Nginx。请先安装 Nginx。"
+            echo "可以使用以下命令安装: sudo apt-get install nginx"
+            exit 1
+        fi
+
+        # 检查 Nginx 配置文件是否存在
+        if [ ! -f "nginx.conf" ]; then
+            echo "错误: 未找到 Nginx 配置文件 (nginx.conf)。"
+            exit 1
+        fi
+
+        # 创建临时配置文件
+        TEMP_CONF=$(mktemp)
+
+        # 替换配置文件中的路径和端口
+        cat "nginx.conf" | \
+            sed "s|FRONTEND_ROOT_PATH|$(pwd)|g" | \
+            sed "s|PORT_NUMBER|$FRONTEND_PORT|g" > "$TEMP_CONF"
+
+        # 尝试使用 Nginx 启动前端服务
+        echo "配置 Nginx 服务..."
+
+        # 检查是否有权限操作 Nginx 配置
+        if [ -d "/etc/nginx/conf.d" ]; then
+            echo "尝试配置 Nginx..."
+            sudo cp "$TEMP_CONF" "/etc/nginx/conf.d/dify-frontend.conf"
+            sudo nginx -t && sudo systemctl restart nginx
+
+            if [ $? -ne 0 ]; then
+                echo "Nginx 配置失败，尝试使用独立配置..."
+                sudo nginx -c "$TEMP_CONF" -g "daemon on;"
+            fi
+        else
+            echo "使用独立配置启动 Nginx..."
+            sudo nginx -c "$TEMP_CONF" -g "daemon on;"
+        fi
+
+        # 检查 Nginx 是否成功启动
+        if ! pgrep -x "nginx" > /dev/null; then
+            echo "警告: Nginx 可能未成功启动，请检查 Nginx 错误日志。"
+            echo "尝试使用 Python HTTP 服务器作为备选方案..."
+
+            # 使用 Python 作为备选方案
+            if command -v python3 &>/dev/null; then
+                PYTHON_CMD="python3"
+            elif command -v python &>/dev/null; then
+                PYTHON_CMD="python"
+            else
+                echo "错误: 未找到 Python。无法启动前端服务。"
+                exit 1
+            fi
+
+            # 启动 Python 简易 HTTP 服务器
+            if [[ "$($PYTHON_CMD --version 2>&1)" == *"Python 3"* ]]; then
+                nohup $PYTHON_CMD -m http.server $FRONTEND_PORT > frontend.log 2>&1 &
+            else
+                nohup $PYTHON_CMD -m SimpleHTTPServer $FRONTEND_PORT > frontend.log 2>&1 &
+            fi
+
+            echo "已使用 Python HTTP 服务器作为备选方案启动前端服务"
+        else
+            echo "Nginx 已成功启动"
+        fi
+
+        # 删除临时文件
+        rm -f "$TEMP_CONF"
     fi
 
-    # 检查 Python 版本
-    PYTHON_VERSION=$($PYTHON_CMD --version 2>&1)
-    echo "使用 $PYTHON_VERSION 作为静态文件服务器"
-
-    # 启动 Python 简易 HTTP 服务器
-    echo "启动 HTML5 前端服务..."
-    if [[ "$PYTHON_VERSION" == *"Python 3"* ]]; then
-        # Python 3
-        nohup $PYTHON_CMD -m http.server $FRONTEND_PORT > frontend.log 2>&1 &
-    else
-        # Python 2
-        nohup $PYTHON_CMD -m SimpleHTTPServer $FRONTEND_PORT > frontend.log 2>&1 &
-    fi
-
-    SERVER_PID=$!
-    echo "HTML5 前端服务已启动，PID: $SERVER_PID"
     cd ..
 
     echo "步骤 6: 服务访问信息"
@@ -216,23 +308,49 @@ stop_services() {
         echo "未发现运行中的后端服务"
     fi
 
-    echo "步骤 2: 停止前端服务"
-    # 检查是否有 Python HTTP 服务器运行
-    FRONTEND_PID=$(pgrep -f "SimpleHTTPServer $FRONTEND_PORT\|http.server $FRONTEND_PORT")
-    if [ ! -z "$FRONTEND_PID" ]; then
-        echo "发现 Python HTTP 服务进程 $FRONTEND_PID，正在终止..."
-        kill $FRONTEND_PID 2>/dev/null || kill -9 $FRONTEND_PID 2>/dev/null
-        sleep 1
-        echo "Python HTTP 服务已终止"
+    echo "步骤 2: 停止前端服务 (类型: $FRONTEND_TYPE)"
+
+    if [ "$FRONTEND_TYPE" = "python" ]; then
+        # 停止 Python HTTP 服务器
+        echo "停止 Python HTTP 服务器..."
+        FRONTEND_PID=$(pgrep -f "SimpleHTTPServer $FRONTEND_PORT\|http.server $FRONTEND_PORT")
+        if [ ! -z "$FRONTEND_PID" ]; then
+            echo "发现 Python HTTP 服务进程 $FRONTEND_PID，正在终止..."
+            kill $FRONTEND_PID 2>/dev/null || kill -9 $FRONTEND_PID 2>/dev/null
+            sleep 1
+            echo "Python HTTP 服务已终止"
+        else
+            echo "未发现运行中的 Python HTTP 服务"
+        fi
+    elif [ "$FRONTEND_TYPE" = "nginx" ]; then
+        # 停止 Nginx 服务
+        echo "停止 Nginx 服务..."
+
+        # 尝试移除 Nginx 配置文件
+        if [ -f "/etc/nginx/conf.d/dify-frontend.conf" ]; then
+            echo "移除 Nginx 配置文件..."
+            sudo rm -f "/etc/nginx/conf.d/dify-frontend.conf"
+
+            # 重启 Nginx 以应用更改
+            echo "重启 Nginx..."
+            sudo systemctl restart nginx 2>/dev/null || sudo service nginx restart 2>/dev/null || sudo nginx -s reload 2>/dev/null
+
+            echo "Nginx 配置已移除"
+        else
+            echo "未找到 Nginx 配置文件"
+        fi
     fi
 
-    # 检查并终止占用前端端口的任何进程
+    # 无论使用哪种前端类型，都尝试停止占用前端端口的任何进程
+    echo "检查并终止占用前端端口的任何进程..."
     PORT_PID=$(lsof -t -i:$FRONTEND_PORT 2>/dev/null)
     if [ ! -z "$PORT_PID" ]; then
         echo "发现端口 $FRONTEND_PORT 被进程 $PORT_PID 占用，正在终止..."
         kill $PORT_PID 2>/dev/null || kill -9 $PORT_PID 2>/dev/null
         sleep 1
         echo "进程已终止"
+    else
+        echo "未发现端口 $FRONTEND_PORT 被占用"
     fi
 
     echo "所有服务已停止"
