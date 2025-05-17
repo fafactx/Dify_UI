@@ -264,34 +264,38 @@ class EvaluationsDAL {
     const totalStmt = this.db.prepare('SELECT COUNT(*) as count FROM evaluations');
     const { count } = totalStmt.get();
 
+    // 使用JSON1扩展从JSON数据中提取评分
     const avgStmt = this.db.prepare(`
       SELECT
-        AVG(average_score) as overall_average,
-        AVG(hallucination_control) as hallucination_control,
-        AVG(quality) as quality,
-        AVG(professionalism) as professionalism,
-        AVG(usefulness) as usefulness
+        AVG(json_extract(data, '$.average_score')) as overall_average,
+        AVG(json_extract(data, '$.hallucination_control')) as hallucination_control,
+        AVG(json_extract(data, '$.quality')) as quality,
+        AVG(json_extract(data, '$.professionalism')) as professionalism,
+        AVG(json_extract(data, '$.usefulness')) as usefulness
       FROM evaluations
     `);
 
     const averages = avgStmt.get();
 
+    // 使用JSON1扩展从JSON数据中提取产品系列
     const productFamilyStmt = this.db.prepare(`
-      SELECT COUNT(DISTINCT product_family) as count
+      SELECT COUNT(DISTINCT json_extract(data, '$."Product Family"')) as count
       FROM evaluations
     `);
 
     const { count: productFamilyCount } = productFamilyStmt.get();
 
+    // 使用JSON1扩展从JSON数据中提取零件编号
     const partNumberStmt = this.db.prepare(`
-      SELECT COUNT(DISTINCT part_number) as count
+      SELECT COUNT(DISTINCT json_extract(data, '$."Part Number"')) as count
       FROM evaluations
     `);
 
     const { count: partNumberCount } = partNumberStmt.get();
 
+    // 使用JSON1扩展从JSON数据中提取MAG
     const magStmt = this.db.prepare(`
-      SELECT COUNT(DISTINCT mag) as count
+      SELECT COUNT(DISTINCT json_extract(data, '$.MAG')) as count
       FROM evaluations
     `);
 
@@ -336,9 +340,9 @@ class EvaluationsDAL {
     const statsStmt = this.db.prepare(`
       SELECT
         COUNT(*) as count,
-        AVG(average_score) as avg_score
+        AVG(json_extract(data, '$.average_score')) as avg_score
       FROM evaluations
-      WHERE part_number = ?
+      WHERE json_extract(data, '$."Part Number"') = ?
     `);
 
     const { count, avg_score } = statsStmt.get(partNumber);
@@ -367,9 +371,9 @@ class EvaluationsDAL {
     const statsStmt = this.db.prepare(`
       SELECT
         COUNT(*) as count,
-        AVG(average_score) as avg_score
+        AVG(json_extract(data, '$.average_score')) as avg_score
       FROM evaluations
-      WHERE mag = ?
+      WHERE json_extract(data, '$.MAG') = ?
     `);
 
     const { count, avg_score } = statsStmt.get(mag);

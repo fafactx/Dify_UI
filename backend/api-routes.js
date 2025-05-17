@@ -114,6 +114,93 @@ router.get('/stats', asyncHandler(async (req, res) => {
   res.json({ stats });
 }));
 
+// 获取产品评分数据
+router.get('/product-scores', asyncHandler(async (req, res) => {
+  try {
+    // 从数据库获取所有评估数据
+    const evaluations = evaluationsDAL.getEvaluations({
+      limit: 1000, // 获取足够多的评估数据
+      sortBy: 'timestamp',
+      sortOrder: 'desc'
+    });
+
+    // 按产品ID分组
+    const productGroups = {};
+
+    // 遍历所有评估数据
+    evaluations.data.forEach(evaluation => {
+      // 提取产品ID
+      let productId = evaluation['Part Number'];
+
+      // 如果没有Part Number字段，使用默认值
+      if (!productId) {
+        productId = 'unknown';
+      }
+
+      // 初始化产品组
+      if (!productGroups[productId]) {
+        productGroups[productId] = {
+          id: productId,
+          samples: [],
+          dimensions: {}
+        };
+      }
+
+      // 添加样本
+      productGroups[productId].samples.push(evaluation);
+
+      // 更新维度得分
+      const dimensions = [
+        'hallucination_control',
+        'quality',
+        'professionalism',
+        'usefulness'
+      ];
+
+      dimensions.forEach(dim => {
+        if (evaluation[dim] !== undefined) {
+          if (!productGroups[productId].dimensions[dim]) {
+            productGroups[productId].dimensions[dim] = {
+              total: 0,
+              count: 0
+            };
+          }
+
+          productGroups[productId].dimensions[dim].total += evaluation[dim];
+          productGroups[productId].dimensions[dim].count++;
+        }
+      });
+    });
+
+    // 计算每个产品的平均得分
+    const productScores = Object.values(productGroups).map(group => {
+      // 计算各维度平均分
+      const dimensionScores = {};
+      Object.entries(group.dimensions).forEach(([dim, data]) => {
+        dimensionScores[dim] = data.count > 0 ? Math.round(data.total / data.count) : 0;
+      });
+
+      // 计算总平均分
+      const totalScore = Object.values(dimensionScores).reduce((sum, score) => sum + score, 0);
+      const averageScore = Object.keys(dimensionScores).length > 0 ?
+                          Math.round(totalScore / Object.keys(dimensionScores).length) : 0;
+
+      return {
+        product_id: group.id,
+        sample_count: group.samples.length,
+        dimension_scores: dimensionScores,
+        average_score: averageScore
+      };
+    });
+
+    console.log(`返回 ${productScores.length} 个产品的评分数据`);
+    res.json({ products: productScores });
+  } catch (error) {
+    console.error(`获取产品评分数据出错: ${error.message}`);
+    res.status(500).json({ success: false, message: error.message });
+  }
+}));
+
 // 保存评估数据 (兼容旧API)
 router.post('/save-evaluation', asyncHandler(async (req, res) => {
   const evaluationData = req.body;
