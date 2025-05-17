@@ -5,6 +5,15 @@
 
 这是一个用于可视化 Dify 工作流评估结果的框架，包括后端 API 和现代化前端实现。该框架允许你将 Dify 工作流中的评估结果保存并可视化，支持多种图表、排序、搜索和对比功能。
 
+## 仓库信息
+
+本项目在以下两个GitHub仓库中同步维护：
+
+- **dify-evaluation-dashboard**: [https://github.com/fafactx/dify-evaluation-dashboard](https://github.com/fafactx/dify-evaluation-dashboard)
+- **Dify_UI**: [https://github.com/fafactx/Dify_UI](https://github.com/fafactx/Dify_UI)
+
+两个仓库内容完全相同，您可以选择任意一个进行克隆和使用。项目提供了同步脚本`sync_repos.sh`，用于将更改同时推送到两个仓库。
+
 ## 技术栈
 
 基于 HTML5、CSS3、JavaScript 和 ECharts 5 构建的实现，提供丰富的视觉效果和交互体验。
@@ -151,16 +160,8 @@ graph LR
 
 这些文件用于部署和管理系统，但不直接参与系统功能：
 
-- **主要部署脚本**：
-  - `deploy.sh` - 主部署脚本入口点
-  - `stop.sh` - 停止服务脚本入口点
-  - `scripts/deploy/deploy.sh` - 完整部署脚本
-  - `scripts/deploy/stop.sh` - 完整停止脚本
-
-- **前端部署脚本**：
-  - `scripts/deploy/frontend-deploy.sh` - 前端独立部署脚本
-  - `scripts/deploy/frontend-nginx-deploy.sh` - Nginx前端部署脚本
-  - `scripts/deploy/frontend-nginx-stop.sh` - Nginx前端停止脚本
+- **综合服务脚本**：
+  - `dify_service.sh` - 综合服务脚本，用于启动和停止服务，支持 Python HTTP 服务器和 Nginx
 
 - **Nginx配置文件**：
   - `frontend-html/nginx.conf` - Nginx配置
@@ -293,9 +294,11 @@ node server.js
 ### 步骤 6：部署前端
 
 ```bash
-cd DIFY_UI/frontend-html
-chmod +x deploy.sh
-./deploy.sh  # HTML5 前端不需要安装依赖
+cd DIFY_UI
+chmod +x dify_service.sh
+./dify_service.sh --action=start --frontend-type=python  # 使用 Python HTTP 服务器部署前端
+# 或者
+./dify_service.sh --action=start --frontend-type=nginx   # 使用 Nginx 部署前端
 ```
 
 部署完成后，您可以在局域网中的浏览器访问 http://10.193.21.115:3001 使用可视化仪表板。
@@ -312,30 +315,34 @@ chmod +x deploy.sh
 
 ### 步骤 8：一键部署（后端+前端）
 
-如果您想一次性部署后端和前端，可以使用根目录下的部署脚本：
+如果您想一次性部署后端和前端，可以使用综合服务脚本：
 
 ```bash
 cd DIFY_UI
-chmod +x deploy.sh
-./deploy.sh --install  # 首次运行时安装依赖
+chmod +x dify_service.sh
+./dify_service.sh --action=start --install  # 首次运行时安装依赖
 ```
 
 部署完成后，您可以在局域网中的浏览器访问 http://10.193.21.115:3001 使用可视化仪表板。
 
-**注意**：所有部署脚本已经重组到 `scripts/deploy` 目录中，但为了保持兼容性，根目录下的 `deploy.sh` 和 `stop.sh` 仍然可以作为入口点使用。如果您想直接使用重组后的脚本，可以这样做：
+**停止服务**：
 
 ```bash
 cd DIFY_UI
-chmod +x scripts/deploy/deploy.sh
-./scripts/deploy/deploy.sh --install  # 首次运行时安装依赖
+./dify_service.sh --action=stop
 ```
 
-同样，停止服务也可以使用：
+**高级选项**：
 
 ```bash
-cd DIFY_UI
-chmod +x scripts/deploy/stop.sh
-./scripts/deploy/stop.sh
+# 使用自定义端口
+./dify_service.sh --action=start --frontend-port=8080 --backend-port=8000
+
+# 使用 Nginx 部署前端
+./dify_service.sh --action=start --frontend-type=nginx
+
+# 查看所有选项
+./dify_service.sh --help
 ```
 
 ## 使用指南
@@ -449,10 +456,8 @@ SyntaxError: Unexpected reserved word
 
 4. 启动服务
    ```bash
-   # 使用根目录脚本启动所有服务
-   ./deploy.sh
-   # 或
-   ./scripts/deploy/deploy.sh
+   # 使用综合服务脚本
+   ./dify_service.sh --action=start
 
    # 或者分别启动
    cd backend
