@@ -13,24 +13,15 @@ const API_ENDPOINTS = {
     SAVE_EVALUATION: '/api/save-evaluation'
 };
 
-// 基本身份验证凭据
-// 注意：在生产环境中，不应该在前端代码中硬编码凭据
-// 这里仅用于演示，实际应用中应该使用更安全的认证方式
-const AUTH_CREDENTIALS = {
-    username: 'admin',
-    password: 'your_password_here' // 请在部署时修改为实际密码
-};
+// 注意：身份验证已被移除，因为在 Node.js v22+ 中存在兼容性问题
 
 /**
- * 创建基本身份验证头部
- * @returns {Object} 包含 Authorization 头的对象
+ * 创建请求头部
+ * @returns {Object} 包含请求头的对象
  */
 function createAuthHeader() {
-    const credentials = `${AUTH_CREDENTIALS.username}:${AUTH_CREDENTIALS.password}`;
-    const encodedCredentials = btoa(credentials);
-    return {
-        'Authorization': `Basic ${encodedCredentials}`
-    };
+    // 返回空对象，不再使用身份验证
+    return {};
 }
 
 /**
