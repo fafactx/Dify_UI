@@ -892,22 +892,26 @@ function showDetail(index) {
     // 创建详情 HTML
     const detailHtml = `
         <div class="detail-section">
-            <h6>基本信息</h6>
+            <h6>Basic Information</h6>
             <div class="detail-content">
                 <p><strong>ID:</strong> ${evaluation.id}</p>
-                <p><strong>日期:</strong> ${dateStr} ${timeStr}</p>
-                <p><strong>平均分:</strong> ${evaluation.average_score || 0}</p>
+                <p><strong>Date:</strong> ${dateStr} ${timeStr}</p>
+                <p><strong>Average Score:</strong> ${evaluation.average_score || 0}</p>
+                ${evaluation.CAS_Name ? `<p><strong>CAS Name:</strong> ${evaluation.CAS_Name}</p>` : ''}
+                ${evaluation.Product_Family ? `<p><strong>Product Family:</strong> ${evaluation.Product_Family}</p>` : ''}
+                ${evaluation.MAG ? `<p><strong>MAG:</strong> ${evaluation.MAG}</p>` : ''}
+                ${evaluation.Part_Number ? `<p><strong>Part Number:</strong> ${evaluation.Part_Number}</p>` : ''}
             </div>
         </div>
 
         <div class="detail-section">
-            <h6>维度评分</h6>
+            <h6>Dimension Scores</h6>
             <div class="detail-content">
                 <div class="row">
                     ${dimensions.map(dim => `
                         <div class="col-md-6 mb-2">
                             <div class="d-flex justify-content-between">
-                                <span>${formatDimensionName(dim)}:</span>
+                                <span>${formatDimensionNameEn(dim)}:</span>
                                 <span class="fw-bold">${evaluation[dim]}</span>
                             </div>
                             <div class="progress" style="height: 10px;">
@@ -924,9 +928,30 @@ function showDetail(index) {
         </div>
 
         <div class="detail-section">
-            <h6>摘要</h6>
+            <h6>Question & Answer</h6>
             <div class="detail-content">
-                <p>${evaluation.summary || '无摘要信息'}</p>
+                ${evaluation.Question ? `<p><strong>Question:</strong> ${evaluation.Question}</p>` : ''}
+                ${evaluation.Answer ? `<p><strong>Answer:</strong> ${evaluation.Answer}</p>` : ''}
+                ${evaluation.Question_Scenario ? `<p><strong>Question Scenario:</strong> ${evaluation.Question_Scenario}</p>` : ''}
+                ${evaluation.Answer_Source ? `<p><strong>Answer Source:</strong> ${evaluation.Answer_Source}</p>` : ''}
+                ${evaluation.Question_Complexity ? `<p><strong>Question Complexity:</strong> ${evaluation.Question_Complexity}</p>` : ''}
+                ${evaluation.Question_Frequency ? `<p><strong>Question Frequency:</strong> ${evaluation.Question_Frequency}</p>` : ''}
+                ${evaluation.Question_Category ? `<p><strong>Question Category:</strong> ${evaluation.Question_Category}</p>` : ''}
+                ${evaluation.Source_Category ? `<p><strong>Source Category:</strong> ${evaluation.Source_Category}</p>` : ''}
+            </div>
+        </div>
+
+        <div class="detail-section">
+            <h6>Summary</h6>
+            <div class="detail-content">
+                <p>${evaluation.summary || 'No summary available'}</p>
+            </div>
+        </div>
+
+        <div class="detail-section">
+            <h6>LLM Answer</h6>
+            <div class="detail-content">
+                <p>${evaluation.LLM_ANSWER || 'No LLM answer available'}</p>
             </div>
         </div>
     `;
