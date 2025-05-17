@@ -4,12 +4,20 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
+const basicAuth = require('express-basic-auth');
 
 // 初始化 Express 应用
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 中间件
+// 基本身份验证中间件
+app.use(basicAuth({
+  users: { 'admin': 'ken@1234' },
+  challenge: true,
+  realm: 'Dify 评估结果可视化仪表板'
+}));
+
+// 其他中间件
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, '../frontend')));
