@@ -55,8 +55,9 @@ fi
 # 更新 Nginx 配置文件中的路径和端口
 TEMP_CONF=$(mktemp)
 TEMP_INCLUDE=$(mktemp)
+TEMP_STANDALONE=$(mktemp)
 
-# 准备两种配置文件，替换路径和端口
+# 准备三种配置文件，替换路径和端口
 cat "$FRONTEND_DIR/nginx.conf" | \
     sed "s|/home/ken/dify-evaluation-dashboard/frontend-html|$FRONTEND_DIR|g" | \
     sed "s|PORT_NUMBER|$PORT|g" > "$TEMP_CONF"
@@ -64,6 +65,11 @@ cat "$FRONTEND_DIR/nginx.conf" | \
 cat "$FRONTEND_DIR/nginx-include.conf" | \
     sed "s|/home/ken/dify-evaluation-dashboard/frontend-html|$FRONTEND_DIR|g" | \
     sed "s|PORT_NUMBER|$PORT|g" > "$TEMP_INCLUDE"
+
+# 准备独立配置文件（完整的 nginx.conf）
+cat "$FRONTEND_DIR/nginx-standalone.conf" | \
+    sed "s|/home/ken/dify-evaluation-dashboard/frontend-html|$FRONTEND_DIR|g" | \
+    sed "s|PORT_NUMBER|$PORT|g" > "$TEMP_STANDALONE"
 
 # 检测 Nginx 配置目录和方法
 NGINX_MAIN_CONF="/etc/nginx/nginx.conf"
@@ -115,13 +121,21 @@ if [ -f "$NGINX_MAIN_CONF" ]; then
 fi
 
 # 如果使用 sites-available/sites-enabled 模式，创建符号链接
-if [ -d "/etc/nginx/sites-available" ] && [ -d "/etc/nginx/sites-enabled" ]; then
+if [ -d "/etc/nginx/sites-available" ] && [ -d "/etc/nginx/sites-enabled" ] && [ ! -z "$NGINX_ENABLED_PATH" ] && [ ! -z "$NGINX_CONF_PATH" ]; then
     echo "创建符号链接: $NGINX_ENABLED_PATH -> $NGINX_CONF_PATH"
+    # 确保目标目录存在
+    sudo mkdir -p "$(dirname "$NGINX_ENABLED_PATH")"
     sudo ln -sf "$NGINX_CONF_PATH" "$NGINX_ENABLED_PATH"
+
+    if [ $? -ne 0 ]; then
+        echo "警告: 创建符号链接失败，但这可能不影响 Nginx 运行"
+    fi
+else
+    echo "跳过符号链接创建（不使用 sites-available/sites-enabled 模式或路径未定义）"
 fi
 
 # 删除临时文件
-rm "$TEMP_CONF" "$TEMP_INCLUDE"
+rm "$TEMP_CONF" "$TEMP_INCLUDE" "$TEMP_STANDALONE"
 
 # 测试 Nginx 配置
 echo "测试 Nginx 配置..."
@@ -150,10 +164,26 @@ else
         sudo nginx -s reload
     fi
 
-    # 如果方法 3 失败，尝试方法 4: 直接启动 nginx
+    # 如果方法 3 失败，尝试方法 4: 使用独立配置文件
     if [ $? -ne 0 ]; then
-        echo "使用 nginx -s reload 失败，尝试直接启动 nginx..."
-        sudo nginx
+        echo "使用 nginx -s reload 失败，尝试使用独立配置文件..."
+
+        # 检查是否有其他 Nginx 进程
+        if pgrep -x "nginx" > /dev/null; then
+            echo "发现 Nginx 进程已在运行，但我们将使用独立配置"
+        fi
+
+        # 创建独立配置目录
+        STANDALONE_DIR="/tmp/nginx-dify"
+        sudo mkdir -p "$STANDALONE_DIR"
+
+        # 复制独立配置文件
+        STANDALONE_CONF="$STANDALONE_DIR/nginx.conf"
+        sudo cp "$TEMP_STANDALONE" "$STANDALONE_CONF"
+
+        # 使用 -c 参数指定配置文件，避免使用默认配置
+        echo "使用独立配置文件启动 Nginx: $STANDALONE_CONF"
+        sudo nginx -c "$STANDALONE_CONF" -g "daemon on; pid $STANDALONE_DIR/nginx.pid;"
     fi
 
     # 检查 Nginx 是否成功启动
