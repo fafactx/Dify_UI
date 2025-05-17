@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="description" content="RAGLLM Testing System Dashboard">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>RAGLLM Testing System</title>
     <style>
         body {
@@ -49,10 +52,30 @@
         }
     </style>
     <script>
+        // 清除缓存
+        function clearCache() {
+            // 尝试清除浏览器缓存
+            if (window.caches) {
+                caches.keys().then(function(names) {
+                    for (let name of names) {
+                        caches.delete(name);
+                    }
+                });
+            }
+        }
+
         // 页面加载完成后重定向到新的仪表板页面
         window.addEventListener('load', function() {
+            // 清除缓存
+            clearCache();
+
+            // 添加随机参数以避免缓存
+            const timestamp = new Date().getTime();
+            const randomParam = Math.floor(Math.random() * 1000000);
+            const url = `raglim-dashboard.html?t=${timestamp}&r=${randomParam}`;
+
             setTimeout(function() {
-                window.location.href = 'raglim-dashboard.html';
+                window.location.href = url;
             }, 1500); // 1.5秒后重定向，给用户一个加载的视觉反馈
         });
     </script>
