@@ -1,0 +1,23 @@
+{
+  "name": "dify-evaluation-dashboard",
+  "version": "1.0.0",
+  "description": "Dify 评估结果可视化仪表板",
+  "private": true,
+  "scripts": {
+    "install:all": "npm run install:backend && npm run install:frontend",
+    "install:backend": "cd backend && npm install",
+    "install:frontend": "cd frontend && npm install",
+    "start": "npm run start:backend & npm run start:frontend",
+    "start:backend": "cd backend && node server.js",
+    "start:frontend": "cd frontend && npm run dev",
+    "setup": "node scripts/setup.js"
+  },
+  "keywords": [
+    "dify",
+    "dashboard",
+    "visualization",
+    "evaluation"
+  ],
+  "author": "",
+  "license": "MIT"
+}

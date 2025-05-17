@@ -6,25 +6,42 @@ echo ======================================
 if "%1"=="--install" (
     echo 步骤 1: 安装依赖
 
-    echo 安装后端依赖...
-    cd backend
-    call npm install
-    if %ERRORLEVEL% neq 0 (
-        echo 安装后端依赖失败，请检查 Node.js 是否正确安装
-        exit /b %ERRORLEVEL%
-    )
-    echo 后端依赖安装完成
-    cd ..
+    :: 检查根目录 package.json 是否存在
+    if exist "package.json" (
+        echo 使用根目录 package.json 安装依赖...
+        call npm install
+        call npm run install:all
+        if %ERRORLEVEL% neq 0 (
+            echo 安装依赖失败，请检查 Node.js 是否正确安装
+            exit /b %ERRORLEVEL%
+        )
+    ) else (
+        echo 安装后端依赖...
+        cd backend
+        call npm install
+        if %ERRORLEVEL% neq 0 (
+            echo 安装后端依赖失败，请检查 Node.js 是否正确安装
+            exit /b %ERRORLEVEL%
+        )
+        echo 后端依赖安装完成
+        cd ..
 
-    echo 安装前端依赖...
-    cd frontend
-    call npm install
-    if %ERRORLEVEL% neq 0 (
-        echo 安装前端依赖失败，请检查 Node.js 是否正确安装
-        exit /b %ERRORLEVEL%
+        echo 安装前端依赖...
+        cd frontend
+        call npm install
+        if %ERRORLEVEL% neq 0 (
+            echo 安装前端依赖失败，请检查 Node.js 是否正确安装
+            exit /b %ERRORLEVEL%
+        )
+        echo 前端依赖安装完成
+        cd ..
     )
-    echo 前端依赖安装完成
-    cd ..
+
+    :: 运行设置脚本
+    if exist "scripts\setup.js" (
+        echo 运行设置脚本...
+        node scripts\setup.js
+    )
 )
 
 echo 步骤 1: 准备后端

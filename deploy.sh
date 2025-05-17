@@ -7,25 +7,42 @@ echo "======================================"
 if [ "$1" = "--install" ]; then
     echo "步骤 1: 安装依赖"
 
-    echo "安装后端依赖..."
-    cd backend
-    npm install
-    if [ $? -ne 0 ]; then
-        echo "安装后端依赖失败，请检查 Node.js 是否正确安装"
-        exit 1
-    fi
-    echo "后端依赖安装完成"
-    cd ..
+    # 检查根目录 package.json 是否存在
+    if [ -f "package.json" ]; then
+        echo "使用根目录 package.json 安装依赖..."
+        npm install
+        npm run install:all
+        if [ $? -ne 0 ]; then
+            echo "安装依赖失败，请检查 Node.js 是否正确安装"
+            exit 1
+        fi
+    else
+        echo "安装后端依赖..."
+        cd backend
+        npm install
+        if [ $? -ne 0 ]; then
+            echo "安装后端依赖失败，请检查 Node.js 是否正确安装"
+            exit 1
+        fi
+        echo "后端依赖安装完成"
+        cd ..
 
-    echo "安装前端依赖..."
-    cd frontend
-    npm install
-    if [ $? -ne 0 ]; then
-        echo "安装前端依赖失败，请检查 Node.js 是否正确安装"
-        exit 1
+        echo "安装前端依赖..."
+        cd frontend
+        npm install
+        if [ $? -ne 0 ]; then
+            echo "安装前端依赖失败，请检查 Node.js 是否正确安装"
+            exit 1
+        fi
+        echo "前端依赖安装完成"
+        cd ..
     fi
-    echo "前端依赖安装完成"
-    cd ..
+
+    # 运行设置脚本
+    if [ -f "scripts/setup.js" ]; then
+        echo "运行设置脚本..."
+        node scripts/setup.js
+    fi
 fi
 
 echo "步骤 1: 准备后端"

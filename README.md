@@ -62,13 +62,37 @@ DIFY_UI/
 └── README.md               # 项目说明
 ```
 
-### 步骤 2：安装后端依赖
+### 步骤 2：安装依赖
 
-打开命令行终端，进入后端目录并安装依赖：
+**方法 1：使用根目录 package.json（推荐）**
+
+打开命令行终端，在项目根目录中运行：
 
 ```bash
+# 安装根目录依赖
+npm install
+
+# 安装所有子项目依赖
+npm run install:all
+
+# 运行设置脚本（配置身份验证等）
+npm run setup
+```
+
+**方法 2：手动安装各个部分**
+
+或者，您可以分别安装后端和前端依赖：
+
+```bash
+# 安装后端依赖
 cd DIFY_UI/backend
 npm install
+cd ..
+
+# 安装前端依赖
+cd frontend
+npm install
+cd ..
 ```
 
 这将安装 Express、CORS 和其他必要的依赖项。
@@ -260,21 +284,41 @@ docker-compose up -d
    git pull
    ```
 
-2. 更新后端
+2. 使用根目录 package.json（推荐）
    ```bash
+   npm install  # 更新根目录依赖
+   npm run install:all  # 更新所有子项目依赖
+   ```
+
+3. 或者手动更新各部分
+   ```bash
+   # 更新后端
    cd backend
    npm install  # 如有新依赖
-   node server.js
-   ```
+   cd ..
 
-3. 更新前端
-   ```bash
+   # 更新前端
    cd frontend
    npm install  # 如有新依赖
-   npm run dev
+   cd ..
    ```
 
-4. 如使用 Docker，重新构建容器
+4. 启动服务
+   ```bash
+   # 使用根目录脚本启动所有服务
+   npm run start
+
+   # 或者分别启动
+   cd backend
+   node server.js
+   cd ..
+
+   cd frontend
+   npm run dev
+   cd ..
+   ```
+
+5. 如使用 Docker，重新构建容器
    ```bash
    docker-compose up -d --build
    ```
