@@ -256,26 +256,26 @@ function updateStatsCards() {
 
     // 1. 样本总数直接使用count
     const totalSamples = count || 0;
-    
+
     // 2. 总平均分使用overall_average
     const formattedAverage = overall_average || 0;
-    
+
     // 3. 处理维度平均值
     let highestDimension = '';
     let highestScore = 0;
     let lowestDimension = '';
     let lowestScore = 10;
-    
+
     // 获取所有维度并按分数排序
     const sortedDimensions = Object.entries(dimension_averages || {})
         .filter(([_, score]) => typeof score === 'number')
         .sort((a, b) => b[1] - a[1]);
-    
+
     if (sortedDimensions.length > 0) {
         // 最高分维度
         highestDimension = sortedDimensions[0][0];
         highestScore = sortedDimensions[0][1];
-        
+
         // 最低分维度
         lowestDimension = sortedDimensions[sortedDimensions.length - 1][0];
         lowestScore = sortedDimensions[sortedDimensions.length - 1][1];
@@ -421,6 +421,45 @@ function updateCharts() {
         return;
     }
 
+    // 确保图表容器可见
+    const dashboardView = document.getElementById('dashboard-view');
+    const wasHidden = dashboardView && dashboardView.classList.contains('d-none');
+
+    if (wasHidden) {
+        console.log('[DEBUG] 仪表板视图隐藏，临时显示以更新图表');
+        dashboardView.classList.remove('d-none');
+    }
+
+    // 确保图表实例已初始化
+    if (!window.radarChart || !window.barChart) {
+        console.log('[DEBUG] 图表实例未初始化，尝试初始化');
+        window.initCharts();
+
+        // 给图表初始化一些时间
+        setTimeout(() => {
+            updateChartsWithData();
+
+            // 恢复仪表板视图状态
+            if (wasHidden) {
+                console.log('[DEBUG] 恢复仪表板视图隐藏状态');
+                dashboardView.classList.add('d-none');
+            }
+        }, 500);
+    } else {
+        updateChartsWithData();
+
+        // 恢复仪表板视图状态
+        if (wasHidden) {
+            console.log('[DEBUG] 恢复仪表板视图隐藏状态');
+            dashboardView.classList.add('d-none');
+        }
+    }
+}
+
+/**
+ * 使用数据更新图表
+ */
+function updateChartsWithData() {
     if (!state.stats.dimension_averages) {
         console.warn('[DEBUG] 维度平均值不存在，无法更新图表');
         // 尝试从评估数据中计算维度平均值
@@ -450,10 +489,34 @@ function updateCharts() {
 
     console.log('[DEBUG] 使用的维度平均值:', state.stats.dimension_averages);
 
+    // 确保图表容器有尺寸
+    const containers = ['radar-chart', 'bar-chart'];
+    containers.forEach(id => {
+        const container = document.getElementById(id);
+        if (container) {
+            if (container.clientWidth === 0 || container.clientHeight === 0) {
+                console.log(`[DEBUG] 容器 #${id} 尺寸为零，设置内联样式`);
+                container.style.width = '100%';
+                container.style.height = '400px';
+                container.style.position = 'relative';
+            }
+        }
+    });
+
+    // 强制重绘图表
+    if (typeof window.forceResizeCharts === 'function') {
+        console.log('[DEBUG] 强制重绘图表');
+        window.forceResizeCharts();
+    }
+
     try {
         // 更新饼图（原雷达图）
         console.log('[DEBUG] 调用 updateRadarChart');
-        updateRadarChart(state.stats.dimension_averages);
+        if (typeof window.updateRadarChart === 'function' && window.radarChart) {
+            window.updateRadarChart(state.stats.dimension_averages);
+        } else {
+            console.warn('[DEBUG] updateRadarChart 函数或图表实例不存在');
+        }
     } catch (error) {
         console.error('[DEBUG] 更新饼图失败:', error);
     }
@@ -461,11 +524,23 @@ function updateCharts() {
     try {
         // 更新MAG分数分布图（原柱状图）
         console.log('[DEBUG] 调用 updateBarChart');
-        // 传递评估数据，用于按MAG分组
-        updateBarChart(state.stats.dimension_averages, state.evaluations);
+        if (typeof window.updateBarChart === 'function' && window.barChart) {
+            // 传递评估数据，用于按MAG分组
+            window.updateBarChart(state.stats.dimension_averages, state.evaluations);
+        } else {
+            console.warn('[DEBUG] updateBarChart 函数或图表实例不存在');
+        }
     } catch (error) {
         console.error('[DEBUG] 更新MAG分数分布图失败:', error);
     }
+
+    // 最后再次强制重绘
+    setTimeout(() => {
+        if (typeof window.forceResizeCharts === 'function') {
+            console.log('[DEBUG] 延迟后再次强制重绘图表');
+            window.forceResizeCharts();
+        }
+    }, 200);
 }
 
 /**

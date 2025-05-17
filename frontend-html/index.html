@@ -21,6 +21,31 @@
     <link href="css/styles.css" rel="stylesheet">
     <!-- ECharts -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js" crossorigin="anonymous"></script>
+
+    <!-- 确保 ECharts 加载 -->
+    <script>
+        // 检查 ECharts 是否加载成功
+        window.addEventListener('load', function() {
+            if (typeof echarts === 'undefined') {
+                console.error('ECharts 库未加载，尝试重新加载');
+                // 重新加载 ECharts
+                var script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js';
+                script.crossOrigin = 'anonymous';
+                script.onload = function() {
+                    console.log('ECharts 库重新加载成功');
+                    // 如果页面已经初始化，尝试重新初始化图表
+                    if (typeof window.initCharts === 'function') {
+                        console.log('尝试重新初始化图表');
+                        window.initCharts();
+                    }
+                };
+                document.head.appendChild(script);
+            } else {
+                console.log('ECharts 库已成功加载，版本:', echarts.version);
+            }
+        });
+    </script>
 </head>
 <body>
     <!-- 导航栏 -->
@@ -89,6 +114,11 @@
                         <div class="card-body">
                             <div id="radar-chart" style="height: 400px;"></div>
                         </div>
+                        <div class="card-footer bg-light text-center">
+                            <button class="btn btn-sm btn-outline-primary" onclick="window.diagnoseDashboard()">
+                                <i class="fas fa-sync-alt me-1"></i>刷新图表
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="col-md-6 mb-4">
@@ -98,6 +128,11 @@
                         </div>
                         <div class="card-body">
                             <div id="bar-chart" style="height: 400px;"></div>
+                        </div>
+                        <div class="card-footer bg-light text-center">
+                            <button class="btn btn-sm btn-outline-primary" onclick="window.testCharts()">
+                                <i class="fas fa-vial me-1"></i>测试图表
+                            </button>
                         </div>
                     </div>
                 </div>
