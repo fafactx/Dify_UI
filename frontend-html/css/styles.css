@@ -1,0 +1,202 @@
+/* 全局样式 */
+:root {
+    --primary-color: #4a6bff;
+    --secondary-color: #6c757d;
+    --success-color: #28a745;
+    --info-color: #17a2b8;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --light-color: #f8f9fa;
+    --dark-color: #343a40;
+}
+
+body {
+    background-color: #f5f7fb;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* 导航栏样式 */
+.navbar {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+    font-weight: 600;
+}
+
+/* 卡片样式 */
+.card {
+    border-radius: 0.5rem;
+    border: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    border-bottom: none;
+    font-weight: 600;
+    border-radius: 0.5rem 0.5rem 0 0 !important;
+}
+
+/* 统计卡片 */
+.stat-card {
+    text-align: center;
+    padding: 1.5rem;
+}
+
+.stat-card .stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.stat-card .stat-label {
+    font-size: 1rem;
+    color: var(--secondary-color);
+}
+
+.stat-card .stat-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+/* 图表容器 */
+.chart-container {
+    height: 400px;
+    width: 100%;
+}
+
+/* 表格样式 */
+.table th {
+    font-weight: 600;
+    background-color: var(--light-color);
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(74, 107, 255, 0.05);
+}
+
+/* 按钮样式 */
+.btn {
+    border-radius: 0.25rem;
+    font-weight: 500;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: #3a5bef;
+    border-color: #3a5bef;
+}
+
+/* 滑块样式 */
+.weight-slider {
+    margin-bottom: 1.5rem;
+}
+
+.weight-slider label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.weight-slider input[type="range"] {
+    width: 100%;
+}
+
+.weight-slider .weight-value {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+/* 加载动画 */
+#loading {
+    padding: 3rem;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .stat-card .stat-value {
+        font-size: 1.8rem;
+    }
+    
+    .stat-card .stat-icon {
+        font-size: 1.5rem;
+    }
+    
+    .chart-container {
+        height: 300px;
+    }
+}
+
+/* 维度标签颜色 */
+.dimension-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    margin-right: 0.25rem;
+    margin-bottom: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+}
+
+.dimension-badge.high {
+    background-color: #28a745;
+}
+
+.dimension-badge.medium {
+    background-color: #ffc107;
+}
+
+.dimension-badge.low {
+    background-color: #dc3545;
+}
+
+/* 详情模态框 */
+.detail-section {
+    margin-bottom: 1.5rem;
+}
+
+.detail-section h6 {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--primary-color);
+}
+
+.detail-section .detail-content {
+    background-color: var(--light-color);
+    padding: 1rem;
+    border-radius: 0.25rem;
+}
+
+/* 对比表格 */
+#compare-table th:first-child {
+    width: 200px;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}

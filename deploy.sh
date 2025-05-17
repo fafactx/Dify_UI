@@ -65,7 +65,6 @@ echo "后端服务已在后台启动，日志保存在 backend/backend.log"
 cd ..
 
 echo "步骤 4: 准备前端"
-cd frontend
 echo "检查并终止占用 3001 端口的进程"
 PORT_PID=$(lsof -t -i:3001 2>/dev/null)
 if [ ! -z "$PORT_PID" ]; then
@@ -75,9 +74,10 @@ if [ ! -z "$PORT_PID" ]; then
     echo "进程已终止"
 fi
 
-echo "步骤 5: 启动前端服务"
-nohup npm run dev > frontend.log 2>&1 &
-echo "前端服务已在后台启动，日志保存在 frontend/frontend.log"
+echo "步骤 5: 启动 HTML5 前端服务"
+cd frontend-html
+chmod +x deploy.sh
+./deploy.sh
 cd ..
 
 echo "步骤 6: 服务访问信息"

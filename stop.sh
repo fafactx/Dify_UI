@@ -15,7 +15,7 @@ else
 fi
 
 echo "步骤 2: 停止前端服务"
-FRONTEND_PID=$(pgrep -f "vite")
+FRONTEND_PID=$(pgrep -f "SimpleHTTPServer 3001\|http.server 3001")
 if [ ! -z "$FRONTEND_PID" ]; then
     echo "发现前端服务进程 $FRONTEND_PID，正在终止..."
     kill $FRONTEND_PID 2>/dev/null || kill -9 $FRONTEND_PID 2>/dev/null
