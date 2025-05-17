@@ -7,7 +7,7 @@
 
 ## 技术栈
 
-基于 React 18、TypeScript、Chakra UI 和 ECharts 5 构建的现代化实现，提供丰富的视觉效果和交互体验。
+基于 HTML5、CSS3、JavaScript 和 ECharts 5 构建的实现，提供丰富的视觉效果和交互体验。
 
 ## 功能特点
 
@@ -19,11 +19,9 @@
 - 📉 时间趋势分析
 - ⚖️ 维度权重配置
 - 📤 数据导出功能
-- 🌙 现代暗色主题 - 专为数据可视化优化的深色界面
-- ✨ 流畅的动画效果 - 使用 Framer Motion 实现平滑过渡
-- 📱 完全响应式设计 - 完美适配各种屏幕尺寸
-- 🎨 高级图表效果 - 3D 雷达图、渐变填充、动态效果
-- 💎 精美 UI 组件 - 使用 Chakra UI 构建的现代界面
+- 📱 响应式设计 - 适配各种屏幕尺寸
+- 🎨 图表效果 - 雷达图、柱状图、渐变填充
+- 💎 精美 UI 组件 - 使用 Bootstrap 5 构建的界面
 
 ## 部署步骤
 
@@ -90,10 +88,7 @@ cd DIFY_UI/backend
 npm install
 cd ..
 
-# 安装前端依赖
-cd frontend
-npm install
-cd ..
+# 前端使用 HTML5，无需安装依赖
 ```
 
 这将安装 Express、CORS 和其他必要的依赖项。
@@ -130,9 +125,9 @@ node server.js
 ### 步骤 6：部署前端
 
 ```bash
-cd DIFY_UI/frontend
+cd DIFY_UI/frontend-html
 chmod +x deploy.sh
-./deploy.sh --install  # 首次运行时安装依赖
+./deploy.sh  # HTML5 前端不需要安装依赖
 ```
 
 部署完成后，您可以在局域网中的浏览器访问 http://10.193.21.115:3001 使用可视化仪表板。
@@ -242,7 +237,7 @@ SyntaxError: Unexpected reserved word
 
 - 检查浏览器控制台是否有错误信息
 - 确保你的浏览器支持 ECharts 5
-- 确保 React 和 Chakra UI 正确加载
+- 确保 Bootstrap 和 ECharts 正确加载
 
 ## 维护与更新
 

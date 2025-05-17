@@ -14,9 +14,11 @@ const API_ENDPOINTS = {
 };
 
 // 基本身份验证凭据
+// 注意：在生产环境中，不应该在前端代码中硬编码凭据
+// 这里仅用于演示，实际应用中应该使用更安全的认证方式
 const AUTH_CREDENTIALS = {
     username: 'admin',
-    password: 'ken@1234'
+    password: 'your_password_here' // 请在部署时修改为实际密码
 };
 
 /**
@@ -39,7 +41,7 @@ function createAuthHeader() {
  */
 async function apiRequest(endpoint, options = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
-    
+
     // 合并默认选项和传入的选项
     const requestOptions = {
         headers: {
@@ -49,15 +51,15 @@ async function apiRequest(endpoint, options = {}) {
         },
         ...options
     };
-    
+
     try {
         const response = await fetch(url, requestOptions);
-        
+
         // 检查响应状态
         if (!response.ok) {
             throw new Error(`API 请求失败: ${response.status} ${response.statusText}`);
         }
-        
+
         // 解析 JSON 响应
         const data = await response.json();
         return data;
@@ -122,39 +124,39 @@ function exportToCSV(evaluations) {
     if (!evaluations || evaluations.length === 0) {
         return '';
     }
-    
+
     // 获取所有可能的维度
     const dimensions = new Set();
     evaluations.forEach(eval => {
         Object.keys(eval).forEach(key => {
-            if (typeof eval[key] === 'number' && 
-                key !== 'timestamp' && 
-                key !== 'id' && 
+            if (typeof eval[key] === 'number' &&
+                key !== 'timestamp' &&
+                key !== 'id' &&
                 !key.includes('_id')) {
                 dimensions.add(key);
             }
         });
     });
-    
+
     // 创建 CSV 头
     const headers = ['ID', '日期', '时间戳', ...Array.from(dimensions)];
     let csv = headers.join(',') + '\n';
-    
+
     // 添加数据行
     evaluations.forEach(eval => {
         const date = new Date(eval.timestamp);
         const dateStr = date.toISOString().split('T')[0];
-        
+
         const row = [
             eval.id,
             dateStr,
             eval.timestamp,
             ...Array.from(dimensions).map(dim => eval[dim] || '')
         ];
-        
+
         csv += row.join(',') + '\n';
     });
-    
+
     return csv;
 }
 
@@ -166,12 +168,12 @@ function exportToCSV(evaluations) {
 function downloadCSV(csv, filename = 'evaluations.csv') {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    
+
     const link = document.createElement('a');
     link.setAttribute('href', url);
     link.setAttribute('download', filename);
     link.style.display = 'none';
-    
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
