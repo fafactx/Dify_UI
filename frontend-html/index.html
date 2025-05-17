@@ -4,293 +4,64 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="description" content="Dify Evaluation Results Dashboard">
-    <title>Dify Evaluation Results Dashboard</title>
-
-    <!-- 预加载关键资源 -->
-    <link rel="preload" href="js/api.js" as="script">
-    <link rel="preload" href="js/charts.js" as="script">
-    <link rel="preload" href="js/main.js" as="script">
-    <link rel="preload" href="css/styles.css" as="style">
-
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
-    <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" crossorigin="anonymous">
-    <!-- Custom CSS -->
-    <link href="css/styles.css" rel="stylesheet">
-    <!-- ECharts -->
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js" crossorigin="anonymous"></script>
-
-    <!-- 确保 ECharts 加载 -->
+    <meta name="description" content="RAGLLM Testing System Dashboard">
+    <title>RAGLLM Testing System</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #F3F4F6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        .loading-container {
+            text-align: center;
+            background-color: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            max-width: 500px;
+        }
+        .loading-title {
+            color: #1E3A8A;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .loading-spinner {
+            border: 4px solid rgba(59, 130, 246, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid #3B82F6;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        .loading-message {
+            color: #6B7280;
+            margin-bottom: 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
     <script>
-        // 检查 ECharts 是否加载成功
+        // 页面加载完成后重定向到新的仪表板页面
         window.addEventListener('load', function() {
-            if (typeof echarts === 'undefined') {
-                console.error('ECharts 库未加载，尝试重新加载');
-                // 重新加载 ECharts
-                var script = document.createElement('script');
-                script.src = 'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js';
-                script.crossOrigin = 'anonymous';
-                script.onload = function() {
-                    console.log('ECharts 库重新加载成功');
-                    // 如果页面已经初始化，尝试重新初始化图表
-                    if (typeof window.initCharts === 'function') {
-                        console.log('尝试重新初始化图表');
-                        window.initCharts();
-                    }
-                };
-                document.head.appendChild(script);
-            } else {
-                console.log('ECharts 库已成功加载，版本:', echarts.version);
-            }
+            setTimeout(function() {
+                window.location.href = 'raglim-dashboard.html';
+            }, 1500); // 1.5秒后重定向，给用户一个加载的视觉反馈
         });
     </script>
 </head>
 <body>
-    <!-- 导航栏 -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">
-                <i class="fas fa-chart-line me-2"></i>Dify Evaluation Dashboard
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="#" id="dashboard-link">
-                            <i class="fas fa-tachometer-alt me-1"></i>Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" id="compare-link">
-                            <i class="fas fa-balance-scale me-1"></i>Compare
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" id="settings-link">
-                            <i class="fas fa-cog me-1"></i>Settings
-                        </a>
-                    </li>
-                </ul>
-                <div class="d-flex">
-                    <span class="navbar-text me-3" id="last-updated">
-                        Last updated: Loading...
-                    </span>
-                    <button class="btn btn-outline-light" id="refresh-btn">
-                        <i class="fas fa-sync-alt me-1"></i>Refresh
-                    </button>
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <!-- 主容器 -->
-    <div class="container-fluid mt-4">
-        <!-- 加载指示器 -->
-        <div id="loading" class="text-center my-5">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">加载中...</span>
-            </div>
-            <p class="mt-2">正在加载数据，请稍候...</p>
-        </div>
-
-        <!-- 仪表板视图 -->
-        <div id="dashboard-view" class="d-none">
-            <!-- 统计卡片 -->
-            <div class="row mb-4" id="stats-cards">
-                <!-- 卡片将通过 JavaScript 动态生成 -->
-            </div>
-
-            <!-- 图表区域 -->
-            <div class="row mb-4">
-                <div class="col-md-6 mb-4">
-                    <div class="card shadow-sm">
-                        <div class="card-header bg-light">
-                            <h5 class="card-title mb-0">Dimension Proportion</h5>
-                        </div>
-                        <div class="card-body">
-                            <div id="radar-chart" style="height: 400px;"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 mb-4">
-                    <div class="card shadow-sm">
-                        <div class="card-header bg-light">
-                            <h5 class="card-title mb-0">MAG Correlation Chart</h5>
-                        </div>
-                        <div class="card-body">
-                            <div id="bar-chart" style="height: 400px;"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 表格区域 -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">评估结果列表</h5>
-                    <div class="d-flex">
-                        <input type="text" class="form-control me-2" id="search-input" placeholder="搜索...">
-                        <div class="dropdown me-2">
-                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown">
-                                排序
-                            </button>
-                            <ul class="dropdown-menu" id="sort-options">
-                                <li><a class="dropdown-item" href="#" data-sort="date" data-order="desc">日期 (新→旧)</a></li>
-                                <li><a class="dropdown-item" href="#" data-sort="date" data-order="asc">日期 (旧→新)</a></li>
-                                <li><a class="dropdown-item" href="#" data-sort="average_score" data-order="desc">平均分 (高→低)</a></li>
-                                <li><a class="dropdown-item" href="#" data-sort="average_score" data-order="asc">平均分 (低→高)</a></li>
-                            </ul>
-                        </div>
-                        <button class="btn btn-success" id="export-csv">
-                            <i class="fas fa-download me-1"></i>导出 CSV
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover" id="evaluations-table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>日期</th>
-                                    <th>平均分</th>
-                                    <th>维度分数</th>
-                                    <th>操作</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- 表格内容将通过 JavaScript 动态生成 -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 对比视图 -->
-        <div id="compare-view" class="d-none">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-light">
-                    <h5 class="card-title mb-0">评估结果对比</h5>
-                </div>
-                <div class="card-body">
-                    <div id="compare-chart" style="height: 500px;"></div>
-                </div>
-            </div>
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">对比详情</h5>
-                    <button class="btn btn-danger" id="clear-compare">
-                        <i class="fas fa-trash me-1"></i>清除对比
-                    </button>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped" id="compare-table">
-                            <thead>
-                                <tr>
-                                    <th>维度</th>
-                                    <!-- 对比项将通过 JavaScript 动态生成 -->
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- 表格内容将通过 JavaScript 动态生成 -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 设置视图 -->
-        <div id="settings-view" class="d-none">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-light">
-                    <h5 class="card-title mb-0">维度权重设置</h5>
-                </div>
-                <div class="card-body">
-                    <div id="weight-sliders">
-                        <!-- 权重滑块将通过 JavaScript 动态生成 -->
-                    </div>
-                    <div class="mt-3">
-                        <button class="btn btn-primary" id="apply-weights">
-                            <i class="fas fa-check me-1"></i>应用
-                        </button>
-                        <button class="btn btn-secondary ms-2" id="reset-weights">
-                            <i class="fas fa-undo me-1"></i>重置
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 详情模态框 -->
-        <div class="modal fade" id="detail-modal" tabindex="-1">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Evaluation Details</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body" id="detail-content">
-                        <!-- 详情内容将通过 JavaScript 动态生成 -->
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="loading-container">
+        <h1 class="loading-title">RAGLLM Testing System</h1>
+        <div class="loading-spinner"></div>
+        <p class="loading-message">Loading the dashboard, please wait...</p>
     </div>
-
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- 自定义 JS -->
-    <script src="js/api.js"></script>
-    <script src="js/charts.js"></script>
-    <script src="js/main.js"></script>
-
-    <!-- 全局辅助脚本 -->
-    <script>
-        // 页面加载完成后执行
-        window.addEventListener('load', function() {
-            console.log('[DEBUG] 页面完全加载，执行额外初始化');
-
-            // 延迟执行，确保所有DOM元素都已渲染
-            setTimeout(function() {
-                // 确保图表容器有尺寸
-                const containers = ['radar-chart', 'bar-chart', 'compare-chart'];
-                containers.forEach(id => {
-                    const container = document.getElementById(id);
-                    if (container) {
-                        // 设置明确的尺寸
-                        container.style.width = '100%';
-                        container.style.height = '400px';
-                        container.style.position = 'relative';
-                        container.style.display = 'block';
-
-                    }
-                });
-
-                // 强制重绘图表
-                if (typeof window.forceResizeCharts === 'function') {
-                    window.forceResizeCharts();
-                }
-
-                // 全局浮动刷新按钮已移除
-            }, 1000);
-
-            // 监听窗口大小变化，重绘图表
-            window.addEventListener('resize', function() {
-                if (typeof window.forceResizeCharts === 'function') {
-                    window.forceResizeCharts();
-                }
-            });
-        });
-    </script>
 </body>
 </html>
