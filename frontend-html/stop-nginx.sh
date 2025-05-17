@@ -1,7 +1,29 @@
 #!/bin/bash
 
+# 默认配置
+DEFAULT_PORT=3001
+
+# 解析命令行参数
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --port=*)
+            PORT="${1#*=}"
+            shift
+            ;;
+        *)
+            # 未知参数
+            echo "未知参数: $1"
+            shift
+            ;;
+    esac
+done
+
+# 使用默认值（如果未指定）
+PORT=${PORT:-$DEFAULT_PORT}
+
 echo "Nginx 前端停止脚本"
 echo "======================================"
+echo "停止端口: $PORT"
 
 # 检查 Nginx 配置文件位置
 NGINX_CONF_DIR="/etc/nginx/conf.d"
@@ -58,13 +80,13 @@ else
     echo "未找到 Nginx 配置文件"
 fi
 
-# 无论如何，都尝试停止占用 3001 端口的进程
-echo "尝试停止端口 3001 上的所有进程..."
+# 无论如何，都尝试停止占用指定端口的进程
+echo "尝试停止端口 $PORT 上的所有进程..."
 
-# 查找并终止占用 3001 端口的进程
-PORT_PID=$(lsof -t -i:3001 2>/dev/null)
+# 查找并终止占用指定端口的进程
+PORT_PID=$(lsof -t -i:$PORT 2>/dev/null)
 if [ ! -z "$PORT_PID" ]; then
-    echo "发现端口 3001 被以下进程占用: $PORT_PID"
+    echo "发现端口 $PORT 被以下进程占用: $PORT_PID"
     for pid in $PORT_PID; do
         echo "终止进程 $pid..."
         sudo kill $pid 2>/dev/null || sudo kill -9 $pid 2>/dev/null
@@ -72,19 +94,9 @@ if [ ! -z "$PORT_PID" ]; then
     sleep 1
     echo "所有进程已终止"
 else
-    echo "未发现端口 3001 被占用"
+    echo "未发现端口 $PORT 被占用"
 fi
 
-# 检查 Python HTTP 服务器进程
-PYTHON_PID=$(pgrep -f "python.*http.server 3001\|SimpleHTTPServer 3001")
-if [ ! -z "$PYTHON_PID" ]; then
-    echo "发现 Python HTTP 服务器进程: $PYTHON_PID"
-    for pid in $PYTHON_PID; do
-        echo "终止 Python HTTP 服务器进程 $pid..."
-        kill $pid 2>/dev/null || kill -9 $pid 2>/dev/null
-    done
-    sleep 1
-    echo "Python HTTP 服务器已终止"
-fi
+# 不再使用 Python HTTP 服务器作为备选方案
 
 echo "停止完成！"

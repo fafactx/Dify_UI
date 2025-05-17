@@ -1,7 +1,29 @@
 #!/bin/bash
 
+# 默认配置
+DEFAULT_FRONTEND_PORT=3001
+
+# 解析命令行参数
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --port=*)
+            FRONTEND_PORT="${1#*=}"
+            shift
+            ;;
+        *)
+            # 未知参数
+            echo "未知参数: $1"
+            shift
+            ;;
+    esac
+done
+
+# 使用默认值（如果未指定）
+FRONTEND_PORT=${FRONTEND_PORT:-$DEFAULT_FRONTEND_PORT}
+
 echo "Dify 评估结果可视化框架停止脚本"
 echo "======================================"
+echo "前端端口: $FRONTEND_PORT"
 
 echo "步骤 1: 停止后端服务"
 BACKEND_PID=$(pgrep -f "node server.js")
@@ -28,7 +50,7 @@ fi
 echo "停止 Nginx 前端服务..."
 cd frontend-html
 chmod +x stop-nginx.sh
-./stop-nginx.sh
+./stop-nginx.sh --port=$FRONTEND_PORT
 cd ..
 
 echo "所有服务已停止"

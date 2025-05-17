@@ -1,7 +1,36 @@
 #!/bin/bash
 
+# 默认配置
+DEFAULT_PORT=3000
+DEFAULT_HOST="10.193.21.115"
+
+# 解析命令行参数
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --port=*)
+            PORT="${1#*=}"
+            shift
+            ;;
+        --host=*)
+            HOST="${1#*=}"
+            shift
+            ;;
+        *)
+            # 未知参数
+            echo "未知参数: $1"
+            shift
+            ;;
+    esac
+done
+
+# 使用默认值（如果未指定）
+PORT=${PORT:-$DEFAULT_PORT}
+HOST=${HOST:-$DEFAULT_HOST}
+
 echo "Nginx 前端部署脚本"
 echo "======================================"
+echo "使用端口: $PORT"
+echo "使用主机: $HOST"
 
 # 检查是否安装了 Nginx
 if ! command -v nginx &> /dev/null; then
@@ -14,22 +43,27 @@ fi
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 FRONTEND_DIR="$SCRIPT_DIR"
 
-# 检查并终止占用 3001 端口的进程
-PORT_PID=$(lsof -t -i:3001 2>/dev/null)
+# 检查并终止占用指定端口的进程
+PORT_PID=$(lsof -t -i:$PORT 2>/dev/null)
 if [ ! -z "$PORT_PID" ]; then
-    echo "发现端口 3001 被进程 $PORT_PID 占用，正在终止..."
+    echo "发现端口 $PORT 被进程 $PORT_PID 占用，正在终止..."
     sudo kill $PORT_PID 2>/dev/null || sudo kill -9 $PORT_PID 2>/dev/null
     sleep 1
     echo "进程已终止"
 fi
 
-# 更新 Nginx 配置文件中的路径
+# 更新 Nginx 配置文件中的路径和端口
 TEMP_CONF=$(mktemp)
 TEMP_INCLUDE=$(mktemp)
 
-# 准备两种配置文件
-cat "$FRONTEND_DIR/nginx.conf" | sed "s|/home/ken/dify-evaluation-dashboard/frontend-html|$FRONTEND_DIR|g" > "$TEMP_CONF"
-cat "$FRONTEND_DIR/nginx-include.conf" | sed "s|/home/ken/dify-evaluation-dashboard/frontend-html|$FRONTEND_DIR|g" > "$TEMP_INCLUDE"
+# 准备两种配置文件，替换路径和端口
+cat "$FRONTEND_DIR/nginx.conf" | \
+    sed "s|/home/ken/dify-evaluation-dashboard/frontend-html|$FRONTEND_DIR|g" | \
+    sed "s|PORT_NUMBER|$PORT|g" > "$TEMP_CONF"
+
+cat "$FRONTEND_DIR/nginx-include.conf" | \
+    sed "s|/home/ken/dify-evaluation-dashboard/frontend-html|$FRONTEND_DIR|g" | \
+    sed "s|PORT_NUMBER|$PORT|g" > "$TEMP_INCLUDE"
 
 # 检测 Nginx 配置目录和方法
 NGINX_MAIN_CONF="/etc/nginx/nginx.conf"
@@ -95,18 +129,8 @@ sudo nginx -t
 
 if [ $? -ne 0 ]; then
     echo "Nginx 配置测试失败，请检查配置文件。"
-    echo "尝试使用 Python HTTP 服务器作为备选方案..."
-    cd "$FRONTEND_DIR"
-    if command -v python3 &> /dev/null; then
-        nohup python3 -m http.server 3001 > frontend.log 2>&1 &
-        echo "Python3 HTTP 服务器已启动"
-    elif command -v python &> /dev/null; then
-        nohup python -m SimpleHTTPServer 3001 > frontend.log 2>&1 &
-        echo "Python2 HTTP 服务器已启动"
-    else
-        echo "错误: 未找到 Python。无法启动备选 HTTP 服务器。"
-        exit 1
-    fi
+    echo "请修复 Nginx 配置问题后重试。"
+    exit 1
 else
     # 尝试多种方式启动/重启 Nginx
     echo "重启 Nginx..."
@@ -134,22 +158,13 @@ else
 
     # 检查 Nginx 是否成功启动
     if ! pgrep -x "nginx" > /dev/null; then
-        echo "Nginx 启动失败，尝试使用 Python HTTP 服务器作为备选方案..."
-        cd "$FRONTEND_DIR"
-        if command -v python3 &> /dev/null; then
-            nohup python3 -m http.server 3001 > frontend.log 2>&1 &
-            echo "Python3 HTTP 服务器已启动"
-        elif command -v python &> /dev/null; then
-            nohup python -m SimpleHTTPServer 3001 > frontend.log 2>&1 &
-            echo "Python2 HTTP 服务器已启动"
-        else
-            echo "错误: 未找到 Python。无法启动备选 HTTP 服务器。"
-            exit 1
-        fi
+        echo "Nginx 启动失败，请检查 Nginx 错误日志。"
+        echo "错误日志位置: /var/log/nginx/error.log"
+        exit 1
     else
         echo "Nginx 已成功启动"
     fi
 fi
 
-echo "前端地址: http://10.193.21.115:3001"
+echo "前端地址: http://$HOST:$PORT"
 echo "部署完成！"
