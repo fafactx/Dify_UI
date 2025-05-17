@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>RAGLIM 配色方案</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" crossorigin="anonymous">
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            padding: 30px;
+        }
+        
+        .header {
+            background-color: #1E3A8A;
+            color: white;
+            padding: 30px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .section-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background-color: #dee2e6;
+            margin-left: 15px;
+        }
+        
+        .color-card {
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            height: 100%;
+        }
+        
+        .color-display {
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .color-info {
+            padding: 15px;
+            background-color: white;
+        }
+        
+        .color-name {
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        
+        .color-hex {
+            font-family: monospace;
+            color: #6c757d;
+        }
+        
+        /* 主色调 */
+        .primary-deep {
+            background-color: #1E3A8A;
+        }
+        
+        .primary-light {
+            background-color: #3B82F6;
+        }
+        
+        /* 强调色 */
+        .accent-green {
+            background-color: #10B981;
+        }
+        
+        .accent-yellow {
+            background-color: #F59E0B;
+        }
+        
+        .accent-red {
+            background-color: #EF4444;
+        }
+        
+        /* 背景色 */
+        .bg-light-gray {
+            background-color: #F3F4F6;
+            color: #1F2937;
+        }
+        
+        .bg-white {
+            background-color: #FFFFFF;
+            color: #1F2937;
+            border: 1px solid #dee2e6;
+        }
+        
+        /* 文字色 */
+        .text-dark {
+            background-color: #1F2937;
+        }
+        
+        .text-medium {
+            background-color: #6B7280;
+        }
+        
+        /* 设计原则卡片 */
+        .principle-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        
+        .principle-card h3 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #1E3A8A;
+        }
+        
+        .principle-list {
+            padding-left: 20px;
+        }
+        
+        .principle-list li {
+            margin-bottom: 10px;
+            position: relative;
+        }
+        
+        .principle-list li::before {
+            content: '•';
+            color: #3B82F6;
+            font-weight: bold;
+            position: absolute;
+            left: -15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>总体布局设计</h1>
+            <p>清晰的结构与现代化配色方案</p>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <!-- 布局结构 -->
+                <h2 class="section-title">布局结构 Layout Structure</h2>
+                <div class="principle-card">
+                    <img src="https://via.placeholder.com/500x300?text=Layout+Structure+Diagram" alt="布局结构图" class="img-fluid mb-3">
+                    <p>采用左侧固定导航栏 + 右侧内容区的经典布局，确保导航清晰、内容突出。</p>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <!-- 配色方案 -->
+                <h2 class="section-title">配色方案 Color Scheme</h2>
+                
+                <!-- 主色调 -->
+                <h3 class="mt-4">主色调</h3>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="color-card">
+                            <div class="color-display primary-deep">
+                                深蓝色
+                            </div>
+                            <div class="color-info">
+                                <div class="color-name">深蓝色</div>
+                                <div class="color-hex">#1E3A8A</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="color-card">
+                            <div class="color-display primary-light">
+                                浅蓝色
+                            </div>
+                            <div class="color-info">
+                                <div class="color-name">浅蓝色</div>
+                                <div class="color-hex">#3B82F6</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 强调色 -->
+                <h3 class="mt-4">强调色</h3>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="color-card">
+                            <div class="color-display accent-green">
+                                绿色
+                            </div>
+                            <div class="color-info">
+                                <div class="color-name">绿色</div>
+                                <div class="color-hex">#10B981</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="color-card">
+                            <div class="color-display accent-yellow">
+                                黄色
+                            </div>
+                            <div class="color-info">
+                                <div class="color-name">黄色</div>
+                                <div class="color-hex">#F59E0B</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="color-card">
+                            <div class="color-display accent-red">
+                                红色
+                            </div>
+                            <div class="color-info">
+                                <div class="color-name">红色</div>
+                                <div class="color-hex">#EF4444</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 背景色 -->
+                <h3 class="mt-4">背景色</h3>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="color-card">
+                            <div class="color-display bg-light-gray">
+                                浅灰色
+                            </div>
+                            <div class="color-info">
+                                <div class="color-name">浅灰色</div>
+                                <div class="color-hex">#F3F4F6</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="color-card">
+                            <div class="color-display bg-white">
+                                白色
+                            </div>
+                            <div class="color-info">
+                                <div class="color-name">白色</div>
+                                <div class="color-hex">#FFFFFF</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 文字色 -->
+                <h3 class="mt-4">文字色</h3>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="color-card">
+                            <div class="color-display text-dark">
+                                深灰色
+                            </div>
+                            <div class="color-info">
+                                <div class="color-name">深灰色</div>
+                                <div class="color-hex">#1F2937</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="color-card">
+                            <div class="color-display text-medium">
+                                中灰色
+                            </div>
+                            <div class="color-info">
+                                <div class="color-name">中灰色</div>
+                                <div class="color-hex">#6B7280</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 设计原则 -->
+        <h2 class="section-title mt-5">设计原则</h2>
+        <div class="principle-card">
+            <ul class="principle-list">
+                <li>使用深蓝色作为主色调，突显科技感和专业性</li>
+                <li>适度使用平滑的交互元素，提高用户体验</li>
+                <li>绿色表示成功，黄色表示警告，红色表示错误</li>
+                <li>浅灰色和白色作为背景，提升可读性</li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

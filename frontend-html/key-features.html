@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="RAGLIM Test Suite Key Features">
+    <title>RAGLIM Test Suite - Key Features</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" crossorigin="anonymous">
+    <!-- 自定义CSS -->
+    <link href="css/raglim-design.css" rel="stylesheet">
+</head>
+<body>
+    <div class="layout-container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-cube"></i>
+                <span>RAGLIM Test Suite</span>
+            </div>
+            <ul class="sidebar-menu">
+                <li data-view="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </li>
+                <li data-view="test-cases">
+                    <i class="fas fa-vial"></i>
+                    <span>Test Cases</span>
+                </li>
+                <li class="active" data-view="results">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Results</span>
+                </li>
+                <li data-view="performance">
+                    <i class="fas fa-bolt"></i>
+                    <span>Performance</span>
+                </li>
+                <li data-view="metrics">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Metrics</span>
+                </li>
+                <li data-view="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </li>
+            </ul>
+            <div class="system-status">
+                <div class="status-indicator"></div>
+                <span>All systems operational</span>
+            </div>
+            <div class="version-info">
+                Version 2.3.4
+            </div>
+        </div>
+
+        <!-- 主内容区域 -->
+        <div class="main-content">
+            <!-- 顶部导航栏 -->
+            <div class="top-nav">
+                <button class="mobile-menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="搜索测试用例">
+                </div>
+                <div class="nav-icons">
+                    <i class="fas fa-bell"></i>
+                    <i class="fas fa-user-circle"></i>
+                </div>
+            </div>
+
+            <!-- 内容区域 -->
+            <div class="content-area">
+                <!-- 页面标题 -->
+                <div class="mb-4">
+                    <h2>测试用例页面设计 <span class="text-muted">Test Cases UI</span></h2>
+                    <p class="text-muted">高效的数据管理与筛选系统</p>
+                </div>
+
+                <!-- 关键特性区域 -->
+                <div class="row">
+                    <div class="col-md-8">
+                        <!-- 测试用例表格预览 -->
+                        <div class="card mb-4">
+                            <div class="card-body p-0">
+                                <img src="https://via.placeholder.com/800x400?text=Test+Cases+UI+Preview" alt="测试用例界面预览" class="img-fluid w-100">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <h3 class="mb-3">关键特性 <span class="text-muted">Key Features</span></h3>
+                        
+                        <!-- 特性1：高级筛选系统 -->
+                        <div class="feature-section">
+                            <h3>
+                                <i class="fas fa-filter"></i>
+                                高级筛选系统
+                            </h3>
+                            <p>提供直观的多条件筛选界面，支持组合查询和保存用户筛选条件，提高测试用例管理效率。</p>
+                            <div class="feature-actions">
+                                <button class="feature-action-btn">组合筛选</button>
+                                <button class="feature-action-btn">保存筛选条件</button>
+                                <button class="feature-action-btn">快速搜索</button>
+                            </div>
+                        </div>
+                        
+                        <!-- 特性2：智能数据表格 -->
+                        <div class="feature-section">
+                            <h3>
+                                <i class="fas fa-table"></i>
+                                智能数据表格
+                            </h3>
+                            <p>现代化数据表格设计，支持点击表头排序，多列操作，行内快速操作，并配合视觉元素提升用户体验。</p>
+                            <div class="feature-actions">
+                                <button class="feature-action-btn">多列排序</button>
+                                <button class="feature-action-btn">批量操作</button>
+                                <button class="feature-action-btn">复杂数据视图</button>
+                            </div>
+                        </div>
+                        
+                        <!-- 特性3：便捷的添加流程 -->
+                        <div class="feature-section">
+                            <h3>
+                                <i class="fas fa-plus-circle"></i>
+                                便捷的添加流程
+                            </h3>
+                            <p>简化测试用例创建流程，通过向导式界面引导用户快速输入必要信息，支持模板和批量导入功能。</p>
+                            <div class="feature-actions">
+                                <button class="feature-action-btn">向导式创建</button>
+                                <button class="feature-action-btn">模板功能</button>
+                                <button class="feature-action-btn">批量导入</button>
+                            </div>
+                        </div>
+                        
+                        <!-- 特性4：数据可视化 -->
+                        <div class="feature-section">
+                            <h3>
+                                <i class="fas fa-chart-pie"></i>
+                                数据可视化
+                            </h3>
+                            <p>右侧边栏提供测试用例分析统计图表，直观展示用例分类、覆盖度状态分布，辅助测试规划。</p>
+                            <div class="feature-actions">
+                                <button class="feature-action-btn">分类饼图</button>
+                                <button class="feature-action-btn">覆盖度分布</button>
+                                <button class="feature-action-btn">测试覆盖率</button>
+                            </div>
+                        </div>
+                        
+                        <!-- 特性5：响应式设计 -->
+                        <div class="feature-section">
+                            <h3>
+                                <i class="fas fa-mobile-alt"></i>
+                                响应式设计
+                            </h3>
+                            <p>完全适配各种屏幕尺寸的响应式布局，确保在桌面和平板设备上都能高效管理测试用例。</p>
+                            <div class="feature-actions">
+                                <button class="feature-action-btn">自适应布局</button>
+                                <button class="feature-action-btn">触控友好</button>
+                                <button class="feature-action-btn">跨设备同步</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- 自定义脚本 -->
+    <script>
+        // 等待页面加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            // 侧边栏菜单切换
+            const menuItems = document.querySelectorAll('.sidebar-menu li');
+            
+            menuItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    // 移除所有活动状态
+                    menuItems.forEach(mi => mi.classList.remove('active'));
+                    // 添加当前活动状态
+                    this.classList.add('active');
+                });
+            });
+            
+            // 移动端菜单切换
+            const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+            const sidebar = document.querySelector('.sidebar');
+            
+            if (mobileMenuToggle) {
+                mobileMenuToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('show');
+                });
+            }
+            
+            // 点击内容区域关闭移动端菜单
+            document.querySelector('.content-area').addEventListener('click', function() {
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.remove('show');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

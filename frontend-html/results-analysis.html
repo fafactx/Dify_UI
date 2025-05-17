@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="RAGLIM Test Suite Results Analysis">
+    <title>RAGLIM Test Suite - Results Analysis</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" crossorigin="anonymous">
+    <!-- 自定义CSS -->
+    <link href="css/raglim-design.css" rel="stylesheet">
+</head>
+<body>
+    <div class="layout-container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-cube"></i>
+                <span>RAGLIM Test Suite</span>
+            </div>
+            <ul class="sidebar-menu">
+                <li data-view="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </li>
+                <li data-view="test-cases">
+                    <i class="fas fa-vial"></i>
+                    <span>Test Cases</span>
+                </li>
+                <li class="active" data-view="results">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Results</span>
+                </li>
+                <li data-view="performance">
+                    <i class="fas fa-bolt"></i>
+                    <span>Performance</span>
+                </li>
+                <li data-view="metrics">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Metrics</span>
+                </li>
+                <li data-view="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </li>
+            </ul>
+            <div class="system-status">
+                <div class="status-indicator"></div>
+                <span>All systems operational</span>
+            </div>
+            <div class="version-info">
+                Version 2.3.4
+            </div>
+        </div>
+
+        <!-- 主内容区域 -->
+        <div class="main-content">
+            <!-- 顶部导航栏 -->
+            <div class="top-nav">
+                <button class="mobile-menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="搜索测试结果">
+                </div>
+                <div class="nav-icons">
+                    <i class="fas fa-bell"></i>
+                    <i class="fas fa-user-circle"></i>
+                </div>
+            </div>
+
+            <!-- 内容区域 -->
+            <div class="content-area">
+                <!-- 页面标题 -->
+                <div class="mb-4">
+                    <h2>结果分析页面设计 <span class="text-muted">Results Analysis</span></h2>
+                    <p class="text-muted">深入解析测试结果与性能评估</p>
+                </div>
+
+                <!-- 主要内容区域 -->
+                <div class="row">
+                    <div class="col-md-8">
+                        <!-- 测试结果详情 -->
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="d-flex mb-3">
+                                            <div class="me-4">
+                                                <div class="text-muted small">Test ID:</div>
+                                                <div class="fw-bold">TS-42875</div>
+                                            </div>
+                                            <div class="me-4">
+                                                <div class="text-muted small">Part Number:</div>
+                                                <div class="fw-bold">PN-3875</div>
+                                            </div>
+                                            <div>
+                                                <div class="text-muted small">Date:</div>
+                                                <div class="fw-bold">2023-11-15</div>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <div class="text-muted small">Product Family:</div>
+                                            <div>Enterprise Storage</div>
+                                        </div>
+                                        <div>
+                                            <div class="text-muted small">Category:</div>
+                                            <div><span class="badge bg-warning-light text-warning">Integration</span></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-center">
+                                        <div class="display-4 fw-bold text-primary-light">84</div>
+                                        <div class="text-muted">Average Score</div>
+                                        <div class="mt-2 text-success">Good Performance</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 标准答案与LLM答案对比 -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-header bg-light">
+                                        <i class="fas fa-book me-2"></i>
+                                        Standard Answer
+                                    </div>
+                                    <div class="card-body">
+                                        <p>The integration process requires first checking compatibility with legacy systems by examining API versions and protocols. Potential issues include outdated authentication methods, data format inconsistencies, and performance bottlenecks at integration points.</p>
+                                        <div class="mt-3">
+                                            <span class="badge bg-primary-light text-primary-deep">API Versions</span>
+                                            <span class="badge bg-primary-light text-primary-deep">Authentication</span>
+                                            <span class="badge bg-primary-light text-primary-deep">Data Format</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-header bg-light">
+                                        <i class="fas fa-robot me-2"></i>
+                                        LLM Answer
+                                    </div>
+                                    <div class="card-body">
+                                        <p>To integrate the component with legacy systems, first verify API compatibility by checking version support and protocol alignments. The main compatibility challenges include authentication differences, data format inconsistencies, and performance issues at integration points.</p>
+                                        <div class="mt-3">
+                                            <span class="badge bg-success-light text-success">API Compatibility</span>
+                                            <span class="badge bg-success-light text-success">Protocol</span>
+                                            <span class="badge bg-success-light text-success">Performance</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 评估摘要 -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <i class="fas fa-clipboard-check me-2"></i>
+                                Evaluation Summary
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3 mb-3">
+                                        <div class="text-muted small">Accuracy:</div>
+                                        <div class="progress mt-1" style="height: 8px;">
+                                            <div class="progress-bar bg-success" style="width: 85%"></div>
+                                        </div>
+                                        <div class="d-flex justify-content-between mt-1">
+                                            <span class="small">85%</span>
+                                            <span class="small text-success">Good</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="text-muted small">Completeness:</div>
+                                        <div class="progress mt-1" style="height: 8px;">
+                                            <div class="progress-bar bg-primary" style="width: 92%"></div>
+                                        </div>
+                                        <div class="d-flex justify-content-between mt-1">
+                                            <span class="small">92%</span>
+                                            <span class="small text-primary">Excellent</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="text-muted small">Relevance:</div>
+                                        <div class="progress mt-1" style="height: 8px;">
+                                            <div class="progress-bar bg-success" style="width: 88%"></div>
+                                        </div>
+                                        <div class="d-flex justify-content-between mt-1">
+                                            <span class="small">88%</span>
+                                            <span class="small text-success">Good</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="text-muted small">Clarity:</div>
+                                        <div class="progress mt-1" style="height: 8px;">
+                                            <div class="progress-bar bg-warning" style="width: 75%"></div>
+                                        </div>
+                                        <div class="d-flex justify-content-between mt-1">
+                                            <span class="small">75%</span>
+                                            <span class="small text-warning">Fair</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <h6>Evaluator Comments:</h6>
+                                    <p class="small">The LLM response correctly identifies the key integration steps and potential issues. It uses slightly different terminology but captures the essence of the standard answer. The clarity could be improved with more specific examples of potential compatibility issues.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 评分按钮 -->
+                        <div class="text-center mb-4">
+                            <button class="btn btn-primary px-4">
+                                <i class="fas fa-star me-2"></i>评分
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <h3 class="mb-3">关键特性 <span class="text-muted">Key Features</span></h3>
+
+                        <!-- 特性1：智能对比分析 -->
+                        <div class="feature-section">
+                            <h3>
+                                <i class="fas fa-balance-scale"></i>
+                                智能对比分析
+                            </h3>
+                            <p>并排展示标准答案与LLM回答，支持显示差异点，帮助测试人员快速识别内容差异与潜在问题。</p>
+                            <div class="feature-actions">
+                                <button class="feature-action-btn">差异高亮</button>
+                                <button class="feature-action-btn">语义对比</button>
+                                <button class="feature-action-btn">内容验证</button>
+                            </div>
+                        </div>
+
+                        <!-- 特性2：多维评分可视化 -->
+                        <div class="feature-section">
+                            <h3>
+                                <i class="fas fa-chart-bar"></i>
+                                多维评分可视化
+                            </h3>
+                            <p>使用雷达图直观展示多个评估维度的得分，包括准确性、质量、专业性和流畅度，便于全面评估性能。</p>
+                            <div class="feature-actions">
+                                <button class="feature-action-btn">多维展示</button>
+                                <button class="feature-action-btn">维度评分</button>
+                                <button class="feature-action-btn">交互式图表</button>
+                            </div>
+                        </div>
+
+                        <!-- 特性3：智能评估摘要 -->
+                        <div class="feature-section">
+                            <h3>
+                                <i class="fas fa-lightbulb"></i>
+                                智能评估摘要
+                            </h3>
+                            <p>自动生成评估摘要，突出优点、改进空间和关键内容，同时提供针对性的改进建议和优化方向。</p>
+                            <div class="feature-actions">
+                                <button class="feature-action-btn">自动分析</button>
+                                <button class="feature-action-btn">改进建议</button>
+                                <button class="feature-action-btn">要点提取</button>
+                            </div>
+                        </div>
+
+                        <!-- 特性4：历史版本对比 -->
+                        <div class="feature-section">
+                            <h3>
+                                <i class="fas fa-history"></i>
+                                历史版本对比
+                            </h3>
+                            <p>支持与历史测试结果对比，追踪LLM模型在不同版本的进展情况，帮助团队了解优化效果和趋势变化。</p>
+                            <div class="feature-actions">
+                                <button class="feature-action-btn">时间线对比</button>
+                                <button class="feature-action-btn">版本追踪</button>
+                                <button class="feature-action-btn">进步可视化</button>
+                            </div>
+                        </div>
+
+                        <!-- 特性5：报告导出与分享 -->
+                        <div class="feature-section">
+                            <h3>
+                                <i class="fas fa-file-export"></i>
+                                报告导出与分享
+                            </h3>
+                            <p>一键导出测试结果为PDF或Excel格式，便于团队分享和管理报告，支持选择性导出和自定义报告格式。</p>
+                            <div class="feature-actions">
+                                <button class="feature-action-btn">多格式导出</button>
+                                <button class="feature-action-btn">团队协作</button>
+                                <button class="feature-action-btn">一键分享</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- 自定义脚本 -->
+    <script>
+        // 等待页面加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            // 侧边栏菜单切换
+            const menuItems = document.querySelectorAll('.sidebar-menu li');
+
+            menuItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    // 移除所有活动状态
+                    menuItems.forEach(mi => mi.classList.remove('active'));
+                    // 添加当前活动状态
+                    this.classList.add('active');
+                });
+            });
+
+            // 移动端菜单切换
+            const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+            const sidebar = document.querySelector('.sidebar');
+
+            if (mobileMenuToggle) {
+                mobileMenuToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('show');
+                });
+            }
+
+            // 点击内容区域关闭移动端菜单
+            document.querySelector('.content-area').addEventListener('click', function() {
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.remove('show');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

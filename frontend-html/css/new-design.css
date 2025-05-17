@@ -1,0 +1,327 @@
+/* 新设计样式表 - 基于设计图实现 */
+
+:root {
+    /* 主色调 */
+    --primary-color: #1E3A8A; /* 深蓝色 #1E3A8A */
+    --secondary-color: #3B82F6; /* 浅蓝色 #3B82F6 */
+    
+    /* 强调色 */
+    --green-color: #10B981; /* 绿色 #10B981 */
+    --yellow-color: #F59E0B; /* 黄色 #F59E0B */
+    --red-color: #EF4444; /* 红色 #EF4444 */
+    
+    /* 背景色 */
+    --light-gray: #F3F4F6; /* 浅灰色 #F3F4F6 */
+    --white: #FFFFFF; /* 白色 #FFFFFF */
+    
+    /* 文字色 */
+    --dark-text: #1F2937; /* 深灰色 #1F2937 */
+    --medium-text: #6B7280; /* 中灰色 #6B7280 */
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+    color: var(--dark-text);
+    margin: 0;
+    padding: 0;
+}
+
+/* 布局结构 */
+.layout-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* 侧边栏样式 */
+.sidebar {
+    background-color: var(--white);
+    width: 250px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    height: 100vh;
+}
+
+.sidebar-header {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+}
+
+.sidebar-header i {
+    margin-right: 10px;
+}
+
+.sidebar-menu {
+    padding: 0;
+    list-style: none;
+    margin: 0;
+    flex-grow: 1;
+}
+
+.sidebar-menu li {
+    padding: 12px 20px;
+    border-left: 3px solid transparent;
+    transition: all 0.3s;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.sidebar-menu li:hover {
+    background-color: var(--light-gray);
+    border-left-color: var(--secondary-color);
+}
+
+.sidebar-menu li.active {
+    background-color: var(--light-gray);
+    border-left-color: var(--primary-color);
+    font-weight: 500;
+}
+
+.sidebar-menu i {
+    margin-right: 10px;
+    width: 20px;
+    text-align: center;
+    color: var(--primary-color);
+}
+
+.sidebar-menu li.active i {
+    color: var(--primary-color);
+}
+
+/* 主内容区域 */
+.main-content {
+    flex: 1;
+    margin-left: 250px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 顶部导航栏 */
+.top-nav {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.search-bar {
+    background-color: rgba(255,255,255,0.2);
+    border-radius: 4px;
+    padding: 5px 10px;
+    display: flex;
+    align-items: center;
+}
+
+.search-bar input {
+    background: transparent;
+    border: none;
+    color: white;
+    outline: none;
+    width: 200px;
+}
+
+.search-bar input::placeholder {
+    color: rgba(255,255,255,0.7);
+}
+
+.search-bar i {
+    color: white;
+    margin-right: 10px;
+}
+
+.nav-icons {
+    display: flex;
+    gap: 15px;
+}
+
+.nav-icons i {
+    font-size: 18px;
+    cursor: pointer;
+}
+
+/* 内容区域 */
+.content-area {
+    padding: 20px;
+    flex: 1;
+}
+
+/* 统计卡片 */
+.stat-card {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    text-align: center;
+    margin-bottom: 20px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.stat-number {
+    font-size: 36px;
+    font-weight: bold;
+    margin: 10px 0;
+}
+
+.stat-label {
+    color: var(--medium-text);
+    font-size: 14px;
+}
+
+.success-rate {
+    color: var(--green-color);
+}
+
+.total-cases {
+    color: var(--secondary-color);
+}
+
+.average-score {
+    color: var(--dark-text);
+}
+
+/* 按钮样式 */
+.btn-primary {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-outline-primary {
+    color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+/* 系统状态指示器 */
+.system-status {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    font-size: 12px;
+    color: var(--medium-text);
+    border-top: 1px solid var(--light-gray);
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--green-color);
+    margin-right: 5px;
+}
+
+/* 版本信息 */
+.version-info {
+    padding: 10px 20px;
+    font-size: 12px;
+    color: var(--medium-text);
+    text-align: left;
+}
+
+/* 卡片样式 */
+.card {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+}
+
+.card-header {
+    background-color: white;
+    border-bottom: 1px solid var(--light-gray);
+    padding: 15px 20px;
+    font-weight: 500;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+/* 响应式设计 */
+@media (max-width: 992px) {
+    .sidebar {
+        width: 70px;
+    }
+    
+    .sidebar-header span,
+    .sidebar-menu span,
+    .version-info,
+    .system-status span {
+        display: none;
+    }
+    
+    .sidebar-menu i {
+        margin-right: 0;
+        font-size: 18px;
+    }
+    
+    .main-content {
+        margin-left: 70px;
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        width: 0;
+        position: fixed;
+        left: -250px;
+        transition: all 0.3s;
+    }
+    
+    .sidebar.show {
+        left: 0;
+        width: 250px;
+    }
+    
+    .sidebar.show .sidebar-header span,
+    .sidebar.show .sidebar-menu span,
+    .sidebar.show .version-info,
+    .sidebar.show .system-status span {
+        display: inline;
+    }
+    
+    .main-content {
+        margin-left: 0;
+    }
+    
+    .mobile-menu-toggle {
+        display: block;
+    }
+}
+
+/* 移动菜单切换按钮 */
+.mobile-menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .mobile-menu-toggle {
+        display: block;
+    }
+}

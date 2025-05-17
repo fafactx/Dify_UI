@@ -1,0 +1,551 @@
+/* RAGLIM Test Suite - 设计系统 CSS */
+
+:root {
+    /* 主色调 */
+    --primary-deep: #1E3A8A; /* 深蓝色 #1E3A8A */
+    --primary-light: #3B82F6; /* 浅蓝色 #3B82F6 */
+
+    /* 强调色 */
+    --accent-green: #10B981; /* 绿色 #10B981 */
+    --accent-yellow: #F59E0B; /* 黄色 #F59E0B */
+    --accent-red: #EF4444; /* 红色 #EF4444 */
+
+    /* 背景色 */
+    --bg-light-gray: #F3F4F6; /* 浅灰色 #F3F4F6 */
+    --bg-white: #FFFFFF; /* 白色 #FFFFFF */
+
+    /* 文字色 */
+    --text-dark: #1F2937; /* 深灰色 #1F2937 */
+    --text-medium: #6B7280; /* 中灰色 #6B7280 */
+
+    /* 扩展颜色 - 用于标签和状态 */
+    --primary-light-bg: rgba(59, 130, 246, 0.1);
+    --success-light: rgba(16, 185, 129, 0.1);
+    --warning-light: rgba(245, 158, 11, 0.1);
+    --danger-light: rgba(239, 68, 68, 0.1);
+    --info-light: rgba(59, 130, 246, 0.1);
+}
+
+/* 全局样式 */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-light-gray);
+    color: var(--text-dark);
+    margin: 0;
+    padding: 0;
+}
+
+/* 布局结构 */
+.layout-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* 侧边栏样式 */
+.sidebar {
+    width: 220px;
+    background-color: var(--bg-white);
+    box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    height: 100vh;
+}
+
+.sidebar-header {
+    background-color: var(--primary-deep);
+    color: white;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+}
+
+.sidebar-header i {
+    margin-right: 10px;
+}
+
+.sidebar-menu {
+    padding: 0;
+    list-style: none;
+    margin: 0;
+    flex-grow: 1;
+}
+
+.sidebar-menu li {
+    padding: 12px 15px;
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.sidebar-menu li:hover {
+    background-color: var(--bg-light-gray);
+    border-left-color: var(--primary-light);
+}
+
+.sidebar-menu li.active {
+    background-color: var(--bg-light-gray);
+    border-left-color: var(--primary-light);
+    font-weight: 500;
+}
+
+.sidebar-menu i {
+    margin-right: 10px;
+    width: 20px;
+    text-align: center;
+    color: var(--text-medium);
+}
+
+.sidebar-menu li.active i {
+    color: var(--primary-light);
+}
+
+/* 主内容区域 */
+.main-content {
+    flex: 1;
+    margin-left: 220px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 顶部导航栏 */
+.top-nav {
+    background-color: var(--primary-deep);
+    color: white;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.search-bar {
+    background-color: rgba(255,255,255,0.15);
+    border-radius: 4px;
+    padding: 5px 10px;
+    display: flex;
+    align-items: center;
+}
+
+.search-bar input {
+    background: transparent;
+    border: none;
+    color: white;
+    outline: none;
+    width: 200px;
+}
+
+.search-bar input::placeholder {
+    color: rgba(255,255,255,0.7);
+}
+
+.search-bar i {
+    color: white;
+    margin-right: 10px;
+}
+
+.nav-icons {
+    display: flex;
+    gap: 15px;
+}
+
+.nav-icons i {
+    font-size: 18px;
+    cursor: pointer;
+}
+
+/* 内容区域 */
+.content-area {
+    padding: 20px;
+    flex: 1;
+}
+
+/* 统计卡片 */
+.stat-card {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    text-align: center;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.stat-number {
+    font-size: 36px;
+    font-weight: bold;
+    margin: 10px 0;
+}
+
+.stat-label {
+    color: var(--text-medium);
+    font-size: 14px;
+}
+
+.success-rate {
+    color: var(--accent-green);
+}
+
+.total-cases {
+    color: var(--primary-light);
+}
+
+.average-score {
+    color: var(--text-dark);
+}
+
+/* 按钮样式 */
+.btn-primary {
+    background-color: var(--primary-light);
+    border-color: var(--primary-light);
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-deep);
+    border-color: var(--primary-deep);
+}
+
+.btn-outline-primary {
+    color: var(--primary-light);
+    border-color: var(--primary-light);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-light);
+    color: white;
+}
+
+.btn-success {
+    background-color: var(--accent-green);
+    border-color: var(--accent-green);
+}
+
+.btn-warning {
+    background-color: var(--accent-yellow);
+    border-color: var(--accent-yellow);
+}
+
+.btn-danger {
+    background-color: var(--accent-red);
+    border-color: var(--accent-red);
+}
+
+/* 系统状态指示器 */
+.system-status {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    font-size: 12px;
+    color: var(--text-medium);
+    border-top: 1px solid var(--bg-light-gray);
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--accent-green);
+    margin-right: 5px;
+}
+
+/* 版本信息 */
+.version-info {
+    padding: 10px 15px;
+    font-size: 12px;
+    color: var(--text-medium);
+    text-align: left;
+}
+
+/* 卡片样式 */
+.card {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+}
+
+.card-header {
+    background-color: white;
+    border-bottom: 1px solid var(--bg-light-gray);
+    padding: 15px 20px;
+    font-weight: 500;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+/* 表格样式 */
+.table {
+    margin-bottom: 0;
+}
+
+.table th {
+    font-weight: 500;
+    color: var(--text-medium);
+    border-top: none;
+    border-bottom-width: 1px;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+/* 标签样式 */
+.badge {
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.bg-primary-light {
+    background-color: var(--primary-light-bg) !important;
+}
+
+.text-primary-deep {
+    color: var(--primary-deep) !important;
+}
+
+.bg-success-light {
+    background-color: var(--success-light) !important;
+}
+
+.text-success {
+    color: var(--accent-green) !important;
+}
+
+.bg-warning-light {
+    background-color: var(--warning-light) !important;
+}
+
+.text-warning {
+    color: var(--accent-yellow) !important;
+}
+
+.bg-danger-light {
+    background-color: var(--danger-light) !important;
+}
+
+.text-danger {
+    color: var(--accent-red) !important;
+}
+
+.badge-success {
+    background-color: var(--success-light);
+    color: var(--accent-green);
+}
+
+.badge-warning {
+    background-color: var(--warning-light);
+    color: var(--accent-yellow);
+}
+
+.badge-danger {
+    background-color: var(--danger-light);
+    color: var(--accent-red);
+}
+
+/* 圆形状态指示器 */
+.badge.rounded-pill {
+    width: 10px;
+    height: 10px;
+    padding: 0;
+    display: inline-block;
+}
+
+/* 特性卡片 */
+.feature-card {
+    border-left: 3px solid var(--primary-light);
+    background-color: white;
+    border-radius: 0 8px 8px 0;
+    padding: 15px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.feature-card h3 {
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: var(--primary-deep);
+    display: flex;
+    align-items: center;
+}
+
+.feature-card h3 i {
+    margin-right: 8px;
+    color: var(--primary-light);
+}
+
+.feature-card p {
+    font-size: 14px;
+    color: var(--text-medium);
+    margin-bottom: 10px;
+}
+
+.feature-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.feature-action {
+    font-size: 12px;
+    color: var(--primary-light);
+    background-color: rgba(59, 130, 246, 0.1);
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.feature-action:hover {
+    background-color: rgba(59, 130, 246, 0.2);
+}
+
+/* 按钮图标样式 */
+.btn-icon {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 特性区域样式 */
+.feature-section {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    border-left: 4px solid var(--primary-light);
+}
+
+.feature-section h3 {
+    display: flex;
+    align-items: center;
+    font-size: 16px;
+    margin-bottom: 15px;
+    color: var(--primary-deep);
+}
+
+.feature-section h3 i {
+    margin-right: 8px;
+    color: var(--primary-light);
+    width: 20px;
+    text-align: center;
+}
+
+.feature-section p {
+    color: var(--text-medium);
+    font-size: 14px;
+    margin-bottom: 15px;
+}
+
+.feature-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.feature-action-btn {
+    background-color: var(--primary-light-bg);
+    color: var(--primary-light);
+    border: none;
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.feature-action-btn:hover {
+    background-color: rgba(59, 130, 246, 0.2);
+}
+
+/* 评分显示 */
+.score-display {
+    text-align: center;
+    padding: 15px;
+}
+
+.score-value {
+    font-size: 36px;
+    font-weight: bold;
+    color: var(--primary-light);
+}
+
+.score-label {
+    color: var(--text-medium);
+    font-size: 14px;
+}
+
+.score-status {
+    margin-top: 5px;
+    color: var(--accent-green);
+    font-size: 14px;
+}
+
+/* 响应式设计 */
+@media (max-width: 992px) {
+    .sidebar {
+        width: 60px;
+    }
+
+    .sidebar-header span,
+    .sidebar-menu span,
+    .version-info,
+    .system-status span {
+        display: none;
+    }
+
+    .sidebar-menu i {
+        margin-right: 0;
+        font-size: 18px;
+    }
+
+    .main-content {
+        margin-left: 60px;
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+    }
+
+    .sidebar.show {
+        transform: translateX(0);
+        width: 220px;
+    }
+
+    .sidebar.show .sidebar-header span,
+    .sidebar.show .sidebar-menu span,
+    .sidebar.show .version-info,
+    .sidebar.show .system-status span {
+        display: inline;
+    }
+
+    .main-content {
+        margin-left: 0;
+    }
+
+    .mobile-menu-toggle {
+        display: block;
+    }
+}
+
+/* 移动菜单切换按钮 */
+.mobile-menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+}
