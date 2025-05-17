@@ -916,6 +916,9 @@
     <script>
         // 等待页面加载完成
         document.addEventListener('DOMContentLoaded', function() {
+            // 加载统计数据
+            loadDashboardStats();
+
             // 初始化图表
             initializeCharts();
 
@@ -958,6 +961,110 @@
                 }
             });
         });
+
+        // 加载仪表板统计数据
+        async function loadDashboardStats() {
+            try {
+                console.log('正在从后端获取统计数据...');
+
+                // 构建API URL
+                const apiBaseUrl = getApiBaseUrl();
+                const url = `${apiBaseUrl}/api/stats`;
+
+                // 发起请求
+                const response = await fetch(url);
+
+                // 检查响应状态
+                if (!response.ok) {
+                    throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
+                }
+
+                // 解析响应数据
+                const data = await response.json();
+
+                // 检查数据格式
+                if (!data || !data.stats) {
+                    console.warn('后端返回的统计数据格式不正确:', data);
+                    return;
+                }
+
+                // 更新统计卡片
+                updateStatCards(data.stats);
+
+                console.log('统计数据加载成功:', data.stats);
+            } catch (error) {
+                console.error('获取统计数据失败:', error);
+            }
+        }
+
+        // 更新统计卡片
+        function updateStatCards(stats) {
+            // 更新样本总数
+            const totalCasesElement = document.querySelector('.total-cases');
+            if (totalCasesElement) {
+                totalCasesElement.textContent = stats.count || 0;
+            }
+
+            // 更新平均分
+            const averageScoreElement = document.querySelector('.average-score');
+            if (averageScoreElement) {
+                averageScoreElement.textContent = stats.overall_average ? stats.overall_average.toFixed(1) : '0.0';
+            }
+
+            // 如果有维度平均分数据
+            if (stats.dimension_averages) {
+                // 找出最高分和最低分的维度
+                const dimensions = [
+                    'hallucination_control',
+                    'quality',
+                    'professionalism',
+                    'usefulness'
+                ];
+
+                let highestDim = '';
+                let highestScore = -1;
+                let lowestDim = '';
+                let lowestScore = 101; // 初始值设为超过最大可能值
+
+                dimensions.forEach(dim => {
+                    const score = stats.dimension_averages[dim];
+                    if (score !== undefined) {
+                        if (score > highestScore) {
+                            highestScore = score;
+                            highestDim = dim;
+                        }
+                        if (score < lowestScore) {
+                            lowestScore = score;
+                            lowestDim = dim;
+                        }
+                    }
+                });
+
+                // 更新最高分维度
+                const successRateElement = document.querySelector('.success-rate');
+                if (successRateElement && highestDim) {
+                    successRateElement.textContent = highestScore.toFixed(1);
+
+                    // 更新标签
+                    const label = successRateElement.nextElementSibling;
+                    if (label) {
+                        label.textContent = `Highest: ${formatDimensionNameEn(highestDim)}`;
+                    }
+                }
+
+                // 更新最低分维度
+                const lowestScoreElement = document.querySelector('.stat-number:not(.total-cases):not(.average-score):not(.success-rate)');
+                if (lowestScoreElement && lowestDim) {
+                    lowestScoreElement.textContent = lowestScore.toFixed(1);
+
+                    // 更新标签
+                    const label = lowestScoreElement.nextElementSibling;
+                    if (label) {
+                        label.textContent = `Lowest: ${formatDimensionNameEn(lowestDim)}`;
+                    }
+                }
+            }
+        }
 
         // 初始化所有图表
         function initializeCharts() {
@@ -1029,15 +1136,15 @@
         }
 
         // 从后端获取产品数据
-        // 这个函数从后端API获取评估数据
+        // 这个函数从专门的产品API端点获取数据
         async function fetchProductData() {
             try {
                 // 显示加载消息
-                console.log('正在从后端获取评估数据...');
+                console.log('正在从后端获取产品评分数据...');
 
                 // 构建API URL
                 const apiBaseUrl = getApiBaseUrl();
-                const url = `${apiBaseUrl}/api/evaluations`;
+                const url = `${apiBaseUrl}/api/product-scores`;
 
                 // 发起请求
                 const response = await fetch(url);
@@ -1051,19 +1158,19 @@
                 const data = await response.json();
 
                 // 检查数据格式
-                if (!data || !data.evaluations || !Array.isArray(data.evaluations)) {
+                if (!data || !data.products || !Array.isArray(data.products)) {
                     console.warn('后端返回的数据格式不正确:', data);
                     // 如果数据格式不正确，使用模拟数据
                     return generateMockRawData(100);
                 }
 
-                // 转换评估数据为所需格式
-                const rawData = transformEvaluationData(data.evaluations);
-                console.log(`成功获取 ${rawData.length} 条评估数据`);
+                // 转换产品数据为所需格式
+                const rawData = transformProductData(data.products);
+                console.log(`成功获取 ${rawData.length} 条产品评分数据`);
 
                 return rawData;
             } catch (error) {
-                console.error('获取评估数据失败:', error);
+                console.error('获取产品评分数据失败:', error);
                 // 出错时使用模拟数据
                 console.log('使用模拟数据代替...');
                 return generateMockRawData(100);
@@ -1082,43 +1189,27 @@
             }
         }
 
-        // 转换评估数据为所需格式
-        function transformEvaluationData(evaluations) {
-            // 定义维度字段
-            const dimensions = [
-                'hallucination_control',
-                'quality',
-                'professionalism',
-                'usefulness'
-            ];
-
-            // 转换数据
-            return evaluations.map((evaluation, index) => {
+        // 转换产品数据为所需格式
+        function transformProductData(products) {
+            return products.map(product => {
                 // 提取产品ID
-                // 假设产品ID存储在某个字段中，如果不存在则生成一个
-                const productId = evaluation.product_id ||
-                                 `PN-${1000 + (index % 4)}`;  // 如果没有产品ID，生成一个
+                const productId = product.product_id || 'unknown';
 
                 // 提取各维度得分
                 const scores = {};
-                dimensions.forEach(dim => {
-                    if (evaluation[dim] !== undefined) {
-                        scores[formatDimensionNameEn(dim)] = evaluation[dim];
-                    }
-                });
-
-                // 使用已有的平均分或计算平均分
-                const averageScore = evaluation.average_score ||
-                                    (Object.values(scores).length > 0 ?
-                                     Object.values(scores).reduce((sum, score) => sum + score, 0) / Object.values(scores).length :
-                                     0);
+                if (product.dimension_scores) {
+                    Object.entries(product.dimension_scores).forEach(([dim, score]) => {
+                        scores[formatDimensionNameEn(dim)] = score;
+                    });
+                }
 
                 // 返回转换后的数据
                 return {
-                    id: evaluation.id || index + 1,
+                    id: productId,
                     productId: productId,
                     scores: scores,
-                    averageScore: averageScore
+                    averageScore: product.average_score || 0,
+                    sampleCount: product.sample_count || 0
                 };
             });
         }
@@ -1167,42 +1258,25 @@
             return rawData;
         }
 
-        // 处理产品数据 - 计算每个产品的平均得分
+        // 处理产品数据 - 准备图表所需的数据格式
         function processProductData(rawData) {
-            // 按产品ID分组
-            const productGroups = {};
-
-            // 遍历原始数据，按产品ID分组
-            rawData.forEach(sample => {
-                if (!productGroups[sample.productId]) {
-                    productGroups[sample.productId] = [];
-                }
-                productGroups[sample.productId].push(sample);
-            });
-
-            // 计算每个产品的平均得分
+            // 计算每个产品的图表数据
             const processedData = [];
             const colors = [
                 '#3B82F6', '#10B981', '#EF4444', '#F59E0B',
                 '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'
             ];
 
-            let colorIndex = 0;
-            for (const [productId, samples] of Object.entries(productGroups)) {
-                // 计算该产品所有样本的平均得分
-                const totalScore = samples.reduce((sum, sample) => sum + sample.averageScore, 0);
-                const averageScore = Math.round(totalScore / samples.length);
-
+            // 遍历产品数据
+            rawData.forEach((product, index) => {
                 // 添加到处理后的数据
                 processedData.push({
-                    name: productId,
-                    value: averageScore,
-                    sampleCount: samples.length,
-                    itemStyle: { color: colors[colorIndex % colors.length] }
+                    name: product.productId,
+                    value: product.averageScore,
+                    sampleCount: product.sampleCount,
+                    itemStyle: { color: colors[index % colors.length] }
                 });
-
-                colorIndex++;
-            }
+            });
 
             return processedData;
         }
@@ -1280,66 +1354,162 @@
             if (chartDom) {
                 const myChart = echarts.init(chartDom);
 
-                // 图表配置
-                const option = {
-                    tooltip: {
-                        trigger: 'axis',
-                        axisPointer: {
-                            type: 'shadow'
-                        }
-                    },
-                    grid: {
-                        left: '3%',
-                        right: '4%',
-                        bottom: '3%',
-                        containLabel: true
-                    },
-                    xAxis: {
-                        type: 'category',
-                        data: ['Usefulness', 'Professionalism', 'Quality', 'Hallucination Control']
-                    },
-                    yAxis: {
-                        type: 'value',
-                        min: 0,
-                        max: 100
-                    },
-                    series: [
-                        {
-                            name: 'Score',
-                            type: 'bar',
-                            data: [
-                                {
-                                    value: 50,
-                                    itemStyle: { color: '#F59E0B' }
-                                },
-                                {
-                                    value: 65,
-                                    itemStyle: { color: '#EF4444' }
-                                },
-                                {
-                                    value: 70,
-                                    itemStyle: { color: '#10B981' }
-                                },
-                                {
-                                    value: 80,
-                                    itemStyle: { color: '#3B82F6' }
-                                }
-                            ],
-                            showBackground: true,
-                            backgroundStyle: {
-                                color: 'rgba(180, 180, 180, 0.2)'
-                            }
-                        }
-                    ]
-                };
-
-                myChart.setOption(option);
-
-                // 响应窗口大小变化
-                window.addEventListener('resize', function() {
-                    myChart.resize();
+                // 显示加载动画
+                myChart.showLoading({
+                    text: 'Loading data...',
+                    color: '#3B82F6',
+                    textColor: '#000',
+                    maskColor: 'rgba(255, 255, 255, 0.8)',
+                    zlevel: 0
                 });
+
+                // 从后端获取统计数据
+                fetchStatsData()
+                    .then(stats => {
+                        // 隐藏加载动画
+                        myChart.hideLoading();
+
+                        // 处理维度数据
+                        const dimensionData = processDimensionData(stats);
+
+                        // 设置图表配置
+                        const option = {
+                            tooltip: {
+                                trigger: 'axis',
+                                axisPointer: {
+                                    type: 'shadow'
+                                }
+                            },
+                            grid: {
+                                left: '3%',
+                                right: '4%',
+                                bottom: '3%',
+                                containLabel: true
+                            },
+                            xAxis: {
+                                type: 'category',
+                                data: dimensionData.map(item => item.name)
+                            },
+                            yAxis: {
+                                type: 'value',
+                                min: 0,
+                                max: 100
+                            },
+                            series: [
+                                {
+                                    name: 'Score',
+                                    type: 'bar',
+                                    data: dimensionData.map(item => ({
+                                        value: item.value,
+                                        itemStyle: { color: item.color }
+                                    })),
+                                    showBackground: true,
+                                    backgroundStyle: {
+                                        color: 'rgba(180, 180, 180, 0.2)'
+                                    }
+                                }
+                            ]
+                        };
+
+                        myChart.setOption(option);
+
+                        // 响应窗口大小变化
+                        window.addEventListener('resize', function() {
+                            myChart.resize();
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error fetching stats data:', error);
+                        myChart.hideLoading();
+
+                        // 显示错误信息
+                        myChart.setOption({
+                            title: {
+                                text: 'Error loading data',
+                                left: 'center',
+                                top: 'center',
+                                textStyle: {
+                                    color: '#EF4444',
+                                    fontSize: 16
+                                }
+                            }
+                        });
+                    });
             }
+        }
+
+        // 从后端获取统计数据
+        async function fetchStatsData() {
+            try {
+                // 构建API URL
+                const apiBaseUrl = getApiBaseUrl();
+                const url = `${apiBaseUrl}/api/stats`;
+
+                // 发起请求
+                const response = await fetch(url);
+
+                // 检查响应状态
+                if (!response.ok) {
+                    throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
+                }
+
+                // 解析响应数据
+                const data = await response.json();
+
+                // 检查数据格式
+                if (!data || !data.stats) {
+                    console.warn('后端返回的统计数据格式不正确:', data);
+                    return generateMockStatsData();
+                }
+
+                return data.stats;
+            } catch (error) {
+                console.error('获取统计数据失败:', error);
+                // 出错时使用模拟数据
+                return generateMockStatsData();
+            }
+        }
+
+        // 生成模拟统计数据
+        function generateMockStatsData() {
+            return {
+                count: 4,
+                overall_average: 82,
+                dimension_averages: {
+                    hallucination_control: 80,
+                    quality: 70,
+                    professionalism: 65,
+                    usefulness: 50,
+                    average_score: 82
+                }
+            };
+        }
+
+        // 处理维度数据
+        function processDimensionData(stats) {
+            // 定义维度和颜色
+            const dimensions = [
+                { key: 'usefulness', name: 'Usefulness', color: '#F59E0B' },
+                { key: 'professionalism', name: 'Professionalism', color: '#EF4444' },
+                { key: 'quality', name: 'Quality', color: '#10B981' },
+                { key: 'hallucination_control', name: 'Hallucination Control', color: '#3B82F6' }
+            ];
+
+            // 如果没有维度平均分数据，返回默认值
+            if (!stats || !stats.dimension_averages) {
+                return dimensions.map(dim => ({
+                    name: dim.name,
+                    value: 0,
+                    color: dim.color
+                }));
+            }
+
+            // 处理维度数据
+            return dimensions.map(dim => ({
+                name: dim.name,
+                value: stats.dimension_averages[dim.key] || 0,
+                color: dim.color
+            }));
         }
 
         // 初始化分布图表
@@ -1348,71 +1518,107 @@
             if (chartDom) {
                 const myChart = echarts.init(chartDom);
 
-                // 图表配置
-                const option = {
-                    tooltip: {
-                        trigger: 'axis'
-                    },
-                    grid: {
-                        left: '3%',
-                        right: '4%',
-                        bottom: '3%',
-                        containLabel: true
-                    },
-                    xAxis: {
-                        type: 'category',
-                        boundaryGap: false,
-                        data: ['Usefulness', 'Professionalism', 'Quality', 'Hallucination Control']
-                    },
-                    yAxis: {
-                        type: 'value',
-                        min: 0,
-                        max: 100
-                    },
-                    series: [
-                        {
-                            name: 'Score',
-                            type: 'line',
-                            data: [50, 65, 70, 80],
-                            smooth: true,
-                            symbol: 'circle',
-                            symbolSize: 8,
-                            lineStyle: {
-                                width: 3,
-                                color: '#3B82F6'
+                // 显示加载动画
+                myChart.showLoading({
+                    text: 'Loading data...',
+                    color: '#3B82F6',
+                    textColor: '#000',
+                    maskColor: 'rgba(255, 255, 255, 0.8)',
+                    zlevel: 0
+                });
+
+                // 从后端获取统计数据
+                fetchStatsData()
+                    .then(stats => {
+                        // 隐藏加载动画
+                        myChart.hideLoading();
+
+                        // 处理维度数据
+                        const dimensionData = processDimensionData(stats);
+
+                        // 设置图表配置
+                        const option = {
+                            tooltip: {
+                                trigger: 'axis'
                             },
-                            itemStyle: {
-                                color: '#3B82F6'
+                            grid: {
+                                left: '3%',
+                                right: '4%',
+                                bottom: '3%',
+                                containLabel: true
                             },
-                            areaStyle: {
-                                color: {
-                                    type: 'linear',
-                                    x: 0,
-                                    y: 0,
-                                    x2: 0,
-                                    y2: 1,
-                                    colorStops: [
-                                        {
-                                            offset: 0,
-                                            color: 'rgba(59, 130, 246, 0.3)'
-                                        },
-                                        {
-                                            offset: 1,
-                                            color: 'rgba(59, 130, 246, 0.1)'
+                            xAxis: {
+                                type: 'category',
+                                boundaryGap: false,
+                                data: dimensionData.map(item => item.name)
+                            },
+                            yAxis: {
+                                type: 'value',
+                                min: 0,
+                                max: 100
+                            },
+                            series: [
+                                {
+                                    name: 'Score',
+                                    type: 'line',
+                                    data: dimensionData.map(item => item.value),
+                                    smooth: true,
+                                    symbol: 'circle',
+                                    symbolSize: 8,
+                                    lineStyle: {
+                                        width: 3,
+                                        color: '#3B82F6'
+                                    },
+                                    itemStyle: {
+                                        color: '#3B82F6'
+                                    },
+                                    areaStyle: {
+                                        color: {
+                                            type: 'linear',
+                                            x: 0,
+                                            y: 0,
+                                            x2: 0,
+                                            y2: 1,
+                                            colorStops: [
+                                                {
+                                                    offset: 0,
+                                                    color: 'rgba(59, 130, 246, 0.3)'
+                                                },
+                                                {
+                                                    offset: 1,
+                                                    color: 'rgba(59, 130, 246, 0.1)'
+                                                }
+                                            ]
                                         }
-                                    ]
+                                    }
+                                }
+                            ]
+                        };
+
+                        myChart.setOption(option);
+
+                        // 响应窗口大小变化
+                        window.addEventListener('resize', function() {
+                            myChart.resize();
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error fetching stats data:', error);
+                        myChart.hideLoading();
+
+                        // 显示错误信息
+                        myChart.setOption({
+                            title: {
+                                text: 'Error loading data',
+                                left: 'center',
+                                top: 'center',
+                                textStyle: {
+                                    color: '#EF4444',
+                                    fontSize: 16
                                 }
                             }
-                        }
-                    ]
-                };
-
-                myChart.setOption(option);
-
-                // 响应窗口大小变化
-                window.addEventListener('resize', function() {
-                    myChart.resize();
-                });
+                        });
+                    });
             }
         }
 
