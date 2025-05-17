@@ -304,8 +304,6 @@ function updateStatsCards() {
         }
     }
 
-    console.log('[DEBUG] 总平均分:', formattedAverage);
-
     // 3. 处理维度平均值
     let highestDimension = '';
     let highestScore = 0;
@@ -314,7 +312,6 @@ function updateStatsCards() {
 
     // 获取所有维度并按分数排序
     const validDimensions = getAllDimensions(); // 获取有效维度列表
-    console.log('[DEBUG] 有效维度:', validDimensions);
 
     // 过滤出有效维度的分数，并按分数排序
     const sortedDimensions = Object.entries(dimension_averages || {})
@@ -325,8 +322,6 @@ function updateStatsCards() {
         )
         .sort((a, b) => b[1] - a[1]);
 
-    console.log('[DEBUG] 排序后的维度:', sortedDimensions);
-
     if (sortedDimensions.length > 0) {
         // 最高分维度
         highestDimension = sortedDimensions[0][0];
@@ -335,11 +330,6 @@ function updateStatsCards() {
         // 最低分维度
         lowestDimension = sortedDimensions[sortedDimensions.length - 1][0];
         lowestScore = sortedDimensions[sortedDimensions.length - 1][1];
-
-        console.log('[DEBUG] 最高分维度:', highestDimension, highestScore);
-        console.log('[DEBUG] 最低分维度:', lowestDimension, lowestScore);
-    } else {
-        console.warn('[DEBUG] 没有有效的维度数据');
     }
 
     // 创建统计卡片 HTML
@@ -475,10 +465,7 @@ function updateEvaluationsTable() {
  * 更新图表
  */
 function updateCharts() {
-    console.log(`[DEBUG] 开始更新图表，状态:`, state);
-
     if (!state.stats) {
-        console.warn('[DEBUG] 统计数据不存在，无法更新图表');
         return;
     }
 
@@ -487,13 +474,11 @@ function updateCharts() {
     const wasHidden = dashboardView && dashboardView.classList.contains('d-none');
 
     if (wasHidden) {
-        console.log('[DEBUG] 仪表板视图隐藏，临时显示以更新图表');
         dashboardView.classList.remove('d-none');
     }
 
     // 确保图表实例已初始化
     if (!window.radarChart || !window.barChart) {
-        console.log('[DEBUG] 图表实例未初始化，尝试初始化');
         window.initCharts();
 
         // 给图表初始化一些时间
@@ -502,7 +487,6 @@ function updateCharts() {
 
             // 恢复仪表板视图状态
             if (wasHidden) {
-                console.log('[DEBUG] 恢复仪表板视图隐藏状态');
                 dashboardView.classList.add('d-none');
             }
         }, 500);
@@ -511,7 +495,6 @@ function updateCharts() {
 
         // 恢复仪表板视图状态
         if (wasHidden) {
-            console.log('[DEBUG] 恢复仪表板视图隐藏状态');
             dashboardView.classList.add('d-none');
         }
     }
@@ -522,12 +505,9 @@ function updateCharts() {
  */
 function updateChartsWithData() {
     if (!state.stats.dimension_averages) {
-        console.warn('[DEBUG] 维度平均值不存在，无法更新图表');
         // 尝试从评估数据中计算维度平均值
         if (state.evaluations && state.evaluations.length > 0) {
-            console.log('[DEBUG] 尝试从评估数据中计算维度平均值');
             const dimensionAverages = calculateDimensionAverages(state.evaluations);
-            console.log('[DEBUG] 计算的维度平均值:', dimensionAverages);
 
             if (Object.keys(dimensionAverages).length > 0) {
                 // 更新状态
@@ -538,7 +518,6 @@ function updateChartsWithData() {
     }
 
     if (!state.stats.dimension_averages) {
-        console.warn('[DEBUG] 无法计算维度平均值，尝试使用测试数据');
         // 使用测试数据
         state.stats.dimension_averages = {
             hallucination_control: 80,
@@ -548,15 +527,12 @@ function updateChartsWithData() {
         };
     }
 
-    console.log('[DEBUG] 使用的维度平均值:', state.stats.dimension_averages);
-
     // 确保图表容器有尺寸
     const containers = ['radar-chart', 'bar-chart'];
     containers.forEach(id => {
         const container = document.getElementById(id);
         if (container) {
             if (container.clientWidth === 0 || container.clientHeight === 0) {
-                console.log(`[DEBUG] 容器 #${id} 尺寸为零，设置内联样式`);
                 container.style.width = '100%';
                 container.style.height = '400px';
                 container.style.position = 'relative';
@@ -566,39 +542,31 @@ function updateChartsWithData() {
 
     // 强制重绘图表
     if (typeof window.forceResizeCharts === 'function') {
-        console.log('[DEBUG] 强制重绘图表');
         window.forceResizeCharts();
     }
 
     try {
         // 更新饼图（原雷达图）
-        console.log('[DEBUG] 调用 updateRadarChart');
         if (typeof window.updateRadarChart === 'function' && window.radarChart) {
             window.updateRadarChart(state.stats.dimension_averages);
-        } else {
-            console.warn('[DEBUG] updateRadarChart 函数或图表实例不存在');
         }
     } catch (error) {
-        console.error('[DEBUG] 更新饼图失败:', error);
+        console.error('更新饼图失败:', error);
     }
 
     try {
         // 更新MAG分数分布图（原柱状图）
-        console.log('[DEBUG] 调用 updateBarChart');
         if (typeof window.updateBarChart === 'function' && window.barChart) {
             // 传递评估数据，用于按MAG分组
             window.updateBarChart(state.stats.dimension_averages, state.evaluations);
-        } else {
-            console.warn('[DEBUG] updateBarChart 函数或图表实例不存在');
         }
     } catch (error) {
-        console.error('[DEBUG] 更新MAG分数分布图失败:', error);
+        console.error('更新MAG分数分布图失败:', error);
     }
 
     // 最后再次强制重绘
     setTimeout(() => {
         if (typeof window.forceResizeCharts === 'function') {
-            console.log('[DEBUG] 延迟后再次强制重绘图表');
             window.forceResizeCharts();
         }
     }, 200);
@@ -611,27 +579,11 @@ function updateChartsWithData() {
  */
 function calculateDimensionAverages(evaluations) {
     if (!evaluations || evaluations.length === 0) {
-        console.warn('[DEBUG] 没有评估数据，无法计算维度平均值');
         return {};
     }
 
-    console.log('[DEBUG] 计算维度平均值，样本数量:', evaluations.length);
-
     // 获取实际存在的4个维度
     const validDimensions = getAllDimensions();
-    console.log('[DEBUG] 计算平均值时使用的有效维度:', validDimensions);
-
-    // 检查评估数据中是否包含这些维度
-    const sampleEval = evaluations[0];
-    console.log('[DEBUG] 样本评估数据:', sampleEval);
-
-    validDimensions.forEach(dim => {
-        if (sampleEval[dim] === undefined) {
-            console.warn(`[DEBUG] 样本数据中缺少维度: ${dim}`);
-        } else {
-            console.log(`[DEBUG] 样本数据中包含维度 ${dim}，值为:`, sampleEval[dim]);
-        }
-    });
 
     const dimensions = {};
     const counts = {};
@@ -643,30 +595,23 @@ function calculateDimensionAverages(evaluations) {
     });
 
     // 累加维度值，只考虑实际存在的4个维度
-    evaluations.forEach((eval, index) => {
+    evaluations.forEach((eval) => {
         validDimensions.forEach(dim => {
             if (typeof eval[dim] === 'number' && !isNaN(eval[dim])) {
                 dimensions[dim] += eval[dim];
                 counts[dim]++;
-            } else if (eval[dim] !== undefined) {
-                console.warn(`[DEBUG] 评估 #${index} 的维度 ${dim} 值无效:`, eval[dim]);
             }
         });
     });
-
-    console.log('[DEBUG] 维度累加值:', dimensions);
-    console.log('[DEBUG] 维度计数:', counts);
 
     // 计算平均值
     const averages = {};
     validDimensions.forEach(dim => {
         if (counts[dim] > 0) {
             averages[dim] = dimensions[dim] / counts[dim];
-            console.log(`[DEBUG] 维度 ${dim} 平均值: ${dimensions[dim]} / ${counts[dim]} = ${averages[dim]}`);
         } else {
             // 如果没有数据，设置默认值
             averages[dim] = 0;
-            console.warn(`[DEBUG] 维度 ${dim} 没有有效数据，设置默认值 0`);
         }
     });
 
@@ -683,13 +628,10 @@ function calculateDimensionAverages(evaluations) {
 
     if (totalCount > 0) {
         averages.average_score = totalScore / totalCount;
-        console.log(`[DEBUG] 总平均分: ${totalScore} / ${totalCount} = ${averages.average_score}`);
     } else {
         averages.average_score = 0;
-        console.warn('[DEBUG] 没有有效维度数据，总平均分设为 0');
     }
 
-    console.log('[DEBUG] 计算的维度平均值:', averages);
     return averages;
 }
 

@@ -33,18 +33,13 @@ const CHART_COLORS = {
  * @returns {Object|null} - 初始化的ECharts实例或null
  */
 function safeInitChart(elementId) {
-    console.log(`[DEBUG] 开始初始化图表: #${elementId}`);
-
     // 检查 echarts 是否已加载
     if (typeof window.echarts === 'undefined') {
-        console.error(`[DEBUG] ECharts 库未加载，无法初始化图表: #${elementId}`);
         // 尝试检查是否有其他变量名
         if (typeof window.echartsInstance !== 'undefined') {
-            console.log(`[DEBUG] 找到 echartsInstance，尝试使用它`);
             window.echarts = window.echartsInstance;
         } else {
             // 尝试重新加载 echarts
-            console.log(`[DEBUG] 尝试重新加载 ECharts 库`);
             const script = document.createElement('script');
             script.src = 'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js';
             script.crossOrigin = 'anonymous';
@@ -57,17 +52,10 @@ function safeInitChart(elementId) {
 
     const element = document.getElementById(elementId);
     if (!element) {
-        console.warn(`[DEBUG] 图表容器元素不存在: #${elementId}`);
         return null;
     }
 
-    // 检查容器尺寸
-    const width = element.clientWidth;
-    const height = element.clientHeight;
-    console.log(`[DEBUG] 图表容器尺寸: width=${width}, height=${height}`);
-
-    // 确保容器有足够的尺寸 - 无论尺寸如何，都强制设置
-    console.log(`[DEBUG] 强制设置图表容器尺寸: #${elementId}`);
+    // 确保容器有尺寸
 
     // 设置内联样式确保容器有尺寸
     element.style.width = '100%';
@@ -91,29 +79,19 @@ function safeInitChart(elementId) {
         cardBody.style.display = 'block';
     }
 
-    console.log(`[DEBUG] 已设置容器及父元素尺寸`);
-
     // 强制浏览器重新计算布局
     element.offsetHeight;
-
-    // 再次检查尺寸
-    const newWidth = element.clientWidth;
-    const newHeight = element.clientHeight;
-    console.log(`[DEBUG] 设置后的图表容器尺寸: width=${newWidth}, height=${newHeight}`);
 
     try {
         // 检查是否已经有图表实例
         const existingInstance = element.__echarts_instance__;
         if (existingInstance) {
-            console.log(`[DEBUG] 容器已有图表实例，先销毁`);
             try {
                 window.echarts.dispose(element);
             } catch (disposeError) {
-                console.warn(`[DEBUG] 销毁已有实例失败:`, disposeError);
+                console.warn(`销毁已有实例失败:`, disposeError);
             }
         }
-
-        console.log(`[DEBUG] 调用 echarts.init() 初始化图表: #${elementId}`);
 
         // 确保容器在DOM中可见
         const originalDisplay = element.style.display;
@@ -132,8 +110,6 @@ function safeInitChart(elementId) {
             element.style.display = originalDisplay;
         }
 
-        console.log(`[DEBUG] 图表初始化成功: #${elementId}`);
-
         // 添加窗口大小变化监听器
         window.addEventListener('resize', () => {
             if (chart) {
@@ -143,12 +119,10 @@ function safeInitChart(elementId) {
 
         return chart;
     } catch (error) {
-        console.error(`[DEBUG] 初始化图表失败 #${elementId}:`, error);
+        console.error(`初始化图表失败:`, error);
 
         // 尝试使用备用方法
         try {
-            console.log(`[DEBUG] 尝试使用备用方法初始化图表: #${elementId}`);
-
             // 清空容器内容
             element.innerHTML = '';
 
@@ -160,10 +134,9 @@ function safeInitChart(elementId) {
 
             // 在新容器上初始化
             const chart = window.echarts.init(innerContainer);
-            console.log(`[DEBUG] 备用方法初始化成功: #${elementId}`);
             return chart;
         } catch (backupError) {
-            console.error(`[DEBUG] 备用初始化方法也失败 #${elementId}:`, backupError);
+            console.error(`备用初始化方法也失败:`, backupError);
             return null;
         }
     }
@@ -173,8 +146,6 @@ function safeInitChart(elementId) {
  * 初始化所有图表
  */
 function initCharts() {
-    console.log('[DEBUG] 开始初始化图表，添加延迟以确保容器尺寸正确');
-
     // 检查容器是否存在并设置最小高度
     const ensureContainers = () => {
         const containers = ['radar-chart', 'bar-chart', 'compare-chart'];
@@ -183,33 +154,28 @@ function initCharts() {
         containers.forEach(id => {
             const container = document.getElementById(id);
             if (!container) {
-                console.warn(`[DEBUG] 图表容器 #${id} 不存在`);
                 allExist = false;
             } else {
                 // 确保容器有最小高度
                 if (container.clientHeight < 100) {
                     container.style.minHeight = '400px';
-                    console.log(`[DEBUG] 设置 #${id} 最小高度为 400px`);
                 }
 
                 // 确保容器宽度不为零
                 if (container.clientWidth < 100) {
                     container.style.minWidth = '100%';
-                    console.log(`[DEBUG] 设置 #${id} 最小宽度为 100%`);
                 }
 
                 // 确保容器可见
                 const parent = container.closest('.card');
                 if (parent) {
                     const isVisible = window.getComputedStyle(parent).display !== 'none';
-                    console.log(`[DEBUG] 容器 #${id} 的父元素可见性: ${isVisible}`);
 
                     // 如果父元素不可见，临时使其可见以便初始化
                     if (!isVisible) {
                         const originalDisplay = parent.style.display;
                         parent.style.display = 'block';
                         parent.dataset.originalDisplay = originalDisplay;
-                        console.log(`[DEBUG] 临时使 #${id} 的父元素可见`);
                     }
                 }
 
@@ -217,7 +183,6 @@ function initCharts() {
                 const cardBody = container.closest('.card-body');
                 if (cardBody && cardBody.clientHeight < 100) {
                     cardBody.style.minHeight = '400px';
-                    console.log(`[DEBUG] 设置卡片体 #${cardBody.id || 'card-body'} 最小高度为 400px`);
                 }
             }
         });
@@ -235,7 +200,6 @@ function initCharts() {
                 if (parent && parent.dataset.originalDisplay !== undefined) {
                     parent.style.display = parent.dataset.originalDisplay;
                     delete parent.dataset.originalDisplay;
-                    console.log(`[DEBUG] 恢复 #${id} 的父元素原始可见性`);
                 }
             }
         });
@@ -247,15 +211,12 @@ function initCharts() {
 
     // 初始化函数
     const initChartsWithRetry = () => {
-        console.log(`[DEBUG] 尝试初始化图表，尝试次数: ${retryCount + 1}`);
-
         // 确保容器存在
         const containersExist = ensureContainers();
 
         if (!containersExist && retryCount < maxRetries) {
             // 如果容器不存在且未超过最大重试次数，延迟后重试
             retryCount++;
-            console.log(`[DEBUG] 容器不存在，${500 * retryCount}ms 后重试`);
             setTimeout(initChartsWithRetry, 500 * retryCount);
             return;
         }
@@ -267,7 +228,6 @@ function initCharts() {
             const wasHidden = dashboardView && dashboardView.classList.contains('d-none');
 
             if (wasHidden) {
-                console.log('[DEBUG] 仪表板视图隐藏，临时显示以初始化图表');
                 dashboardView.classList.remove('d-none');
             }
 
@@ -291,38 +251,31 @@ function initCharts() {
 
             // 恢复仪表板视图状态
             if (wasHidden) {
-                console.log('[DEBUG] 恢复仪表板视图隐藏状态');
                 dashboardView.classList.add('d-none');
             }
 
             // 恢复容器原始可见性
             restoreContainers();
 
-            console.log('[DEBUG] 图表初始化完成，已强制重绘');
-
             // 添加额外的延迟重绘，确保在页面完全加载后图表正确显示
             setTimeout(() => {
                 forceResizeCharts();
-                console.log('[DEBUG] 额外的延迟重绘完成');
 
                 // 测试图表是否正常工作
                 testCharts();
             }, 1000);
         } catch (error) {
-            console.error('[DEBUG] 初始化图表时出错:', error);
+            console.error('初始化图表时出错:', error);
 
             if (retryCount < maxRetries) {
                 // 如果未超过最大重试次数，延迟后重试
                 retryCount++;
-                console.log(`[DEBUG] 初始化失败，${500 * retryCount}ms 后重试`);
                 setTimeout(initChartsWithRetry, 500 * retryCount);
             } else {
-                console.error('[DEBUG] 达到最大重试次数，初始化失败');
                 // 恢复容器原始可见性
                 restoreContainers();
 
                 // 最后尝试使用备用方法初始化
-                console.log('[DEBUG] 尝试使用备用方法初始化图表');
                 tryBackupInitialization();
             }
         }
@@ -330,8 +283,6 @@ function initCharts() {
 
     // 备用初始化方法
     const tryBackupInitialization = () => {
-        console.log('[DEBUG] 执行备用初始化方法');
-
         try {
             // 直接在容器上设置内联样式
             const containers = ['radar-chart', 'bar-chart', 'compare-chart'];
@@ -341,7 +292,6 @@ function initCharts() {
                     container.style.width = '100%';
                     container.style.height = '400px';
                     container.style.position = 'relative';
-                    console.log(`[DEBUG] 备用方法：设置 #${id} 的内联样式`);
                 }
             });
 
@@ -369,7 +319,7 @@ function initCharts() {
                 testCharts();
             }, 500);
         } catch (error) {
-            console.error('[DEBUG] 备用初始化方法失败:', error);
+            console.error('备用初始化方法失败:', error);
         }
     };
 
@@ -387,7 +337,6 @@ function initCharts() {
             // 延迟重绘图表，确保在视图切换后图表正确显示
             setTimeout(() => {
                 forceResizeCharts();
-                console.log('[DEBUG] 视图切换后重绘图表');
             }, 300);
         });
     });
@@ -401,7 +350,6 @@ function initCharts() {
                 mutations.forEach((mutation) => {
                     if (mutation.attributeName === 'style' ||
                         mutation.attributeName === 'class') {
-                        console.log(`[DEBUG] 检测到 #${id} 容器变化，重绘图表`);
                         forceResizeCharts();
                     }
                 });
@@ -419,7 +367,6 @@ function initCharts() {
                     mutations.forEach((mutation) => {
                         if (mutation.attributeName === 'style' ||
                             mutation.attributeName === 'class') {
-                            console.log(`[DEBUG] 检测到 #${id} 父元素变化，重绘图表`);
                             forceResizeCharts();
                         }
                     });
@@ -440,13 +387,11 @@ function initCharts() {
             mutations.forEach((mutation) => {
                 if (mutation.attributeName === 'class') {
                     const isVisible = !dashboardView.classList.contains('d-none');
-                    console.log(`[DEBUG] 仪表板视图可见性变化: ${isVisible ? '可见' : '隐藏'}`);
 
                     if (isVisible) {
                         // 当仪表板变为可见时，重绘图表
                         setTimeout(() => {
                             forceResizeCharts();
-                            console.log('[DEBUG] 仪表板视图变为可见，重绘图表');
                         }, 100);
                     }
                 }
@@ -464,18 +409,14 @@ function initCharts() {
  * 强制重绘所有图表
  */
 function forceResizeCharts() {
-    console.log('[DEBUG] 强制重绘所有图表');
     if (radarChart) {
         radarChart.resize();
-        console.log('[DEBUG] 雷达图重绘完成');
     }
     if (barChart) {
         barChart.resize();
-        console.log('[DEBUG] 柱状图重绘完成');
     }
     if (compareChart) {
         compareChart.resize();
-        console.log('[DEBUG] 对比图重绘完成');
     }
 }
 
@@ -1222,66 +1163,3 @@ window.getAllDimensions = getAllDimensions;
 window.testCharts = testCharts;
 window.initCharts = initCharts;
 window.forceResizeCharts = forceResizeCharts;
-
-// 添加一个诊断函数，可以从控制台调用
-window.diagnoseDashboard = function() {
-    console.log('======= 开始诊断仪表板 =======');
-
-    // 检查视图状态
-    const dashboardView = document.getElementById('dashboard-view');
-    console.log('仪表板视图可见性:',
-        dashboardView ?
-        (dashboardView.classList.contains('d-none') ? '隐藏' : '可见') :
-        '元素不存在');
-
-    // 检查图表容器
-    const containers = ['radar-chart', 'bar-chart', 'compare-chart'];
-    containers.forEach(id => {
-        const container = document.getElementById(id);
-        if (!container) {
-            console.log(`图表容器 #${id}: 不存在`);
-        } else {
-            const rect = container.getBoundingClientRect();
-            const styles = window.getComputedStyle(container);
-            console.log(`图表容器 #${id}:`, {
-                width: rect.width,
-                height: rect.height,
-                display: styles.display,
-                visibility: styles.visibility,
-                position: styles.position,
-                parent: container.parentElement ? container.parentElement.id || container.parentElement.tagName : 'none'
-            });
-        }
-    });
-
-    // 检查图表实例
-    console.log('图表实例状态:', {
-        radarChart: radarChart ? '已初始化' : '未初始化',
-        barChart: barChart ? '已初始化' : '未初始化',
-        compareChart: compareChart ? '已初始化' : '未初始化'
-    });
-
-    // 尝试重新初始化图表
-    console.log('尝试重新初始化图表...');
-    initCharts();
-
-    // 强制重绘
-    setTimeout(() => {
-        console.log('强制重绘图表...');
-        forceResizeCharts();
-
-        // 使用测试数据更新图表
-        const testData = {
-            hallucination_control: 80,
-            quality: 70,
-            professionalism: 60,
-            usefulness: 50
-        };
-
-        console.log('使用测试数据更新图表...');
-        updateRadarChart(testData);
-        updateBarChart(testData);
-
-        console.log('======= 诊断完成 =======');
-    }, 1000);
-};

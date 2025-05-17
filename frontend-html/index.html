@@ -114,11 +114,6 @@
                         <div class="card-body">
                             <div id="radar-chart" style="height: 400px;"></div>
                         </div>
-                        <div class="card-footer bg-light text-center">
-                            <button class="btn btn-sm btn-outline-primary" onclick="window.diagnoseDashboard()">
-                                <i class="fas fa-sync-alt me-1"></i>刷新图表
-                            </button>
-                        </div>
                     </div>
                 </div>
                 <div class="col-md-6 mb-4">
@@ -128,11 +123,6 @@
                         </div>
                         <div class="card-body">
                             <div id="bar-chart" style="height: 400px;"></div>
-                        </div>
-                        <div class="card-footer bg-light text-center">
-                            <button class="btn btn-sm btn-outline-primary" onclick="window.testCharts()">
-                                <i class="fas fa-vial me-1"></i>测试图表
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -282,36 +272,22 @@
                         container.style.height = '400px';
                         container.style.position = 'relative';
                         container.style.display = 'block';
-                        console.log(`[DEBUG] 页面加载后设置 #${id} 容器尺寸`);
+
                     }
                 });
 
                 // 强制重绘图表
                 if (typeof window.forceResizeCharts === 'function') {
                     window.forceResizeCharts();
-                    console.log('[DEBUG] 页面加载后强制重绘图表');
                 }
 
-                // 添加全局重绘按钮
-                const refreshAllBtn = document.createElement('button');
-                refreshAllBtn.className = 'btn btn-primary position-fixed';
-                refreshAllBtn.style.bottom = '20px';
-                refreshAllBtn.style.right = '20px';
-                refreshAllBtn.style.zIndex = '1000';
-                refreshAllBtn.innerHTML = '<i class="fas fa-sync-alt me-1"></i>刷新所有图表';
-                refreshAllBtn.onclick = function() {
-                    if (typeof window.diagnoseDashboard === 'function') {
-                        window.diagnoseDashboard();
-                    }
-                };
-                document.body.appendChild(refreshAllBtn);
+                // 全局浮动刷新按钮已移除
             }, 1000);
 
             // 监听窗口大小变化，重绘图表
             window.addEventListener('resize', function() {
                 if (typeof window.forceResizeCharts === 'function') {
                     window.forceResizeCharts();
-                    console.log('[DEBUG] 窗口大小变化，重绘图表');
                 }
             });
         });
