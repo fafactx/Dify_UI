@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 默认配置
-DEFAULT_PORT=3000
+DEFAULT_PORT=3001
 DEFAULT_HOST="10.193.21.115"
 
 # 解析命令行参数
