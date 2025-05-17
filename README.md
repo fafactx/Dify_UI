@@ -245,9 +245,9 @@ docker-compose up -d
    node server.js
    ```
 
-3. 更新现代版前端
+3. 更新前端
    ```bash
-   cd modern-frontend
+   cd frontend
    npm install  # 如有新依赖
    npm run dev
    ```
@@ -264,12 +264,7 @@ docker-compose up -d
 - **Express** - Web 应用框架
 - **文件系统存储** - 使用 JSON 文件存储评估数据
 
-### 传统版前端
-- **Vue 3** - 渐进式 JavaScript 框架
-- **Bootstrap 5** - 响应式 CSS 框架
-- **Chart.js** - 简单易用的图表库
-
-### 现代版前端
+### 前端
 - **React 18** + **TypeScript** - 现代化前端框架
 - **Vite** - 快速的构建工具
 - **Chakra UI** - 美观且高度可定制的组件库
