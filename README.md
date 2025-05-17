@@ -1,23 +1,42 @@
-# Dify 评估结果可视化框架
+# Dify 评估结果可视化仪表板
 
-这是一个用于可视化 Dify 工作流评估结果的框架，包括后端 API 和前端仪表板。该框架允许你将 Dify 工作流中的评估结果保存并可视化，支持多种图表、排序、搜索和对比功能。
+![版本](https://img.shields.io/badge/版本-1.0.0-blue)
+![许可证](https://img.shields.io/badge/许可证-MIT-green)
+
+这是一个用于可视化 Dify 工作流评估结果的框架，包括后端 API 和两种前端实现：传统版和现代版。该框架允许你将 Dify 工作流中的评估结果保存并可视化，支持多种图表、排序、搜索和对比功能。
+
+## 两种前端实现
+
+### 传统版 (frontend)
+基于 Vue 3 和 Bootstrap 5 构建的轻量级实现，简单易用。
+
+### 现代版 (modern-frontend) ✨
+基于 React 18、Chakra UI 和 ECharts 5 构建的现代化实现，提供更丰富的视觉效果和交互体验。
 
 ## 功能特点
 
-- 实时显示评估结果统计数据
-- 多种图表展示评估维度分布
-- 可排序和搜索的评估结果表格
-- 详细的评估结果查看
-- 多结果对比功能
-- 时间趋势分析
-- 维度权重配置
-- 数据导出功能
+### 共有功能
+- 📊 实时显示评估结果统计数据
+- 📈 多种图表展示评估维度分布
+- 🔍 可排序和搜索的评估结果表格
+- 📋 详细的评估结果查看
+- 🔄 多结果对比功能
+- 📉 时间趋势分析
+- ⚖️ 维度权重配置
+- 📤 数据导出功能
+
+### 现代版特有功能
+- 🌙 现代暗色主题 - 专为数据可视化优化的深色界面
+- ✨ 流畅的动画效果 - 使用 Framer Motion 实现平滑过渡
+- 📱 完全响应式设计 - 完美适配各种屏幕尺寸
+- 🎨 高级图表效果 - 3D 雷达图、渐变填充、动态效果
+- 💎 精美 UI 组件 - 使用 Chakra UI 构建的现代界面
 
 ## 部署步骤
 
 ### 前提条件
 
-- Node.js 14+ 
+- Node.js 14+
 - 运行中的 Dify 工作流
 
 ### 步骤 1：克隆或下载代码
@@ -26,21 +45,35 @@
 
 ```
 DIFY_UI/
-├── backend/              # 后端服务
-│   ├── data/             # 存储评估数据的文件夹
-│   ├── dify_code.py      # Dify Code 节点脚本
-│   ├── server.js         # Express 服务器
-│   └── package.json      # 后端依赖
-├── frontend/             # 前端应用
-│   ├── index.html        # 主页面
-│   ├── css/              # 样式文件
-│   │   └── style.css     # 主样式表
-│   └── js/               # JavaScript 文件
-│       ├── app.js        # 主应用逻辑
-│       └── charts.js     # 图表相关代码
-├── Dockerfile            # Docker 构建文件
-├── docker-compose.yml    # Docker Compose 配置
-└── README.md             # 项目说明
+├── backend/                # 后端服务
+│   ├── data/               # 存储评估数据的文件夹
+│   ├── dify_code.py        # Dify Code 节点脚本
+│   ├── server.js           # Express 服务器
+│   └── package.json        # 后端依赖
+├── frontend/               # 传统版前端
+│   ├── index.html          # 主页面
+│   ├── css/                # 样式文件
+│   │   └── style.css       # 主样式表
+│   └── js/                 # JavaScript 文件
+│       ├── app.js          # 主应用逻辑
+│       └── charts.js       # 图表相关代码
+├── modern-frontend/        # 现代版前端
+│   ├── src/                # 源代码
+│   │   ├── components/     # 组件
+│   │   │   ├── charts/     # 图表组件
+│   │   │   ├── dashboard/  # 仪表板组件
+│   │   │   ├── modals/     # 模态框组件
+│   │   │   └── table/      # 表格组件
+│   │   ├── hooks/          # 自定义 Hooks
+│   │   ├── store/          # 状态管理
+│   │   ├── theme/          # 主题配置
+│   │   └── utils/          # 工具函数
+│   ├── package.json        # 前端依赖
+│   ├── deploy.bat          # Windows 部署脚本
+│   └── deploy.sh           # Linux 部署脚本
+├── deploy.bat              # 传统版 Windows 部署脚本
+├── deploy.sh               # 传统版 Linux 部署脚本
+└── README.md               # 项目说明
 ```
 
 ### 步骤 2：安装后端依赖
@@ -83,21 +116,44 @@ node server.js
 2. 检查后端服务器的控制台输出，确认数据已成功接收
 3. 检查 `backend/data` 目录，确认评估数据文件已创建
 
-### 步骤 6：访问可视化仪表板
+### 步骤 6：部署前端
 
-在浏览器中打开 http://localhost:3000 即可访问可视化仪表板。
+#### 传统版前端
+
+在浏览器中直接打开 http://localhost:3000 即可访问传统版可视化仪表板。
+
+#### 现代版前端 (推荐)
+
+**在 Linux 上:**
+
+```bash
+cd DIFY_UI/modern-frontend
+chmod +x deploy.sh
+./deploy.sh --install  # 首次运行时安装依赖
+```
+
+**在 Windows 上:**
+
+```bash
+cd DIFY_UI\modern-frontend
+deploy.bat --install  # 首次运行时安装依赖
+```
+
+部署完成后，在浏览器中打开 http://localhost:3001 即可访问现代版可视化仪表板。
 
 ## 使用指南
 
+以下功能在传统版和现代版中均可使用，但现代版提供了更优雅的界面和交互体验。
+
 ### 查看统计数据
 
-仪表板顶部显示评估总数、总平均分和最高评分维度等统计数据。
+仪表板顶部显示评估总数、总平均分和最高评分维度等统计数据。现代版还提供了精美的卡片设计和微型趋势图。
 
 ### 查看图表
 
-- **评分维度分布**：雷达图展示各维度的平均分布
-- **评分维度对比**：柱状图对比各维度的平均分
-- **评分随时间变化趋势**：折线图展示评分随时间的变化
+- **评分维度分布**：雷达图展示各维度的平均分布（现代版提供 3D 效果和渐变填充）
+- **评分维度对比**：柱状图对比各维度的平均分（现代版提供动画效果和更丰富的颜色）
+- **评分随时间变化趋势**：折线图展示评分随时间的变化（现代版提供平滑曲线和区域填充）
 
 ### 查看评估结果列表
 
@@ -109,7 +165,7 @@ node server.js
 
 ### 配置维度权重
 
-1. 点击导航栏中的"配置权重"按钮
+1. 点击导航栏中的"配置权重"按钮（现代版中为天平图标）
 2. 调整各维度的权重滑块
 3. 点击"应用"按钮保存设置
 4. 查看加权平均分列，了解权重调整后的结果
@@ -123,6 +179,13 @@ node server.js
 ### 导出数据
 
 点击表格上方的"导出 CSV"按钮，可以将当前筛选的评估结果导出为 CSV 文件。
+
+### 现代版特有功能
+
+- **暗色主题**：现代版默认使用暗色主题，更适合数据可视化
+- **动画效果**：所有图表和组件都有流畅的动画效果
+- **响应式设计**：完美适配各种屏幕尺寸，包括移动设备
+- **高级图表**：使用 ECharts 5 提供更丰富的图表效果和交互
 
 ## Docker 部署（可选）
 
@@ -144,7 +207,8 @@ docker-compose up -d
 
 ### 步骤 3：访问仪表板
 
-在浏览器中打开 http://localhost:3000 即可访问可视化仪表板。
+- 传统版：在浏览器中打开 http://localhost:3000 访问传统版仪表板
+- 现代版：在浏览器中打开 http://localhost:3001 访问现代版仪表板（需要先按照上述步骤部署现代版前端）
 
 ## 故障排除
 
@@ -162,8 +226,14 @@ docker-compose up -d
 
 ### 图表不显示
 
+#### 传统版
 - 检查浏览器控制台是否有错误信息
 - 确保你的浏览器支持 Chart.js
+
+#### 现代版
+- 检查浏览器控制台是否有错误信息
+- 确保你的浏览器支持 ECharts 5
+- 确保 React 和 Chakra UI 正确加载
 
 ## 维护与更新
 
@@ -178,4 +248,60 @@ docker-compose up -d
 ### 更新框架
 
 1. 拉取最新代码
-2. 重启后端服务器或重新构建 Docker 容器
+   ```bash
+   git pull
+   ```
+
+2. 更新后端
+   ```bash
+   cd backend
+   npm install  # 如有新依赖
+   node server.js
+   ```
+
+3. 更新现代版前端
+   ```bash
+   cd modern-frontend
+   npm install  # 如有新依赖
+   npm run dev
+   ```
+
+4. 如使用 Docker，重新构建容器
+   ```bash
+   docker-compose up -d --build
+   ```
+
+## 技术栈详情
+
+### 后端
+- **Node.js** - JavaScript 运行时
+- **Express** - Web 应用框架
+- **文件系统存储** - 使用 JSON 文件存储评估数据
+
+### 传统版前端
+- **Vue 3** - 渐进式 JavaScript 框架
+- **Bootstrap 5** - 响应式 CSS 框架
+- **Chart.js** - 简单易用的图表库
+
+### 现代版前端
+- **React 18** + **TypeScript** - 现代化前端框架
+- **Vite** - 快速的构建工具
+- **Chakra UI** - 美观且高度可定制的组件库
+- **ECharts 5** - 强大的数据可视化库
+- **Framer Motion** - 流畅的动画效果
+- **React Query** - 数据获取和缓存
+- **Zustand** - 轻量级状态管理
+
+## 贡献指南
+
+欢迎贡献代码、报告问题或提出新功能建议。请遵循以下步骤:
+
+1. Fork 仓库
+2. 创建功能分支 (`git checkout -b feature/amazing-feature`)
+3. 提交更改 (`git commit -m 'Add some amazing feature'`)
+4. 推送到分支 (`git push origin feature/amazing-feature`)
+5. 创建 Pull Request
+
+## 许可证
+
+本项目采用 MIT 许可证。
