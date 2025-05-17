@@ -19,11 +19,20 @@ fi
 echo "步骤 1: 创建数据目录"
 mkdir -p data
 
-echo "步骤 2: 启动后端服务"
+echo "步骤 2: 检查并终止占用 3000 端口的进程"
+PORT_PID=$(lsof -t -i:3000 2>/dev/null)
+if [ ! -z "$PORT_PID" ]; then
+    echo "发现端口 3000 被进程 $PORT_PID 占用，正在终止..."
+    kill $PORT_PID 2>/dev/null || kill -9 $PORT_PID 2>/dev/null
+    sleep 1
+    echo "进程已终止"
+fi
+
+echo "步骤 3: 启动后端服务"
 node server.js &
 SERVER_PID=$!
 
-echo "步骤 3: 打开可视化仪表板"
+echo "步骤 4: 打开可视化仪表板"
 sleep 3
 if command -v xdg-open > /dev/null; then
     xdg-open http://10.193.21.115:3000
