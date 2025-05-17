@@ -29,7 +29,9 @@
 
 ### 前提条件
 
-- Node.js 14+
+- Node.js 14+ (推荐 16+)
+  - 如果您的 Node.js 版本过低，可以使用项目根目录中的 `upgrade-node.sh` 脚本进行升级
+  - 运行方式: `chmod +x upgrade-node.sh && ./upgrade-node.sh`
 - 运行中的 Dify 工作流
 
 ### 步骤 1：克隆或下载代码
@@ -213,10 +215,25 @@ chmod +x deploy.sh
 
 ## 故障排除
 
+### Node.js 版本过低
+
+如果您在启动前端时遇到类似以下错误：
+
+```
+SyntaxError: Unexpected reserved word
+    at Loader.moduleStrategy (internal/modules/esm/translators.js:133:18)
+```
+
+这表明您的 Node.js 版本太旧，不支持 ESM (ECMAScript Modules)。解决方法：
+
+1. 使用项目根目录中的升级脚本：`chmod +x upgrade-node.sh && ./upgrade-node.sh`
+2. 升级完成后，重新安装依赖并部署：`./deploy.sh --install`
+
 ### 无法连接到服务器
 
 - 确保后端服务器正在运行
 - 检查端口 3000 是否被其他应用占用
+- 确保服务器 IP 地址配置正确
 
 ### 无法显示数据
 
