@@ -33,6 +33,8 @@ function createAuthHeader() {
 async function apiRequest(endpoint, options = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
 
+    console.log(`[DEBUG] 发起请求: ${url}`);
+
     // 合并默认选项和传入的选项
     const requestOptions = {
         headers: {
@@ -43,19 +45,37 @@ async function apiRequest(endpoint, options = {}) {
         ...options
     };
 
+    console.log(`[DEBUG] 请求选项:`, requestOptions);
+
     try {
+        console.log(`[DEBUG] 开始 fetch 请求...`);
         const response = await fetch(url, requestOptions);
+        console.log(`[DEBUG] 收到响应:`, response);
 
         // 检查响应状态
         if (!response.ok) {
+            console.error(`[DEBUG] 响应状态错误: ${response.status} ${response.statusText}`);
             throw new Error(`API 请求失败: ${response.status} ${response.statusText}`);
         }
 
         // 解析 JSON 响应
-        const data = await response.json();
+        console.log(`[DEBUG] 开始解析 JSON...`);
+        const text = await response.text();
+        console.log(`[DEBUG] 响应文本:`, text);
+
+        let data;
+        try {
+            data = JSON.parse(text);
+            console.log(`[DEBUG] 解析后的数据:`, data);
+        } catch (parseError) {
+            console.error(`[DEBUG] JSON 解析错误:`, parseError);
+            throw new Error(`JSON 解析错误: ${parseError.message}, 原始文本: ${text}`);
+        }
+
         return data;
     } catch (error) {
-        console.error('API 请求错误:', error);
+        console.error('[DEBUG] API 请求错误:', error);
+        alert(`API 请求错误: ${error.message}`);
         throw error;
     }
 }

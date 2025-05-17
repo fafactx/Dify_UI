@@ -47,16 +47,16 @@ async function initApp() {
     try {
         // 初始化图表
         initCharts();
-        
+
         // 添加事件监听器
         setupEventListeners();
-        
+
         // 加载数据
         await loadData();
-        
+
         // 显示仪表板视图
         showView('dashboard');
-        
+
         // 隐藏加载指示器
         elements.loading.classList.add('d-none');
     } catch (error) {
@@ -73,25 +73,25 @@ function setupEventListeners() {
     elements.dashboardLink.addEventListener('click', () => showView('dashboard'));
     elements.compareLink.addEventListener('click', () => showView('compare'));
     elements.settingsLink.addEventListener('click', () => showView('settings'));
-    
+
     // 搜索输入
     elements.searchInput.addEventListener('input', handleSearch);
-    
+
     // 排序选项
     elements.sortOptions.addEventListener('click', handleSort);
-    
+
     // 导出 CSV
     elements.exportCsv.addEventListener('click', handleExportCsv);
-    
+
     // 清除对比
     elements.clearCompare.addEventListener('click', handleClearCompare);
-    
+
     // 应用权重
     elements.applyWeights.addEventListener('click', handleApplyWeights);
-    
+
     // 重置权重
     elements.resetWeights.addEventListener('click', handleResetWeights);
-    
+
     // 刷新按钮
     elements.refreshBtn.addEventListener('click', loadData);
 }
@@ -101,36 +101,72 @@ function setupEventListeners() {
  */
 async function loadData() {
     try {
+        console.log('[DEBUG] 开始加载数据...');
+
         // 显示加载指示器
         elements.loading.classList.remove('d-none');
-        
-        // 并行获取评估数据和统计数据
-        const [evaluations, stats] = await Promise.all([
-            getEvaluations(),
-            getStats()
-        ]);
-        
+
+        // 获取评估数据
+        console.log('[DEBUG] 获取评估数据...');
+        let evaluations;
+        try {
+            evaluations = await getEvaluations();
+            console.log('[DEBUG] 评估数据获取成功:', evaluations);
+        } catch (evalError) {
+            console.error('[DEBUG] 获取评估数据失败:', evalError);
+            alert(`获取评估数据失败: ${evalError.message}`);
+            throw evalError;
+        }
+
+        // 获取统计数据
+        console.log('[DEBUG] 获取统计数据...');
+        let stats;
+        try {
+            stats = await getStats();
+            console.log('[DEBUG] 统计数据获取成功:', stats);
+        } catch (statsError) {
+            console.error('[DEBUG] 获取统计数据失败:', statsError);
+            alert(`获取统计数据失败: ${statsError.message}`);
+            throw statsError;
+        }
+
         // 更新状态
+        console.log('[DEBUG] 更新应用状态...');
         state.evaluations = evaluations;
         state.stats = stats;
-        
+
         // 初始化权重
+        console.log('[DEBUG] 初始化权重...');
         initWeights();
-        
+
         // 更新 UI
+        console.log('[DEBUG] 更新统计卡片...');
         updateStatsCards();
+
+        console.log('[DEBUG] 更新评估表格...');
         updateEvaluationsTable();
+
+        console.log('[DEBUG] 更新图表...');
         updateCharts();
+
+        console.log('[DEBUG] 更新最后更新时间...');
         updateLastUpdated();
-        
+
         // 隐藏加载指示器
+        console.log('[DEBUG] 数据加载完成，隐藏加载指示器');
         elements.loading.classList.add('d-none');
     } catch (error) {
-        console.error('加载数据失败:', error);
-        alert('加载数据失败，请检查网络连接或刷新页面重试。');
-        
-        // 隐藏加载指示器
-        elements.loading.classList.add('d-none');
+        console.error('[DEBUG] 加载数据失败:', error);
+        alert(`加载数据失败: ${error.message}`);
+
+        // 显示错误信息在页面上
+        elements.loading.innerHTML = `
+            <div class="alert alert-danger">
+                <h4>加载数据失败</h4>
+                <p>${error.message}</p>
+                <button class="btn btn-primary mt-3" onclick="loadData()">重试</button>
+            </div>
+        `;
     }
 }
 
@@ -141,17 +177,17 @@ async function loadData() {
 function showView(viewName) {
     // 更新当前视图
     state.currentView = viewName;
-    
+
     // 隐藏所有视图
     elements.dashboardView.classList.add('d-none');
     elements.compareView.classList.add('d-none');
     elements.settingsView.classList.add('d-none');
-    
+
     // 移除所有导航链接的激活状态
     elements.dashboardLink.classList.remove('active');
     elements.compareLink.classList.remove('active');
     elements.settingsLink.classList.remove('active');
-    
+
     // 显示选定的视图
     switch (viewName) {
         case 'dashboard':
@@ -176,13 +212,13 @@ function showView(viewName) {
  */
 function updateStatsCards() {
     if (!state.stats) return;
-    
+
     const { count, overall_average, dimension_averages } = state.stats;
-    
+
     // 找出最高评分维度
     let highestDimension = '';
     let highestScore = 0;
-    
+
     if (dimension_averages) {
         Object.keys(dimension_averages).forEach(dim => {
             if (dim !== 'average_score' && dimension_averages[dim] > highestScore) {
@@ -191,7 +227,7 @@ function updateStatsCards() {
             }
         });
     }
-    
+
     // 创建统计卡片 HTML
     const cardsHtml = `
         <div class="col-md-4 mb-4">
@@ -228,7 +264,7 @@ function updateStatsCards() {
             </div>
         </div>
     `;
-    
+
     // 更新 DOM
     elements.statsCards.innerHTML = cardsHtml;
 }
@@ -245,25 +281,25 @@ function updateEvaluationsTable() {
         `;
         return;
     }
-    
+
     // 过滤评估数据
     let filteredEvaluations = filterEvaluations();
-    
+
     // 排序评估数据
     filteredEvaluations = sortEvaluations(filteredEvaluations);
-    
+
     // 创建表格行 HTML
     const rowsHtml = filteredEvaluations.map((eval, index) => {
         // 格式化日期
         const date = new Date(eval.timestamp);
         const dateStr = date.toLocaleDateString('zh-CN');
-        
+
         // 获取维度分数
         const dimensionScores = Object.keys(eval)
-            .filter(key => 
-                typeof eval[key] === 'number' && 
-                key !== 'timestamp' && 
-                key !== 'id' && 
+            .filter(key =>
+                typeof eval[key] === 'number' &&
+                key !== 'timestamp' &&
+                key !== 'id' &&
                 key !== 'average_score' &&
                 !key.includes('_id')
             )
@@ -272,11 +308,11 @@ function updateEvaluationsTable() {
                 let badgeClass = 'medium';
                 if (score >= 8) badgeClass = 'high';
                 if (score <= 4) badgeClass = 'low';
-                
+
                 return `<span class="dimension-badge ${badgeClass}">${formatDimensionName(dim)}: ${score}</span>`;
             })
             .join(' ');
-        
+
         return `
             <tr>
                 <td>${eval.id}</td>
@@ -294,7 +330,7 @@ function updateEvaluationsTable() {
             </tr>
         `;
     }).join('');
-    
+
     // 更新 DOM
     elements.evaluationsTable.querySelector('tbody').innerHTML = rowsHtml;
 }
@@ -304,10 +340,10 @@ function updateEvaluationsTable() {
  */
 function updateCharts() {
     if (!state.stats || !state.stats.dimension_averages) return;
-    
+
     // 更新雷达图
     updateRadarChart(state.stats.dimension_averages);
-    
+
     // 更新柱状图
     updateBarChart(state.stats.dimension_averages);
 }
@@ -325,10 +361,10 @@ function updateCompareView() {
         `;
         return;
     }
-    
+
     // 更新对比图
     updateCompareChart(state.compareItems);
-    
+
     // 更新对比表格
     updateCompareTable();
 }
@@ -338,23 +374,23 @@ function updateCompareView() {
  */
 function updateCompareTable() {
     if (state.compareItems.length === 0) return;
-    
+
     // 获取所有维度
     const dimensions = new Set();
     state.compareItems.forEach(item => {
         Object.keys(item).forEach(key => {
-            if (typeof item[key] === 'number' && 
-                key !== 'timestamp' && 
-                key !== 'id' && 
+            if (typeof item[key] === 'number' &&
+                key !== 'timestamp' &&
+                key !== 'id' &&
                 !key.includes('_id')) {
                 dimensions.add(key);
             }
         });
     });
-    
+
     // 转换为数组并排序
     const dimensionArray = Array.from(dimensions).sort();
-    
+
     // 创建表头
     const headerHtml = `
         <tr>
@@ -362,7 +398,7 @@ function updateCompareTable() {
             ${state.compareItems.map((_, index) => `<th>评估 ${index + 1}</th>`).join('')}
         </tr>
     `;
-    
+
     // 创建表格行
     const rowsHtml = dimensionArray.map(dim => `
         <tr>
@@ -370,7 +406,7 @@ function updateCompareTable() {
             ${state.compareItems.map(item => `<td>${item[dim] || '-'}</td>`).join('')}
         </tr>
     `).join('');
-    
+
     // 更新 DOM
     elements.compareTable.querySelector('thead').innerHTML = headerHtml;
     elements.compareTable.querySelector('tbody').innerHTML = rowsHtml;
@@ -384,16 +420,16 @@ function updateSettingsView() {
     const dimensions = new Set();
     state.evaluations.forEach(eval => {
         Object.keys(eval).forEach(key => {
-            if (typeof eval[key] === 'number' && 
-                key !== 'timestamp' && 
-                key !== 'id' && 
+            if (typeof eval[key] === 'number' &&
+                key !== 'timestamp' &&
+                key !== 'id' &&
                 key !== 'average_score' &&
                 !key.includes('_id')) {
                 dimensions.add(key);
             }
         });
     });
-    
+
     // 创建权重滑块 HTML
     const slidersHtml = Array.from(dimensions).map(dim => `
         <div class="weight-slider">
@@ -401,21 +437,21 @@ function updateSettingsView() {
                 ${formatDimensionName(dim)}
                 <span class="weight-value">${state.weights[dim] || 1}</span>
             </label>
-            <input type="range" class="form-range" min="0" max="5" step="0.1" 
+            <input type="range" class="form-range" min="0" max="5" step="0.1"
                    value="${state.weights[dim] || 1}" data-dimension="${dim}">
         </div>
     `).join('');
-    
+
     // 更新 DOM
     elements.weightSliders.innerHTML = slidersHtml;
-    
+
     // 添加滑块事件监听器
     document.querySelectorAll('.weight-slider input[type="range"]').forEach(slider => {
         slider.addEventListener('input', (e) => {
             const dimension = e.target.dataset.dimension;
             const value = parseFloat(e.target.value);
             state.weights[dimension] = value;
-            
+
             // 更新显示的值
             e.target.previousElementSibling.querySelector('.weight-value').textContent = value;
         });
@@ -442,16 +478,16 @@ function initWeights() {
     const dimensions = new Set();
     state.evaluations.forEach(eval => {
         Object.keys(eval).forEach(key => {
-            if (typeof eval[key] === 'number' && 
-                key !== 'timestamp' && 
-                key !== 'id' && 
+            if (typeof eval[key] === 'number' &&
+                key !== 'timestamp' &&
+                key !== 'id' &&
                 key !== 'average_score' &&
                 !key.includes('_id')) {
                 dimensions.add(key);
             }
         });
     });
-    
+
     // 初始化权重
     dimensions.forEach(dim => {
         if (!state.weights[dim]) {
@@ -466,32 +502,32 @@ function initWeights() {
  */
 function filterEvaluations() {
     if (!state.searchTerm) return [...state.evaluations];
-    
+
     const searchTerm = state.searchTerm.toLowerCase();
-    
+
     return state.evaluations.filter(eval => {
         // 搜索 ID
         if (eval.id && eval.id.toLowerCase().includes(searchTerm)) return true;
-        
+
         // 搜索日期
         const date = new Date(eval.timestamp);
         const dateStr = date.toLocaleDateString('zh-CN');
         if (dateStr.includes(searchTerm)) return true;
-        
+
         // 搜索维度
         for (const key in eval) {
-            if (typeof eval[key] === 'number' && 
-                key !== 'timestamp' && 
-                key !== 'id' && 
+            if (typeof eval[key] === 'number' &&
+                key !== 'timestamp' &&
+                key !== 'id' &&
                 !key.includes('_id')) {
                 const dimName = formatDimensionName(key).toLowerCase();
                 if (dimName.includes(searchTerm)) return true;
-                
+
                 // 搜索分数
                 if (eval[key].toString().includes(searchTerm)) return true;
             }
         }
-        
+
         return false;
     });
 }
@@ -504,7 +540,7 @@ function filterEvaluations() {
 function sortEvaluations(evaluations) {
     return [...evaluations].sort((a, b) => {
         let valueA, valueB;
-        
+
         if (state.sortField === 'date') {
             valueA = a.timestamp;
             valueB = b.timestamp;
@@ -512,7 +548,7 @@ function sortEvaluations(evaluations) {
             valueA = a[state.sortField] || 0;
             valueB = b[state.sortField] || 0;
         }
-        
+
         if (state.sortOrder === 'asc') {
             return valueA - valueB;
         } else {
@@ -536,12 +572,12 @@ function handleSearch(e) {
  */
 function handleSort(e) {
     if (!e.target.classList.contains('dropdown-item')) return;
-    
+
     e.preventDefault();
-    
+
     const sortField = e.target.dataset.sort;
     const sortOrder = e.target.dataset.order;
-    
+
     if (sortField && sortOrder) {
         state.sortField = sortField;
         state.sortOrder = sortOrder;
@@ -555,7 +591,7 @@ function handleSort(e) {
 function handleExportCsv() {
     const filteredEvaluations = filterEvaluations();
     const sortedEvaluations = sortEvaluations(filteredEvaluations);
-    
+
     const csv = exportToCSV(sortedEvaluations);
     downloadCSV(csv, `evaluations_${new Date().toISOString().split('T')[0]}.csv`);
 }
@@ -585,7 +621,7 @@ function handleResetWeights() {
     dimensions.forEach(dim => {
         state.weights[dim] = 1;
     });
-    
+
     // 更新设置视图
     updateSettingsView();
 }
@@ -597,21 +633,21 @@ function handleResetWeights() {
 function showDetail(index) {
     const evaluation = state.evaluations[index];
     if (!evaluation) return;
-    
+
     // 格式化日期
     const date = new Date(evaluation.timestamp);
     const dateStr = date.toLocaleDateString('zh-CN');
     const timeStr = date.toLocaleTimeString('zh-CN');
-    
+
     // 获取维度分数
     const dimensions = Object.keys(evaluation)
-        .filter(key => 
-            typeof evaluation[key] === 'number' && 
-            key !== 'timestamp' && 
-            key !== 'id' && 
+        .filter(key =>
+            typeof evaluation[key] === 'number' &&
+            key !== 'timestamp' &&
+            key !== 'id' &&
             !key.includes('_id')
         );
-    
+
     // 创建详情 HTML
     const detailHtml = `
         <div class="detail-section">
@@ -622,7 +658,7 @@ function showDetail(index) {
                 <p><strong>平均分:</strong> ${evaluation.average_score || 0}</p>
             </div>
         </div>
-        
+
         <div class="detail-section">
             <h6>维度评分</h6>
             <div class="detail-content">
@@ -634,10 +670,10 @@ function showDetail(index) {
                                 <span class="fw-bold">${evaluation[dim]}</span>
                             </div>
                             <div class="progress" style="height: 10px;">
-                                <div class="progress-bar" role="progressbar" 
-                                     style="width: ${evaluation[dim] * 10}%;" 
-                                     aria-valuenow="${evaluation[dim]}" 
-                                     aria-valuemin="0" 
+                                <div class="progress-bar" role="progressbar"
+                                     style="width: ${evaluation[dim] * 10}%;"
+                                     aria-valuenow="${evaluation[dim]}"
+                                     aria-valuemin="0"
                                      aria-valuemax="10"></div>
                             </div>
                         </div>
@@ -645,7 +681,7 @@ function showDetail(index) {
                 </div>
             </div>
         </div>
-        
+
         <div class="detail-section">
             <h6>摘要</h6>
             <div class="detail-content">
@@ -653,10 +689,10 @@ function showDetail(index) {
             </div>
         </div>
     `;
-    
+
     // 更新模态框内容
     elements.detailContent.innerHTML = detailHtml;
-    
+
     // 显示模态框
     elements.detailModal.show();
 }
@@ -668,23 +704,23 @@ function showDetail(index) {
 function addToCompare(index) {
     const evaluation = state.evaluations[index];
     if (!evaluation) return;
-    
+
     // 检查是否已经添加
     const exists = state.compareItems.some(item => item.id === evaluation.id);
     if (exists) {
         alert('此评估已添加到对比列表');
         return;
     }
-    
+
     // 限制对比项数量
     if (state.compareItems.length >= 5) {
         alert('最多只能对比 5 个评估结果');
         return;
     }
-    
+
     // 添加到对比列表
     state.compareItems.push(evaluation);
-    
+
     // 如果当前不在对比视图，提示用户
     if (state.currentView !== 'compare') {
         alert('评估已添加到对比列表，点击导航栏中的"对比"查看');
