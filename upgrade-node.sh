@@ -16,11 +16,11 @@ if [ -d "$HOME/.nvm" ]; then
 else
     echo "正在安装 NVM..."
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
-    
+
     # 设置 NVM 环境变量
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # 加载 NVM
-    
+
     # 验证安装
     if [ -d "$HOME/.nvm" ]; then
         echo "NVM 安装成功!"
@@ -46,14 +46,10 @@ echo "npm 版本: $(npm -v)"
 echo "是否要重新安装项目依赖? (y/n)"
 read -r answer
 if [[ "$answer" =~ ^[Yy]$ ]]; then
-    if [ -d "frontend" ]; then
-        echo "正在重新安装前端依赖..."
-        cd frontend
-        rm -rf node_modules package-lock.json
-        npm install
-        cd ..
+    if [ -d "frontend-html" ]; then
+        echo "前端使用 HTML5，无需安装依赖"
     fi
-    
+
     if [ -d "backend" ]; then
         echo "正在重新安装后端依赖..."
         cd backend
@@ -61,7 +57,7 @@ if [[ "$answer" =~ ^[Yy]$ ]]; then
         npm install
         cd ..
     fi
-    
+
     echo "依赖安装完成!"
 fi
 
