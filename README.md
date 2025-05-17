@@ -55,10 +55,12 @@ DIFY_UI/
 │   │   ├── theme/          # 主题配置
 │   │   └── utils/          # 工具函数
 │   ├── package.json        # 前端依赖
-│   ├── deploy.bat          # Windows 前端部署脚本
-│   └── deploy.sh           # Linux 前端部署脚本
-├── deploy.bat              # Windows 完整部署脚本
-├── deploy.sh               # Linux 完整部署脚本
+│   └── deploy.sh           # 前端部署脚本
+├── scripts/                # 脚本目录
+│   └── setup.js            # 设置脚本
+├── deploy.sh               # 完整部署脚本
+├── stop.sh                 # 停止服务脚本
+├── package.json            # 根目录依赖和脚本
 └── README.md               # 项目说明
 ```
 
@@ -128,19 +130,10 @@ node server.js
 
 ### 步骤 6：部署前端
 
-**在 Linux 上:**
-
 ```bash
 cd DIFY_UI/frontend
 chmod +x deploy.sh
 ./deploy.sh --install  # 首次运行时安装依赖
-```
-
-**在 Windows 上:**
-
-```bash
-cd DIFY_UI\frontend
-deploy.bat --install  # 首次运行时安装依赖
 ```
 
 部署完成后，在浏览器中打开 http://10.193.21.115:3001 即可访问可视化仪表板。
@@ -171,19 +164,10 @@ deploy.bat --install  # 首次运行时安装依赖
 
 如果您想一次性部署后端和前端，可以使用根目录下的部署脚本：
 
-**在 Linux 上:**
-
 ```bash
 cd DIFY_UI
 chmod +x deploy.sh
 ./deploy.sh --install  # 首次运行时安装依赖
-```
-
-**在 Windows 上:**
-
-```bash
-cd DIFY_UI
-deploy.bat --install  # 首次运行时安装依赖
 ```
 
 部署完成后，浏览器会自动打开 http://10.193.21.115:3001 访问可视化仪表板。
