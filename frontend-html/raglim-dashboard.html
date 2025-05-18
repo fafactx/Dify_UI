@@ -1021,9 +1021,15 @@
             // 更新平均分
             const averageScoreElement = document.querySelector('.average-score');
             if (averageScoreElement) {
-                const avgScore = stats.overall_average || 0;
+                const avgScore = stats.overall_average;
                 console.log('平均分:', avgScore);
-                averageScoreElement.textContent = avgScore.toFixed(1);
+
+                // 检查是否为特殊值 -1（表示数据库为空）
+                if (avgScore === -1) {
+                    averageScoreElement.textContent = "No Data";
+                } else {
+                    averageScoreElement.textContent = (avgScore || 0).toFixed(1);
+                }
             }
 
             // 如果有维度平均分数据
@@ -1045,7 +1051,7 @@
 
                 dimensions.forEach(dim => {
                     const score = stats.dimension_averages[dim];
-                    if (score !== undefined) {
+                    if (score !== undefined && score !== -1) {
                         console.log(`维度 ${dim} 得分:`, score);
                         if (score > highestScore) {
                             highestScore = score;
@@ -1063,29 +1069,56 @@
 
                 // 更新最高分维度
                 const successRateElement = document.querySelector('.success-rate');
-                if (successRateElement && highestDim) {
-                    successRateElement.textContent = highestScore.toFixed(1);
+                if (successRateElement) {
+                    if (highestScore === -1 || !highestDim) {
+                        successRateElement.textContent = "No Data";
+                    } else {
+                        successRateElement.textContent = highestScore.toFixed(1);
+                    }
 
                     // 更新标签
                     const label = successRateElement.nextElementSibling;
                     if (label) {
-                        label.textContent = `Highest: ${formatDimensionNameEn(highestDim)}`;
+                        if (highestDim) {
+                            label.textContent = `Highest: ${formatDimensionNameEn(highestDim)}`;
+                        } else {
+                            label.textContent = 'Highest: N/A';
+                        }
                     }
                 }
 
                 // 更新最低分维度
                 const lowestScoreElement = document.querySelector('.stat-number:not(.total-cases):not(.average-score):not(.success-rate)');
-                if (lowestScoreElement && lowestDim) {
-                    lowestScoreElement.textContent = lowestScore.toFixed(1);
+                if (lowestScoreElement) {
+                    if (lowestScore === 101 || lowestScore === -1 || !lowestDim) {
+                        lowestScoreElement.textContent = "No Data";
+                    } else {
+                        lowestScoreElement.textContent = lowestScore.toFixed(1);
+                    }
 
                     // 更新标签
                     const label = lowestScoreElement.nextElementSibling;
                     if (label) {
-                        label.textContent = `Lowest: ${formatDimensionNameEn(lowestDim)}`;
+                        if (lowestDim) {
+                            label.textContent = `Lowest: ${formatDimensionNameEn(lowestDim)}`;
+                        } else {
+                            label.textContent = 'Lowest: N/A';
+                        }
                     }
                 }
             } else {
                 console.warn('没有维度平均分数据');
+
+                // 如果没有维度平均分数据，显示"No Data"
+                const successRateElement = document.querySelector('.success-rate');
+                if (successRateElement) {
+                    successRateElement.textContent = "No Data";
+                }
+
+                const lowestScoreElement = document.querySelector('.stat-number:not(.total-cases):not(.average-score):not(.success-rate)');
+                if (lowestScoreElement) {
+                    lowestScoreElement.textContent = "No Data";
+                }
             }
         }
 

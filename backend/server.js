@@ -360,6 +360,39 @@ if (config.backup && config.backup.enabled) {
   performBackup();
 }
 
+// 自动删除JSON文件的功能
+function deleteJsonFiles() {
+  try {
+    const jsonFiles = fs.readdirSync(dbDir).filter(file =>
+      file.endsWith('.json') && (file.startsWith('evaluation_') || file === 'index.json')
+    );
+
+    if (jsonFiles.length > 0) {
+      logger.warn(`发现 ${jsonFiles.length} 个 JSON 文件，正在删除...`);
+      jsonFiles.forEach(file => {
+        try {
+          fs.unlinkSync(path.join(dbDir, file));
+          logger.info(`已删除 JSON 文件: ${file}`);
+        } catch (unlinkError) {
+          logger.error(`删除 JSON 文件 ${file} 失败: ${unlinkError.message}`);
+        }
+      });
+      logger.info('所有 JSON 文件已删除');
+    } else {
+      logger.info('未发现 JSON 文件');
+    }
+  } catch (error) {
+    logger.error(`删除 JSON 文件时出错: ${error.message}`);
+  }
+}
+
+// 在服务器启动时删除JSON文件
+deleteJsonFiles();
+
+// 添加定时任务，每小时检查并删除JSON文件
+const jsonCleanupInterval = setInterval(deleteJsonFiles, 60 * 60 * 1000); // 每小时执行一次
+logger.info('已启用自动删除JSON文件功能: 每小时检查一次');
+
 // 启动服务器
 const server = app.listen(PORT, HOST, () => {
   logger.info(`服务器运行在 http://${publicUrl}:${PORT}`);
@@ -371,6 +404,7 @@ const server = app.listen(PORT, HOST, () => {
   logger.info(`- CORS: ${config.cors.origin}`);
   logger.info(`- 身份验证: ${config.auth.enabled ? '启用' : '禁用'}`);
   logger.info(`- 日志级别: ${config.logging.level}`);
+  logger.info(`- 自动删除JSON文件: 启用 (每小时)`);
 
   if (config.logging.file) {
     logger.info(`- 日志文件: ${config.logging.filePath}`);
@@ -392,6 +426,11 @@ process.on('SIGTERM', () => {
   // 清除备份定时器
   if (backupInterval) {
     clearInterval(backupInterval);
+  }
+
+  // 清除JSON文件清理定时器
+  if (jsonCleanupInterval) {
+    clearInterval(jsonCleanupInterval);
   }
 
   server.close(() => {

@@ -3,11 +3,70 @@
 const { getDatabase } = require('./database');
 const { getDbLogger } = require('./utils/db-logger');
 const fieldLabelsDAL = require('./field-labels-dal');
+const fs = require('fs');
+const path = require('path');
 
 class EvaluationsDAL {
   constructor(dbPath) {
-    this.db = getDatabase(dbPath);
+    this.dbPath = dbPath;
     this.logger = getDbLogger();
+
+    // 检查数据库文件
+    this._checkDatabaseFile();
+
+    // 初始化数据库连接
+    try {
+      this.db = getDatabase(dbPath);
+      console.log(`EvaluationsDAL 初始化成功，使用数据库: ${dbPath}`);
+    } catch (error) {
+      console.error(`EvaluationsDAL 初始化失败: ${error.message}`);
+      throw error;
+    }
+  }
+
+  // 私有方法：检查数据库文件
+  _checkDatabaseFile() {
+    try {
+      const dbDir = path.dirname(this.dbPath);
+
+      // 确保数据目录存在
+      if (!fs.existsSync(dbDir)) {
+        console.log(`数据目录不存在，正在创建: ${dbDir}`);
+        fs.mkdirSync(dbDir, { recursive: true, mode: 0o755 });
+      }
+
+      // 检查数据库文件是否存在
+      if (!fs.existsSync(this.dbPath)) {
+        console.log(`数据库文件不存在: ${this.dbPath}`);
+
+        // 创建空数据库文件
+        fs.writeFileSync(this.dbPath, '', { mode: 0o666 });
+        console.log(`已创建空数据库文件: ${this.dbPath}`);
+      } else {
+        console.log(`数据库文件已存在: ${this.dbPath}, 大小: ${fs.statSync(this.dbPath).size} 字节`);
+      }
+
+      // 检查数据库文件权限
+      try {
+        fs.accessSync(this.dbPath, fs.constants.R_OK | fs.constants.W_OK);
+        console.log(`数据库文件权限正常: ${this.dbPath}`);
+      } catch (accessError) {
+        console.error(`数据库文件权限不足: ${this.dbPath}`);
+
+        // 尝试修复权限
+        if (process.platform !== 'win32') {
+          try {
+            fs.chmodSync(this.dbPath, 0o666);
+            console.log(`已修复数据库文件权限: ${this.dbPath}`);
+          } catch (chmodError) {
+            console.error(`修复数据库文件权限失败: ${chmodError.message}`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`检查数据库文件时出错: ${error.message}`);
+      throw error;
+    }
   }
 
   // 保存新的评估数据
