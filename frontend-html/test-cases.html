@@ -368,7 +368,7 @@
             }
         }
 
-        // 渲染测试用例 - 简化版
+        // 渲染测试用例 - 超级简化版
         function renderTestCases() {
             if (testCases.length === 0) {
                 testCasesBody.innerHTML = `
@@ -388,29 +388,7 @@
 
             // 生成HTML
             testCasesBody.innerHTML = pageTestCases.map(testCase => {
-                // 检查数据结构
-                console.log('测试用例数据:', testCase);
-
-                // 获取CAS Name、Product Family和Part Number
-                let casName = 'N/A';
-                let productFamily = 'N/A';
-                let partNumber = 'N/A';
-                let averageScore = 'N/A';
-
-                // 检查数据是否在data字段中
-                if (testCase.data) {
-                    casName = testCase.data['CAS Name'] || 'N/A';
-                    productFamily = testCase.data['Product Family'] || 'N/A';
-                    partNumber = testCase.data['Part Number'] || 'N/A';
-                    averageScore = testCase.data.average_score ? testCase.data.average_score.toFixed(1) : 'N/A';
-                } else {
-                    // 数据可能直接在testCase对象中
-                    casName = testCase['CAS Name'] || 'N/A';
-                    productFamily = testCase['Product Family'] || 'N/A';
-                    partNumber = testCase['Part Number'] || 'N/A';
-                    averageScore = testCase.average_score ? testCase.average_score.toFixed(1) : 'N/A';
-                }
-
+                // 直接使用字段，不需要检查嵌套结构
                 return `
                 <tr data-id="${testCase.id}">
                     <td>
@@ -420,10 +398,10 @@
                     </td>
                     <td>${testCase.id}</td>
                     <td>${formatDate(testCase.date || testCase.timestamp)}</td>
-                    <td>${casName}</td>
-                    <td>${productFamily}</td>
-                    <td>${partNumber}</td>
-                    <td>${averageScore}</td>
+                    <td>${testCase['CAS Name'] || 'N/A'}</td>
+                    <td>${testCase['Product Family'] || 'N/A'}</td>
+                    <td>${testCase['Part Number'] || 'N/A'}</td>
+                    <td>${testCase.average_score ? testCase.average_score.toFixed(1) : 'N/A'}</td>
                     <td>
                         <button class="text-red-500 hover:text-red-700" onclick="deleteTestCase(${testCase.id})">
                             <i class="fas fa-trash"></i>
@@ -676,15 +654,15 @@
             }
         }
 
-        // View test case details
+        // 查看测试用例详情 - 简化版
         function viewTestCase(id) {
             const testCase = testCases.find(tc => tc.id === id);
             if (!testCase) return;
 
-            // For now, just show the data in an alert
-            alert(JSON.stringify(testCase.data, null, 2));
+            // 直接显示测试用例数据，不需要访问嵌套的data字段
+            alert(JSON.stringify(testCase, null, 2));
 
-            // In a real implementation, you would show a modal with the details
+            // 在实际实现中，你会显示一个带有详细信息的模态框
         }
 
         // 格式化日期 - 健壮版

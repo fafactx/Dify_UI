@@ -279,16 +279,32 @@ router.get('/test-cases', asyncHandler(async (req, res) => {
       });
     }
 
-    // 返回测试用例数据
-    res.json({
-      success: true,
-      testCases: result.data.map(item => ({
+    // 返回测试用例数据 - 简化数据结构，避免嵌套
+    const simplifiedData = result.data.map(item => {
+      // 直接返回扁平化的数据结构，不使用嵌套的data字段
+      return {
         id: item.id,
         result_key: item.result_key,
         timestamp: item.timestamp,
         date: item.date,
-        data: item
-      })),
+        'CAS Name': item['CAS Name'] || 'N/A',
+        'Product Family': item['Product Family'] || 'N/A',
+        'Part Number': item['Part Number'] || 'N/A',
+        average_score: item.average_score || 0,
+        hallucination_control: item.hallucination_control || 0,
+        quality: item.quality || 0,
+        professionalism: item.professionalism || 0,
+        usefulness: item.usefulness || 0
+      };
+    });
+
+    // 打印调试信息
+    console.log(`返回 ${simplifiedData.length} 条测试用例数据`);
+
+    // 返回简化的数据结构
+    res.json({
+      success: true,
+      testCases: simplifiedData,
       pagination: {
         total: result.total,
         page,
@@ -401,29 +417,7 @@ router.delete('/test-cases/:id', asyncHandler(async (req, res) => {
   }
 }));
 
-// 删除ID范围内的测试用例
-router.delete('/test-cases/range', asyncHandler(async (req, res) => {
-  try {
-    const { fromId, toId } = req.body;
-
-    if (!fromId || !toId || fromId > toId || fromId < 1) {
-      return res.status(400).json({ success: false, message: '请提供有效的ID范围' });
-    }
-
-    // 从数据库删除ID范围内的评估数据
-    const result = evaluationsDAL.deleteEvaluationRange(fromId, toId);
-
-    // 返回成功消息
-    res.json({
-      success: true,
-      message: `已成功删除ID范围 ${fromId} 到 ${toId} 内的 ${result.deletedCount} 个测试用例`,
-      deletedCount: result.deletedCount
-    });
-  } catch (error) {
-    console.error(`删除ID范围内的测试用例出错: ${error.message}`);
-    res.status(500).json({ success: false, message: error.message });
-  }
-}));
+// 删除ID范围内的测试用例 - 已在上面定义，此处删除重复代码
 
 // 保存评估数据 (兼容旧API)
 router.post('/save-evaluation', asyncHandler(async (req, res) => {
