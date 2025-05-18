@@ -1137,20 +1137,23 @@ function testCharts() {
         }
     });
 
-    // 测试雷达图 - 只使用4个实际维度
-    const testRadarData = {
-        hallucination_control: 80,
-        quality: 70,
-        professionalism: 60,
-        usefulness: 50
-    };
+    // 不使用测试数据，而是检查图表容器
+    console.log(`[DEBUG] 检查图表容器是否正确初始化`);
 
-    console.log(`[DEBUG] 测试雷达图，使用测试数据:`, testRadarData);
-    updateRadarChart(testRadarData);
+    // 检查图表实例是否存在
+    if (radarChart) {
+        console.log(`[DEBUG] 雷达图实例已创建`);
+    } else {
+        console.log(`[DEBUG] 雷达图实例未创建`);
+    }
 
-    // 测试柱状图
-    console.log(`[DEBUG] 测试柱状图，使用测试数据:`, testRadarData);
-    updateBarChart(testRadarData);
+    if (barChart) {
+        console.log(`[DEBUG] 柱状图实例已创建`);
+    } else {
+        console.log(`[DEBUG] 柱状图实例未创建`);
+    }
+
+    // 不再使用测试数据初始化图表
 }
 
 // 将函数暴露到全局作用域，以便 main.js 可以访问

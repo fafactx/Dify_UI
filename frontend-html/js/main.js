@@ -518,13 +518,29 @@ function updateChartsWithData() {
     }
 
     if (!state.stats.dimension_averages) {
-        // 使用测试数据
+        // 不使用测试数据，而是使用空数据
         state.stats.dimension_averages = {
-            hallucination_control: 80,
-            quality: 70,
-            professionalism: 60,
-            usefulness: 50
+            hallucination_control: 0,
+            quality: 0,
+            professionalism: 0,
+            usefulness: 0,
+            average_score: 0
         };
+
+        // 显示暂无数据提示
+        const noDataMessage = document.createElement('div');
+        noDataMessage.className = 'alert alert-info text-center mt-4';
+        noDataMessage.innerHTML = '<i class="fas fa-info-circle me-2"></i>暂无评估数据，请等待数据从 Dify 同步';
+
+        // 在图表容器前插入提示
+        const chartContainers = document.querySelectorAll('.chart-container');
+        if (chartContainers.length > 0) {
+            chartContainers.forEach(container => {
+                if (!container.querySelector('.alert')) {
+                    container.insertBefore(noDataMessage.cloneNode(true), container.firstChild);
+                }
+            });
+        }
     }
 
     // 确保图表容器有尺寸
