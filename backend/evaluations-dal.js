@@ -2,6 +2,7 @@
 
 const { getDatabase } = require('./database');
 const { getDbLogger } = require('./utils/db-logger');
+const fieldLabelsDAL = require('./field-labels-dal');
 
 class EvaluationsDAL {
   constructor(dbPath) {
@@ -48,6 +49,9 @@ class EvaluationsDAL {
         if (processedData['MAG']) {
           this._updateMagInfo(processedData['MAG']);
         }
+
+        // 初始化字段标签（如果尚未初始化）
+        this._initializeFieldLabels(processedData);
 
         // 清除统计缓存，强制下次请求重新计算
         this._clearStatsCache();
@@ -644,6 +648,20 @@ class EvaluationsDAL {
   _clearStatsCache() {
     const stmt = this.db.prepare('DELETE FROM stats_cache');
     stmt.run();
+  }
+
+  // 私有方法：初始化字段标签
+  _initializeFieldLabels(sampleData) {
+    try {
+      // 检查字段标签表是否为空
+      if (fieldLabelsDAL.isFieldLabelsEmpty()) {
+        console.log('字段标签表为空，从样本数据初始化字段标签');
+        fieldLabelsDAL.initializeFieldLabelsFromSample(sampleData);
+      }
+    } catch (error) {
+      console.error('初始化字段标签时出错:', error);
+      // 不抛出错误，允许保存评估数据继续进行
+    }
   }
 
   // 调试方法：获取数据库信息

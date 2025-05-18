@@ -492,11 +492,19 @@ function updateTableHeaders(sampleData) {
     // Add columns for each displayed field
     const displayFields = getDisplayFields();
     displayFields.forEach(field => {
+        // 查找字段标签
+        const fieldLabel = fieldLabels.find(label => label.field_key === field);
         let displayName = field;
-        // Format field name for display
-        if (field === 'average_score') {
+
+        // 如果找到字段标签，使用其显示名称
+        if (fieldLabel) {
+            displayName = fieldLabel.display_name;
+        }
+        // 否则使用默认格式化
+        else if (field === 'average_score') {
             displayName = 'Score';
         }
+
         tableHead.innerHTML += `<th class="w-32">${displayName}</th>`;
     });
 
@@ -506,16 +514,73 @@ function updateTableHeaders(sampleData) {
     console.log("Updated table headers based on sample data");
 }
 
+// 存储从后端获取的字段标签
+let fieldLabels = [];
+
+/**
+ * 加载字段标签
+ */
+async function loadFieldLabels() {
+    try {
+        const apiBaseUrl = getApiBaseUrl();
+        const url = `${apiBaseUrl}/api/field-labels`;
+        console.log(`加载字段标签: ${url}`);
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log('字段标签响应:', data);
+
+        if (data.success && data.labels && data.labels.length > 0) {
+            // 保存字段标签
+            fieldLabels = data.labels;
+            console.log(`已加载 ${fieldLabels.length} 个字段标签`);
+        } else {
+            console.warn('未找到字段标签或标签为空');
+            // 使用默认标签
+            fieldLabels = [
+                { field_key: 'CAS Name', display_name: 'CAS Name', display_order: 30 },
+                { field_key: 'Product Family', display_name: 'Product Family', display_order: 40 },
+                { field_key: 'Part Number', display_name: 'Part Number', display_order: 50 },
+                { field_key: 'MAG', display_name: 'MAG', display_order: 60 },
+                { field_key: 'average_score', display_name: 'Score', display_order: 70 }
+            ];
+        }
+    } catch (error) {
+        console.error('加载字段标签出错:', error);
+        // 使用默认标签
+        fieldLabels = [
+            { field_key: 'CAS Name', display_name: 'CAS Name', display_order: 30 },
+            { field_key: 'Product Family', display_name: 'Product Family', display_order: 40 },
+            { field_key: 'Part Number', display_name: 'Part Number', display_order: 50 },
+            { field_key: 'MAG', display_name: 'MAG', display_order: 60 },
+            { field_key: 'average_score', display_name: 'Score', display_order: 70 }
+        ];
+    }
+}
+
 /**
  * Get the fields to display in the table
  */
 function getDisplayFields() {
-    // If we have test cases, dynamically determine fields to display
+    // 如果已经从后端加载了字段标签，使用这些标签
+    if (fieldLabels && fieldLabels.length > 0) {
+        // 按显示顺序排序
+        const sortedLabels = [...fieldLabels].sort((a, b) => a.display_order - b.display_order);
+        // 返回字段键
+        return sortedLabels.map(label => label.field_key);
+    }
+
+    // 如果没有从后端加载字段标签，但有测试用例数据，动态确定要显示的字段
     if (testCases && testCases.length > 0) {
         const sampleCase = testCases[0];
         const allFields = Object.keys(sampleCase);
 
-        // Priority fields that should always be displayed if available
+        // 优先显示的字段
         const priorityFields = [
             'CAS Name',
             'Product Family',
@@ -525,12 +590,12 @@ function getDisplayFields() {
             'Question Complexity'
         ];
 
-        // Filter priority fields that exist in the sample
+        // 过滤出样本中存在的优先字段
         const availablePriorityFields = priorityFields.filter(field =>
             allFields.includes(field) && sampleCase[field]
         );
 
-        // Always include average_score at the end
+        // 始终在最后包含平均分
         if (allFields.includes('average_score')) {
             return [...availablePriorityFields, 'average_score'];
         }
@@ -538,7 +603,7 @@ function getDisplayFields() {
         return availablePriorityFields;
     }
 
-    // Default fields if no test cases are available
+    // 默认字段
     return [
         'CAS Name',
         'Product Family',

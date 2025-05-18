@@ -3,6 +3,7 @@
 const express = require('express');
 const router = express.Router();
 const EvaluationsDAL = require('./evaluations-dal');
+const fieldLabelsDAL = require('./field-labels-dal');
 const path = require('path');
 
 // 初始化数据访问层
@@ -488,6 +489,26 @@ router.delete('/test-cases/:id', asyncHandler(async (req, res) => {
   } catch (error) {
     console.error(`删除测试用例出错: ${error.message}`);
     res.status(500).json({ success: false, message: error.message });
+  }
+}));
+
+// 获取字段标签
+router.get('/field-labels', asyncHandler(async (req, res) => {
+  try {
+    // 获取可见的字段标签
+    const labels = fieldLabelsDAL.getVisibleFieldLabels();
+
+    res.json({
+      success: true,
+      labels
+    });
+  } catch (error) {
+    console.error(`获取字段标签出错: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+      labels: []
+    });
   }
 }));
 

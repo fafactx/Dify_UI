@@ -142,6 +142,19 @@ function initializeDatabase(dbPath) {
       )
     `);
 
+    // 创建字段标签表 - 用于存储样本字段标签
+    console.log(`创建字段标签表...`);
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS field_labels (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        field_key TEXT UNIQUE NOT NULL,
+        display_name TEXT NOT NULL,
+        is_visible INTEGER DEFAULT 1,
+        display_order INTEGER DEFAULT 999,
+        last_updated INTEGER NOT NULL
+      )
+    `);
+
     // 验证数据库是否正常工作
     console.log(`验证数据库...`);
     const testStmt = db.prepare('SELECT 1 as test');
