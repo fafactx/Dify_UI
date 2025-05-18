@@ -676,6 +676,58 @@ class EvaluationsDAL {
       return [];
     }
   }
+
+  // 获取所有评估数据 - 用于统计
+  getAllEvaluations() {
+    try {
+      console.log('获取所有评估数据...');
+
+      // 获取所有记录
+      const stmt = this.db.prepare(`
+        SELECT id, result_key, timestamp, date, data,
+               json_extract(data, '$.hallucination_control') as hallucination_control,
+               json_extract(data, '$.quality') as quality,
+               json_extract(data, '$.professionalism') as professionalism,
+               json_extract(data, '$.usefulness') as usefulness,
+               json_extract(data, '$.average_score') as average_score
+        FROM evaluations
+        ORDER BY timestamp DESC
+      `);
+
+      const rows = stmt.all();
+      console.log(`从数据库获取到 ${rows.length} 条评估数据`);
+
+      // 转换数据
+      const evaluations = rows.map(row => {
+        // 解析JSON数据
+        let parsedData = {};
+        try {
+          parsedData = JSON.parse(row.data);
+        } catch (e) {
+          console.error(`解析ID为 ${row.id} 的数据时出错:`, e);
+        }
+
+        // 返回包含维度得分的对象
+        return {
+          id: row.id,
+          result_key: row.result_key,
+          timestamp: row.timestamp,
+          date: row.date,
+          hallucination_control: parseFloat(row.hallucination_control) || 0,
+          quality: parseFloat(row.quality) || 0,
+          professionalism: parseFloat(row.professionalism) || 0,
+          usefulness: parseFloat(row.usefulness) || 0,
+          average_score: parseFloat(row.average_score) || 0,
+          ...parsedData
+        };
+      });
+
+      return evaluations;
+    } catch (error) {
+      console.error('获取所有评估数据出错:', error);
+      return [];
+    }
+  }
 }
 
 module.exports = EvaluationsDAL;

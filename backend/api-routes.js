@@ -615,5 +615,94 @@ router.get('/dbinfo', asyncHandler(async (req, res) => {
   }
 }));
 
+// 获取统计数据 - 用于仪表板
+router.get('/stats', asyncHandler(async (req, res) => {
+  try {
+    console.log('获取统计数据...');
+
+    // 从数据库获取评估数据
+    const evaluations = evaluationsDAL.getAllEvaluations();
+
+    if (!evaluations || evaluations.length === 0) {
+      console.log('数据库中没有评估数据');
+      return res.json({
+        success: true,
+        stats: {
+          count: 0,
+          overall_average: 0,
+          dimension_averages: {
+            hallucination_control: 0,
+            quality: 0,
+            professionalism: 0,
+            usefulness: 0
+          }
+        }
+      });
+    }
+
+    console.log(`从数据库获取到 ${evaluations.length} 条评估数据`);
+
+    // 计算统计数据
+    const dimensions = ['hallucination_control', 'quality', 'professionalism', 'usefulness'];
+    const dimensionTotals = {};
+    const dimensionCounts = {};
+
+    // 初始化维度统计
+    dimensions.forEach(dim => {
+      dimensionTotals[dim] = 0;
+      dimensionCounts[dim] = 0;
+    });
+
+    // 计算总分和各维度总分
+    let overallTotal = 0;
+    let overallCount = 0;
+
+    evaluations.forEach(evaluation => {
+      // 计算各维度得分
+      dimensions.forEach(dim => {
+        const score = evaluation[dim];
+        if (score !== undefined && !isNaN(score)) {
+          dimensionTotals[dim] += score;
+          dimensionCounts[dim]++;
+        }
+      });
+
+      // 计算平均分
+      if (evaluation.average_score !== undefined && !isNaN(evaluation.average_score)) {
+        overallTotal += evaluation.average_score;
+        overallCount++;
+      }
+    });
+
+    // 计算各维度平均分
+    const dimensionAverages = {};
+    dimensions.forEach(dim => {
+      dimensionAverages[dim] = dimensionCounts[dim] > 0 ?
+        Math.round(dimensionTotals[dim] / dimensionCounts[dim] * 10) / 10 : 0;
+    });
+
+    // 计算总平均分
+    const overallAverage = overallCount > 0 ?
+      Math.round(overallTotal / overallCount * 10) / 10 : 0;
+
+    // 返回统计数据
+    const stats = {
+      count: evaluations.length,
+      overall_average: overallAverage,
+      dimension_averages: dimensionAverages
+    };
+
+    console.log('统计数据计算完成:', stats);
+
+    res.json({
+      success: true,
+      stats
+    });
+  } catch (error) {
+    console.error('获取统计数据出错:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+}));
+
 // 导出路由
 module.exports = router;
