@@ -123,6 +123,38 @@ start_services() {
     if [ "$INSTALL" = true ]; then
         echo "步骤 1: 安装依赖"
 
+        # 检查操作系统类型
+        if [ -f /etc/os-release ]; then
+            . /etc/os-release
+            OS_TYPE=$ID
+            echo "检测到操作系统: $OS_TYPE"
+        else
+            OS_TYPE="unknown"
+            echo "无法检测操作系统类型，将尝试通用安装方法"
+        fi
+
+        # 在 Linux 环境中安装系统依赖
+        if [ "$OS_TYPE" = "ubuntu" ] || [ "$OS_TYPE" = "debian" ]; then
+            echo "安装 Linux 系统依赖..."
+            sudo apt-get update
+            sudo apt-get install -y build-essential python3 python3-pip
+            if [ $? -ne 0 ]; then
+                echo "警告: 系统依赖安装失败，某些功能可能无法正常工作"
+            else
+                echo "系统依赖安装成功"
+            fi
+        elif [ "$OS_TYPE" = "centos" ] || [ "$OS_TYPE" = "rhel" ] || [ "$OS_TYPE" = "fedora" ]; then
+            echo "安装 Linux 系统依赖..."
+            sudo yum -y update
+            sudo yum -y groupinstall "Development Tools"
+            sudo yum -y install python3 python3-pip
+            if [ $? -ne 0 ]; then
+                echo "警告: 系统依赖安装失败，某些功能可能无法正常工作"
+            else
+                echo "系统依赖安装成功"
+            fi
+        fi
+
         # 检查根目录 package.json 是否存在
         if [ -f "package.json" ]; then
             echo "使用根目录 package.json 安装依赖..."
@@ -144,15 +176,27 @@ start_services() {
             # 检查是否安装了 better-sqlite3
             if ! npm list | grep -q "better-sqlite3"; then
                 echo "安装 SQLite 数据库依赖..."
-                npm install better-sqlite3@8.5.0
+
+                # 在 Linux 环境中，先尝试使用 --build-from-source 选项
+                if [ "$OS_TYPE" = "ubuntu" ] || [ "$OS_TYPE" = "debian" ] || [ "$OS_TYPE" = "centos" ] || [ "$OS_TYPE" = "rhel" ] || [ "$OS_TYPE" = "fedora" ]; then
+                    echo "在 Linux 环境中使用 --build-from-source 选项安装 better-sqlite3..."
+                    npm install better-sqlite3 --build-from-source
+                else
+                    # 在其他环境中，先尝试常规安装
+                    npm install better-sqlite3@8.5.0
+                fi
+
                 if [ $? -ne 0 ]; then
-                    echo "安装 SQLite 数据库依赖失败，请检查是否有合适的编译环境"
-                    echo "尝试安装预编译版本..."
-                    npm install better-sqlite3@8.5.0 --build-from-source
+                    echo "安装 SQLite 数据库依赖失败，尝试其他方法..."
+
+                    # 尝试安装特定版本
+                    echo "尝试安装特定版本的 better-sqlite3..."
+                    npm install better-sqlite3@7.4.5 --build-from-source
+
                     if [ $? -ne 0 ]; then
                         echo "警告: SQLite 数据库依赖安装失败，系统将使用文件存储模式"
                     else
-                        echo "SQLite 数据库依赖安装成功"
+                        echo "SQLite 数据库依赖安装成功 (版本 7.4.5)"
                     fi
                 else
                     echo "SQLite 数据库依赖安装成功"
