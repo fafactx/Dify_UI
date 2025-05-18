@@ -312,78 +312,53 @@
             document.getElementById('confirmDelete').addEventListener('click', handleDelete);
         });
 
-        // Load test cases from the API
+        // 加载测试用例数据 - 简化版
         async function loadTestCases() {
             try {
-                console.log('Loading test cases...');
+                console.log('正在加载测试用例...');
 
-                // 尝试多种API基础URL
-                const apiUrls = [
-                    getApiBaseUrl(),                                // 动态检测的URL
-                    '',                                             // 相对路径
-                    'http://10.103.21.115:3000',                    // 配置文件中的URL
-                    'http://10.193.21.115:3000',                    // 之前硬编码的URL
-                    `${window.location.protocol}//${window.location.hostname}:3000` // 当前主机名，固定端口
-                ];
+                // 使用固定的API URL
+                const url = 'http://10.193.21.115:3000/api/test-cases';
+                console.log('API URL:', url);
 
-                let lastError = null;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    mode: 'cors'
+                });
 
-                // 尝试每个URL，直到成功或全部失败
-                for (const baseUrl of apiUrls) {
-                    try {
-                        const url = `${baseUrl}/api/test-cases`;
-                        console.log('尝试API URL:', url);
-
-                        const response = await fetch(url, {
-                            method: 'GET',
-                            headers: {
-                                'Accept': 'application/json',
-                                'Content-Type': 'application/json'
-                            },
-                            mode: 'cors'
-                        });
-
-                        if (!response.ok) {
-                            console.warn(`API请求失败 (${url}): ${response.status} ${response.statusText}`);
-                            continue; // 尝试下一个URL
-                        }
-
-                        const data = await response.json();
-                        console.log('API响应成功:', data);
-
-                        if (!data.testCases) {
-                            console.warn(`API响应缺少testCases字段 (${url})`, data);
-                            continue; // 尝试下一个URL
-                        }
-
-                        testCases = data.testCases;
-
-                        // 成功获取数据，重置选择
-                        selectedIds.clear();
-                        selectAllCheckbox.checked = false;
-                        updateDeleteSelectedButton();
-
-                        // 渲染测试用例
-                        renderTestCases();
-                        renderPagination();
-
-                        // 成功后退出循环
-                        return;
-                    } catch (err) {
-                        console.warn(`尝试URL失败 (${baseUrl}):`, err);
-                        lastError = err;
-                    }
+                if (!response.ok) {
+                    throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
                 }
 
-                // 如果所有URL都失败，抛出最后一个错误
-                throw lastError || new Error('所有API URL尝试均失败');
+                const data = await response.json();
+                console.log('API响应:', data);
+
+                // 检查数据格式
+                if (!data.testCases && !data.data) {
+                    throw new Error('API响应格式不正确，缺少testCases或data字段');
+                }
+
+                // 使用testCases字段或data字段
+                testCases = data.testCases || data.data || [];
+
+                // 重置选择
+                selectedIds.clear();
+                selectAllCheckbox.checked = false;
+                updateDeleteSelectedButton();
+
+                // 渲染测试用例
+                renderTestCases();
+                renderPagination();
             } catch (error) {
                 console.error('加载测试用例错误:', error);
                 testCasesBody.innerHTML = `
                     <tr>
                         <td colspan="8" class="text-center py-4 text-red-500">
                             加载测试用例错误: ${error.message}<br>
-                            请检查服务器是否正在运行，以及网络连接是否正常。<br>
                             <button onclick="loadTestCases()" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded">
                                 重试
                             </button>
@@ -393,22 +368,50 @@
             }
         }
 
-        // Render test cases for the current page
+        // 渲染测试用例 - 简化版
         function renderTestCases() {
             if (testCases.length === 0) {
                 testCasesBody.innerHTML = `
                     <tr>
-                        <td colspan="8" class="text-center py-4">No test cases found</td>
+                        <td colspan="8" class="text-center py-4">没有找到测试用例</td>
                     </tr>
                 `;
                 return;
             }
 
+            console.log('渲染测试用例，总数:', testCases.length);
+
+            // 分页
             const startIndex = (currentPage - 1) * pageSize;
             const endIndex = Math.min(startIndex + pageSize, testCases.length);
             const pageTestCases = testCases.slice(startIndex, endIndex);
 
-            testCasesBody.innerHTML = pageTestCases.map(testCase => `
+            // 生成HTML
+            testCasesBody.innerHTML = pageTestCases.map(testCase => {
+                // 检查数据结构
+                console.log('测试用例数据:', testCase);
+
+                // 获取CAS Name、Product Family和Part Number
+                let casName = 'N/A';
+                let productFamily = 'N/A';
+                let partNumber = 'N/A';
+                let averageScore = 'N/A';
+
+                // 检查数据是否在data字段中
+                if (testCase.data) {
+                    casName = testCase.data['CAS Name'] || 'N/A';
+                    productFamily = testCase.data['Product Family'] || 'N/A';
+                    partNumber = testCase.data['Part Number'] || 'N/A';
+                    averageScore = testCase.data.average_score ? testCase.data.average_score.toFixed(1) : 'N/A';
+                } else {
+                    // 数据可能直接在testCase对象中
+                    casName = testCase['CAS Name'] || 'N/A';
+                    productFamily = testCase['Product Family'] || 'N/A';
+                    partNumber = testCase['Part Number'] || 'N/A';
+                    averageScore = testCase.average_score ? testCase.average_score.toFixed(1) : 'N/A';
+                }
+
+                return `
                 <tr data-id="${testCase.id}">
                     <td>
                         <input type="checkbox" class="case-checkbox rounded"
@@ -416,11 +419,11 @@
                                ${selectedIds.has(testCase.id) ? 'checked' : ''}>
                     </td>
                     <td>${testCase.id}</td>
-                    <td>${formatDate(testCase.date)}</td>
-                    <td>${testCase.data['CAS Name'] || 'N/A'}</td>
-                    <td>${testCase.data['Product Family'] || 'N/A'}</td>
-                    <td>${testCase.data['Part Number'] || 'N/A'}</td>
-                    <td>${testCase.data.average_score ? testCase.data.average_score.toFixed(1) : 'N/A'}</td>
+                    <td>${formatDate(testCase.date || testCase.timestamp)}</td>
+                    <td>${casName}</td>
+                    <td>${productFamily}</td>
+                    <td>${partNumber}</td>
+                    <td>${averageScore}</td>
                     <td>
                         <button class="text-red-500 hover:text-red-700" onclick="deleteTestCase(${testCase.id})">
                             <i class="fas fa-trash"></i>
@@ -430,54 +433,48 @@
                         </button>
                     </td>
                 </tr>
-            `).join('');
+                `;
+            }).join('');
 
-            // Add event listeners to checkboxes
+            // 添加事件监听器
             document.querySelectorAll('.case-checkbox').forEach(checkbox => {
                 checkbox.addEventListener('change', handleCheckboxChange);
             });
         }
 
-        // Render pagination controls
+        // 渲染分页控件 - 简化版
         function renderPagination() {
             const totalPages = Math.ceil(testCases.length / pageSize);
 
+            // 显示总记录数
+            const totalCountElement = document.createElement('div');
+            totalCountElement.className = 'text-gray-600 text-sm mt-2';
+            totalCountElement.textContent = `共 ${testCases.length} 条记录`;
+
+            // 如果只有一页，不显示分页控件
             if (totalPages <= 1) {
                 pagination.innerHTML = '';
+                pagination.appendChild(totalCountElement);
                 return;
             }
 
+            // 创建分页HTML
             let paginationHTML = `
-                <button id="prevPage" ${currentPage === 1 ? 'disabled' : ''}>
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-            `;
-
-            for (let i = 1; i <= totalPages; i++) {
-                paginationHTML += `
-                    <button class="page-btn ${currentPage === i ? 'active' : ''}" data-page="${i}">
-                        ${i}
+                <div class="flex items-center space-x-2">
+                    <button id="prevPage" class="px-3 py-1 rounded border ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}" ${currentPage === 1 ? 'disabled' : ''}>
+                        上一页
                     </button>
-                `;
-            }
-
-            paginationHTML += `
-                <button id="nextPage" ${currentPage === totalPages ? 'disabled' : ''}>
-                    <i class="fas fa-chevron-right"></i>
-                </button>
+                    <span class="text-gray-600">第 ${currentPage} 页，共 ${totalPages} 页</span>
+                    <button id="nextPage" class="px-3 py-1 rounded border ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}" ${currentPage === totalPages ? 'disabled' : ''}>
+                        下一页
+                    </button>
+                </div>
             `;
 
             pagination.innerHTML = paginationHTML;
+            pagination.appendChild(totalCountElement);
 
-            // Add event listeners to pagination buttons
-            document.querySelectorAll('.page-btn').forEach(button => {
-                button.addEventListener('click', () => {
-                    currentPage = parseInt(button.dataset.page);
-                    renderTestCases();
-                    renderPagination();
-                });
-            });
-
+            // 添加事件监听器
             const prevPageBtn = document.getElementById('prevPage');
             const nextPageBtn = document.getElementById('nextPage');
 
@@ -690,10 +687,25 @@
             // In a real implementation, you would show a modal with the details
         }
 
-        // Format date
+        // 格式化日期 - 健壮版
         function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+            if (!dateString) return 'N/A';
+
+            try {
+                // 尝试创建日期对象
+                const date = new Date(dateString);
+
+                // 检查日期是否有效
+                if (isNaN(date.getTime())) {
+                    return 'Invalid Date';
+                }
+
+                // 格式化日期
+                return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+            } catch (error) {
+                console.error('日期格式化错误:', error);
+                return 'Error';
+            }
         }
 
         // Get API base URL
