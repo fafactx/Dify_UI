@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="Dify Evaluation Dashboard">
+    <title>Dify Evaluation Dashboard</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" crossorigin="anonymous">
+    <!-- ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js" crossorigin="anonymous"></script>
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .header-bar {
+            background-color: #4a6bff;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header-title {
+            display: flex;
+            align-items: center;
+        }
+        
+        .header-title i {
+            margin-right: 10px;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .nav-tab {
+            color: white;
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .nav-tab.active {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .timestamp {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+        
+        .content-container {
+            padding: 20px;
+        }
+        
+        .metric-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            height: 100%;
+        }
+        
+        .metric-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #f0f4ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+        }
+        
+        .metric-icon i {
+            color: #4a6bff;
+            font-size: 24px;
+        }
+        
+        .metric-value {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #4a6bff;
+        }
+        
+        .metric-label {
+            color: #6c757d;
+            font-size: 14px;
+        }
+        
+        .chart-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .chart-title {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 15px;
+        }
+        
+        .chart {
+            height: 300px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-bar">
+        <div class="header-title">
+            <i class="fas fa-chart-line"></i>
+            <h5 class="mb-0">Dify Evaluation Dashboard</h5>
+        </div>
+        <div class="nav-tabs">
+            <a class="nav-tab active">Dashboard</a>
+            <a class="nav-tab">Compare</a>
+            <a class="nav-tab">Settings</a>
+        </div>
+        <div class="timestamp">
+            Last updated: 5/18/2025, 2:06:54 AM
+        </div>
+    </div>
+
+    <div class="content-container">
+        <div class="row">
+            <!-- Metric Cards -->
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-icon">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <div class="metric-value">4</div>
+                    <div class="metric-label">Total Samples</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-icon">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <div class="metric-value">82.0</div>
+                    <div class="metric-label">Average Score</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-icon">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <div class="metric-value">90.0</div>
+                    <div class="metric-label">Highest: Hallucination Control</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-icon">
+                        <i class="fas fa-arrow-down"></i>
+                    </div>
+                    <div class="metric-value">75.0</div>
+                    <div class="metric-label">Lowest: Usefulness</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="section-title">Dimension Proportion</div>
+                <div class="chart-container">
+                    <div id="dimension-chart" class="chart"></div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="section-title">MAG Correlation Chart</div>
+                <div class="chart-container">
+                    <div id="correlation-chart" class="chart"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="section-title">Dimension Score Distribution</div>
+                <div class="chart-container">
+                    <div id="distribution-chart" class="chart"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+        });
+
+        function initializeCharts() {
+            initializeDimensionChart();
+            initializeCorrelationChart();
+            initializeDistributionChart();
+        }
+
+        function initializeDimensionChart() {
+            const chart = echarts.init(document.getElementById('dimension-chart'));
+            const option = {
+                tooltip: {
+                    trigger: 'item'
+                },
+                legend: {
+                    orient: 'vertical',
+                    right: 10,
+                    top: 'center'
+                },
+                series: [
+                    {
+                        name: 'Dimension Proportion',
+                        type: 'pie',
+                        radius: ['40%', '70%'],
+                        avoidLabelOverlap: false,
+                        itemStyle: {
+                            borderRadius: 10,
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        },
+                        label: {
+                            show: false,
+                            position: 'center'
+                        },
+                        emphasis: {
+                            label: {
+                                show: true,
+                                fontSize: '16',
+                                fontWeight: 'bold'
+                            }
+                        },
+                        labelLine: {
+                            show: false
+                        },
+                        data: [
+                            { value: 80, name: 'Hallucination Control', itemStyle: { color: '#3B82F6' } },
+                            { value: 70, name: 'Quality', itemStyle: { color: '#10B981' } },
+                            { value: 65, name: 'Professionalism', itemStyle: { color: '#EF4444' } },
+                            { value: 50, name: 'Usefulness', itemStyle: { color: '#F59E0B' } }
+                        ]
+                    }
+                ]
+            };
+            chart.setOption(option);
+            window.addEventListener('resize', function() {
+                chart.resize();
+            });
+        }
+
+        function initializeCorrelationChart() {
+            const chart = echarts.init(document.getElementById('correlation-chart'));
+            const option = {
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'shadow'
+                    }
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: ['Usefulness', 'Professionalism', 'Quality', 'Hallucination Control']
+                },
+                yAxis: {
+                    type: 'value',
+                    min: 0,
+                    max: 100
+                },
+                series: [
+                    {
+                        name: 'Score',
+                        type: 'bar',
+                        data: [
+                            { value: 50, itemStyle: { color: '#F59E0B' } },
+                            { value: 65, itemStyle: { color: '#EF4444' } },
+                            { value: 70, itemStyle: { color: '#10B981' } },
+                            { value: 80, itemStyle: { color: '#3B82F6' } }
+                        ],
+                        showBackground: true,
+                        backgroundStyle: {
+                            color: 'rgba(180, 180, 180, 0.2)'
+                        }
+                    }
+                ]
+            };
+            chart.setOption(option);
+            window.addEventListener('resize', function() {
+                chart.resize();
+            });
+        }
+
+        function initializeDistributionChart() {
+            const chart = echarts.init(document.getElementById('distribution-chart'));
+            const option = {
+                tooltip: {
+                    trigger: 'axis'
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    boundaryGap: false,
+                    data: ['Usefulness', 'Professionalism', 'Quality', 'Hallucination Control']
+                },
+                yAxis: {
+                    type: 'value',
+                    min: 0,
+                    max: 100
+                },
+                series: [
+                    {
+                        name: 'Score',
+                        type: 'line',
+                        data: [50, 65, 70, 80],
+                        smooth: true,
+                        symbol: 'circle',
+                        symbolSize: 8,
+                        lineStyle: {
+                            width: 3,
+                            color: '#3B82F6'
+                        },
+                        itemStyle: {
+                            color: '#3B82F6'
+                        },
+                        areaStyle: {
+                            color: {
+                                type: 'linear',
+                                x: 0,
+                                y: 0,
+                                x2: 0,
+                                y2: 1,
+                                colorStops: [
+                                    { offset: 0, color: 'rgba(59, 130, 246, 0.3)' },
+                                    { offset: 1, color: 'rgba(59, 130, 246, 0.1)' }
+                                ]
+                            }
+                        }
+                    }
+                ]
+            };
+            chart.setOption(option);
+            window.addEventListener('resize', function() {
+                chart.resize();
+            });
+        }
+    </script>
+</body>
+</html>

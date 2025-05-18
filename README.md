@@ -384,7 +384,72 @@ cd DIFY_UI
 
 
 
+## Linux 环境安装指南
+
+如果您在 Linux 环境中部署本项目，可能需要安装一些额外的依赖项，特别是对于 `better-sqlite3` 模块。
+
+### 安装系统依赖
+
+```bash
+# 更新包管理器
+sudo apt-get update
+
+# 安装编译工具和 Python
+sudo apt-get install -y build-essential python3
+```
+
+### 安装 Node.js 依赖
+
+```bash
+# 进入后端目录
+cd backend
+
+# 安装依赖
+npm install
+
+# 如果 better-sqlite3 安装失败，尝试使用 --build-from-source 选项
+npm install better-sqlite3 --build-from-source
+```
+
+### 创建数据目录
+
+```bash
+# 确保数据目录存在
+mkdir -p backend/data
+```
+
+### 启动服务
+
+```bash
+# 启动后端服务
+node server.js
+
+# 在另一个终端启动前端服务
+cd frontend-html
+python3 -m http.server 3001
+```
+
 ## 故障排除
+
+### better-sqlite3 安装问题
+
+如果您在安装 better-sqlite3 时遇到错误，可能是因为缺少系统依赖。尝试以下解决方案：
+
+1. 安装必要的系统依赖：
+   ```bash
+   sudo apt-get update
+   sudo apt-get install -y build-essential python3
+   ```
+
+2. 使用 `--build-from-source` 选项安装：
+   ```bash
+   npm install better-sqlite3 --build-from-source
+   ```
+
+3. 如果仍然失败，尝试安装特定版本：
+   ```bash
+   npm install better-sqlite3@7.4.5 --build-from-source
+   ```
 
 ### Node.js 版本过低
 
