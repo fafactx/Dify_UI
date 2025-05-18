@@ -106,34 +106,7 @@ if (!fs.existsSync(dataDir)) {
 
 // 注意：旧的 /api/stats 端点已移除，现在使用 api-routes.js 中的实现
 
-// 辅助函数：更新索引文件
-async function updateIndex(filename, fileData) {
-  const indexPath = path.join(dataDir, config.storage.indexFile);
-  let index = { files: [], total_evaluations: 0, last_updated: Date.now() };
-
-  // 如果索引文件存在，读取它
-  if (fs.existsSync(indexPath)) {
-    index = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
-  }
-
-  // 计算评估结果数量
-  const evaluationCount = Object.keys(fileData.data || {}).filter(key => key.startsWith('result')).length;
-
-  // 添加新文件信息
-  index.files.push({
-    filename,
-    timestamp: fileData.timestamp,
-    date: fileData.date,
-    count: evaluationCount
-  });
-
-  // 更新总数和最后更新时间
-  index.total_evaluations += evaluationCount;
-  index.last_updated = Date.now();
-
-  // 保存更新后的索引
-  fs.writeFileSync(indexPath, JSON.stringify(index, null, 2));
-}
+// 注意：旧的更新索引文件函数已移除，现在使用SQLite数据库存储所有数据
 
 // 初始化数据库
 // 使用配置中的数据目录路径
