@@ -378,15 +378,26 @@ router.get('/test-cases/:id', asyncHandler(async (req, res) => {
       return res.status(404).json({ success: false, message: '测试用例不存在' });
     }
 
-    // 返回测试用例数据
+    // 返回测试用例数据 - 使用与列表API相同的扁平结构
+    const simplifiedTestCase = {
+      id: testCase.id,
+      result_key: testCase.result_key,
+      timestamp: testCase.timestamp,
+      date: testCase.date,
+      'CAS Name': testCase['CAS Name'] || 'N/A',
+      'Product Family': testCase['Product Family'] || 'N/A',
+      'Part Number': testCase['Part Number'] || 'N/A',
+      average_score: testCase.average_score || 0,
+      hallucination_control: testCase.hallucination_control || 0,
+      quality: testCase.quality || 0,
+      professionalism: testCase.professionalism || 0,
+      usefulness: testCase.usefulness || 0
+    };
+
+    // 返回简化的数据结构
     res.json({
-      testCase: {
-        id: testCase.id,
-        result_key: testCase.result_key,
-        timestamp: testCase.timestamp,
-        date: testCase.date,
-        data: testCase
-      }
+      success: true,
+      testCase: simplifiedTestCase
     });
   } catch (error) {
     console.error(`获取测试用例出错: ${error.message}`);
