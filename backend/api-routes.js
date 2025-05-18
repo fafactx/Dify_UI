@@ -303,7 +303,7 @@ router.get('/test-cases/:id', asyncHandler(async (req, res) => {
 }));
 
 // 删除单个测试用例
-router.delete('/test-cases/:id', asyncHandler(async (req, res) => {
+router.delete('/test-cases/:id', express.json(), asyncHandler(async (req, res) => {
   try {
     const id = parseInt(req.params.id);
 
@@ -326,7 +326,7 @@ router.delete('/test-cases/:id', asyncHandler(async (req, res) => {
 }));
 
 // 批量删除测试用例
-router.delete('/test-cases/batch', asyncHandler(async (req, res) => {
+router.delete('/test-cases/batch', express.json(), asyncHandler(async (req, res) => {
   try {
     const { ids } = req.body;
 
@@ -350,7 +350,7 @@ router.delete('/test-cases/batch', asyncHandler(async (req, res) => {
 }));
 
 // 删除ID范围内的测试用例
-router.delete('/test-cases/range', asyncHandler(async (req, res) => {
+router.delete('/test-cases/range', express.json(), asyncHandler(async (req, res) => {
   try {
     const { fromId, toId } = req.body;
 

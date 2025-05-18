@@ -66,9 +66,12 @@ app.locals.logger = logger;
 app.use(cors({
   origin: '*',  // 允许所有来源
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   credentials: true
 }));
+
+// 添加JSON解析中间件
+app.use(express.json());
 
 // 请求限流中间件
 if (config.rateLimit && config.rateLimit.enabled) {

@@ -282,7 +282,7 @@
         let currentPage = 1;
         const pageSize = 10;
         let selectedIds = new Set();
-        
+
         // DOM elements
         const testCasesBody = document.getElementById('testCasesBody');
         const pagination = document.getElementById('pagination');
@@ -294,42 +294,54 @@
         const confirmationModal = document.getElementById('confirmationModal');
         const fromIdInput = document.getElementById('fromId');
         const toIdInput = document.getElementById('toId');
-        
+
         // Initialize the page
         document.addEventListener('DOMContentLoaded', () => {
             loadTestCases();
-            
+
             // Event listeners
             selectAllCheckbox.addEventListener('change', handleSelectAll);
             deleteSelectedBtn.addEventListener('click', showDeleteConfirmation);
             deleteRangeBtn.addEventListener('click', showDeleteRangeModal);
             refreshBtn.addEventListener('click', loadTestCases);
-            
+
             // Modal event listeners
             document.getElementById('cancelDeleteRange').addEventListener('click', hideDeleteRangeModal);
             document.getElementById('confirmDeleteRange').addEventListener('click', handleDeleteRange);
             document.getElementById('cancelDelete').addEventListener('click', hideConfirmationModal);
             document.getElementById('confirmDelete').addEventListener('click', handleDelete);
         });
-        
+
         // Load test cases from the API
         async function loadTestCases() {
             try {
+                console.log('Loading test cases...');
                 const apiBaseUrl = getApiBaseUrl();
-                const response = await fetch(`${apiBaseUrl}/api/test-cases`);
-                
+                const url = `${apiBaseUrl}/api/test-cases`;
+                console.log('API URL:', url);
+
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    mode: 'cors'
+                });
+
                 if (!response.ok) {
                     throw new Error(`API request failed: ${response.status} ${response.statusText}`);
                 }
-                
+
                 const data = await response.json();
+                console.log('API response:', data);
                 testCases = data.testCases || [];
-                
+
                 // Reset selection
                 selectedIds.clear();
                 selectAllCheckbox.checked = false;
                 updateDeleteSelectedButton();
-                
+
                 // Render the test cases
                 renderTestCases();
                 renderPagination();
@@ -344,7 +356,7 @@
                 `;
             }
         }
-        
+
         // Render test cases for the current page
         function renderTestCases() {
             if (testCases.length === 0) {
@@ -355,16 +367,16 @@
                 `;
                 return;
             }
-            
+
             const startIndex = (currentPage - 1) * pageSize;
             const endIndex = Math.min(startIndex + pageSize, testCases.length);
             const pageTestCases = testCases.slice(startIndex, endIndex);
-            
+
             testCasesBody.innerHTML = pageTestCases.map(testCase => `
                 <tr data-id="${testCase.id}">
                     <td>
-                        <input type="checkbox" class="case-checkbox rounded" 
-                               data-id="${testCase.id}" 
+                        <input type="checkbox" class="case-checkbox rounded"
+                               data-id="${testCase.id}"
                                ${selectedIds.has(testCase.id) ? 'checked' : ''}>
                     </td>
                     <td>${testCase.id}</td>
@@ -383,28 +395,28 @@
                     </td>
                 </tr>
             `).join('');
-            
+
             // Add event listeners to checkboxes
             document.querySelectorAll('.case-checkbox').forEach(checkbox => {
                 checkbox.addEventListener('change', handleCheckboxChange);
             });
         }
-        
+
         // Render pagination controls
         function renderPagination() {
             const totalPages = Math.ceil(testCases.length / pageSize);
-            
+
             if (totalPages <= 1) {
                 pagination.innerHTML = '';
                 return;
             }
-            
+
             let paginationHTML = `
                 <button id="prevPage" ${currentPage === 1 ? 'disabled' : ''}>
                     <i class="fas fa-chevron-left"></i>
                 </button>
             `;
-            
+
             for (let i = 1; i <= totalPages; i++) {
                 paginationHTML += `
                     <button class="page-btn ${currentPage === i ? 'active' : ''}" data-page="${i}">
@@ -412,15 +424,15 @@
                     </button>
                 `;
             }
-            
+
             paginationHTML += `
                 <button id="nextPage" ${currentPage === totalPages ? 'disabled' : ''}>
                     <i class="fas fa-chevron-right"></i>
                 </button>
             `;
-            
+
             pagination.innerHTML = paginationHTML;
-            
+
             // Add event listeners to pagination buttons
             document.querySelectorAll('.page-btn').forEach(button => {
                 button.addEventListener('click', () => {
@@ -429,10 +441,10 @@
                     renderPagination();
                 });
             });
-            
+
             const prevPageBtn = document.getElementById('prevPage');
             const nextPageBtn = document.getElementById('nextPage');
-            
+
             if (prevPageBtn) {
                 prevPageBtn.addEventListener('click', () => {
                     if (currentPage > 1) {
@@ -442,7 +454,7 @@
                     }
                 });
             }
-            
+
             if (nextPageBtn) {
                 nextPageBtn.addEventListener('click', () => {
                     if (currentPage < totalPages) {
@@ -453,41 +465,41 @@
                 });
             }
         }
-        
+
         // Handle select all checkbox
         function handleSelectAll() {
             const isChecked = selectAllCheckbox.checked;
-            
+
             // Update all checkboxes on the current page
             document.querySelectorAll('.case-checkbox').forEach(checkbox => {
                 checkbox.checked = isChecked;
                 const id = parseInt(checkbox.dataset.id);
-                
+
                 if (isChecked) {
                     selectedIds.add(id);
                 } else {
                     selectedIds.delete(id);
                 }
             });
-            
+
             updateDeleteSelectedButton();
         }
-        
+
         // Handle individual checkbox change
         function handleCheckboxChange(event) {
             const checkbox = event.target;
             const id = parseInt(checkbox.dataset.id);
-            
+
             if (checkbox.checked) {
                 selectedIds.add(id);
             } else {
                 selectedIds.delete(id);
                 selectAllCheckbox.checked = false;
             }
-            
+
             updateDeleteSelectedButton();
         }
-        
+
         // Update delete selected button visibility
         function updateDeleteSelectedButton() {
             if (selectedIds.size > 0) {
@@ -496,54 +508,64 @@
                 deleteSelectedBtn.classList.add('hidden');
             }
         }
-        
+
         // Show delete confirmation modal
         function showDeleteConfirmation() {
             const count = selectedIds.size;
-            document.getElementById('confirmationMessage').textContent = 
+            document.getElementById('confirmationMessage').textContent =
                 `Are you sure you want to delete ${count} selected test case${count !== 1 ? 's' : ''}?`;
             confirmationModal.classList.remove('hidden');
         }
-        
+
         // Hide confirmation modal
         function hideConfirmationModal() {
             confirmationModal.classList.add('hidden');
         }
-        
+
         // Show delete range modal
         function showDeleteRangeModal() {
             deleteRangeModal.classList.remove('hidden');
         }
-        
+
         // Hide delete range modal
         function hideDeleteRangeModal() {
             deleteRangeModal.classList.add('hidden');
         }
-        
+
         // Handle delete range
         async function handleDeleteRange() {
             const fromId = parseInt(fromIdInput.value);
             const toId = parseInt(toIdInput.value);
-            
+
             if (isNaN(fromId) || isNaN(toId) || fromId > toId || fromId < 1) {
                 alert('Please enter a valid ID range');
                 return;
             }
-            
+
             try {
+                console.log(`Deleting test cases range from ${fromId} to ${toId}...`);
                 const apiBaseUrl = getApiBaseUrl();
-                const response = await fetch(`${apiBaseUrl}/api/test-cases/range`, {
+                const url = `${apiBaseUrl}/api/test-cases/range`;
+                console.log('API URL:', url);
+                console.log('Request body:', { fromId, toId });
+
+                const response = await fetch(url, {
                     method: 'DELETE',
                     headers: {
+                        'Accept': 'application/json',
                         'Content-Type': 'application/json'
                     },
+                    mode: 'cors',
                     body: JSON.stringify({ fromId, toId })
                 });
-                
+
                 if (!response.ok) {
                     throw new Error(`API request failed: ${response.status} ${response.statusText}`);
                 }
-                
+
+                const result = await response.json();
+                console.log('Delete range result:', result);
+
                 hideDeleteRangeModal();
                 loadTestCases();
             } catch (error) {
@@ -551,23 +573,33 @@
                 alert(`Error deleting test cases: ${error.message}`);
             }
         }
-        
+
         // Handle delete selected
         async function handleDelete() {
             try {
+                console.log(`Deleting selected test cases: ${Array.from(selectedIds).join(', ')}...`);
                 const apiBaseUrl = getApiBaseUrl();
-                const response = await fetch(`${apiBaseUrl}/api/test-cases/batch`, {
+                const url = `${apiBaseUrl}/api/test-cases/batch`;
+                console.log('API URL:', url);
+                console.log('Request body:', { ids: Array.from(selectedIds) });
+
+                const response = await fetch(url, {
                     method: 'DELETE',
                     headers: {
+                        'Accept': 'application/json',
                         'Content-Type': 'application/json'
                     },
+                    mode: 'cors',
                     body: JSON.stringify({ ids: Array.from(selectedIds) })
                 });
-                
+
                 if (!response.ok) {
                     throw new Error(`API request failed: ${response.status} ${response.statusText}`);
                 }
-                
+
+                const result = await response.json();
+                console.log('Delete selected result:', result);
+
                 hideConfirmationModal();
                 loadTestCases();
             } catch (error) {
@@ -575,56 +607,63 @@
                 alert(`Error deleting test cases: ${error.message}`);
             }
         }
-        
+
         // Delete a single test case
         async function deleteTestCase(id) {
             if (!confirm(`Are you sure you want to delete test case #${id}?`)) {
                 return;
             }
-            
+
             try {
+                console.log(`Deleting test case #${id}...`);
                 const apiBaseUrl = getApiBaseUrl();
-                const response = await fetch(`${apiBaseUrl}/api/test-cases/${id}`, {
-                    method: 'DELETE'
+                const url = `${apiBaseUrl}/api/test-cases/${id}`;
+                console.log('API URL:', url);
+
+                const response = await fetch(url, {
+                    method: 'DELETE',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    mode: 'cors'
                 });
-                
+
                 if (!response.ok) {
                     throw new Error(`API request failed: ${response.status} ${response.statusText}`);
                 }
-                
+
+                const result = await response.json();
+                console.log('Delete result:', result);
+
                 loadTestCases();
             } catch (error) {
                 console.error(`Error deleting test case #${id}:`, error);
                 alert(`Error deleting test case: ${error.message}`);
             }
         }
-        
+
         // View test case details
         function viewTestCase(id) {
             const testCase = testCases.find(tc => tc.id === id);
             if (!testCase) return;
-            
+
             // For now, just show the data in an alert
             alert(JSON.stringify(testCase.data, null, 2));
-            
+
             // In a real implementation, you would show a modal with the details
         }
-        
+
         // Format date
         function formatDate(dateString) {
             const date = new Date(dateString);
             return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
         }
-        
+
         // Get API base URL
         function getApiBaseUrl() {
-            // If in local development, use localhost
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                return 'http://localhost:3000';
-            } else {
-                // In production, use the same host but with port 3000
-                return `${window.location.protocol}//${window.location.hostname}:3000`;
-            }
+            // 使用固定IP地址
+            return 'http://10.193.21.115:3000';
         }
     </script>
 </body>
