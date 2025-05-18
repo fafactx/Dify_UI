@@ -662,8 +662,14 @@
 
         // Get API base URL
         function getApiBaseUrl() {
-            // 使用固定IP地址
-            return 'http://10.193.21.115:3000';
+            // 使用相对路径，避免硬编码IP地址
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                // 本地开发环境
+                return `${window.location.protocol}//${window.location.hostname}:3000`;
+            } else {
+                // 生产环境，使用相对路径
+                return '';
+            }
         }
     </script>
 </body>
