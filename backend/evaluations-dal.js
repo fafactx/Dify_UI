@@ -109,15 +109,34 @@ class EvaluationsDAL {
     // 定义必需的维度字段
     const requiredDimensions = ['hallucination_control', 'quality', 'professionalism', 'usefulness'];
 
+    // 定义已知的非维度字段（这些字段不会被视为额外维度）
+    const knownNonDimensionFields = [
+      'CAS Name', 'Product Family', 'MAG', 'Part Number', 'Question', 'Answer',
+      'Question Scenario', 'Answer Source', 'Question Complexity', 'Question Frequency',
+      'Question Category', 'Source Category', 'average_score', 'summary', 'timestamp',
+      'date', 'id', 'result_key'
+    ];
+
     // 检查是否有额外的维度字段
-    const extraDimensions = Object.keys(processedData).filter(key =>
-      key !== 'hallucination_control' &&
-      key !== 'quality' &&
-      key !== 'professionalism' &&
-      key !== 'usefulness' &&
-      key !== 'average_score' &&
-      key.startsWith('dimension_') // 检查是否有其他以dimension_开头的字段
-    );
+    const extraDimensions = Object.keys(processedData).filter(key => {
+      // 如果是必需的维度字段或已知的非维度字段，则不是额外维度
+      if (requiredDimensions.includes(key) || knownNonDimensionFields.includes(key)) {
+        return false;
+      }
+
+      // 检查是否是以dimension_开头的字段
+      if (key.startsWith('dimension_')) {
+        return true;
+      }
+
+      // 检查是否是以score_开头的字段
+      if (key.startsWith('score_')) {
+        return true;
+      }
+
+      // 其他字段不视为维度字段
+      return false;
+    });
 
     if (extraDimensions.length > 0) {
       console.error(`错误: 评估数据 [${resultKey}] 包含额外的维度字段: ${extraDimensions.join(', ')}`);
