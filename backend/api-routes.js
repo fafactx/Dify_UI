@@ -589,7 +589,7 @@ router.post('/dify-evaluation', asyncHandler(async (req, res) => {
 }));
 
 // 数据库检查 API - 仅用于调试
-router.get('/debug/db-info', asyncHandler(async (req, res) => {
+router.get('/dbinfo', asyncHandler(async (req, res) => {
   try {
     // 获取数据库信息
     const dbInfo = evaluationsDAL.getDebugInfo();
