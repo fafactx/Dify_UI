@@ -122,10 +122,10 @@ router.get('/stats/overview', asyncHandler(async (req, res) => {
   });
 }));
 
-// 兼容旧API
-// 获取统计数据
+// 获取统计数据 - 主要API端点
 router.get('/stats', asyncHandler(async (req, res) => {
   try {
+    // 从数据库获取统计概览（使用缓存）
     const stats = evaluationsDAL.getStatsOverview();
 
     // 打印统计数据，用于调试
@@ -139,14 +139,34 @@ router.get('/stats', asyncHandler(async (req, res) => {
       usefulness: stats.dimension_averages?.usefulness || 0
     };
 
-    res.json({
-      stats: {
-        count: stats.count || 0,
-        overall_average: stats.overall_average || 0,
-        dimension_averages: filteredDimensions,
-        last_updated: stats.last_updated || new Date().toISOString()
-      }
-    });
+    // 如果数据库为空（特殊值-1），保留特殊值
+    if (stats.is_empty || stats.overall_average === -1) {
+      res.json({
+        stats: {
+          count: 0,
+          overall_average: -1,
+          dimension_averages: {
+            hallucination_control: -1,
+            quality: -1,
+            professionalism: -1,
+            usefulness: -1
+          },
+          last_updated: stats.last_updated || Date.now(),
+          is_empty: true
+        }
+      });
+    } else {
+      // 返回正常统计数据
+      res.json({
+        stats: {
+          count: stats.count || 0,
+          overall_average: stats.overall_average || 0,
+          dimension_averages: filteredDimensions,
+          last_updated: stats.last_updated || Date.now(),
+          is_empty: false
+        }
+      });
+    }
   } catch (error) {
     console.error('获取统计数据出错:', error);
     res.status(500).json({
@@ -154,13 +174,15 @@ router.get('/stats', asyncHandler(async (req, res) => {
       message: error.message,
       stats: {
         count: 0,
-        overall_average: 0,
+        overall_average: -1,
         dimension_averages: {
-          hallucination_control: 0,
-          quality: 0,
-          professionalism: 0,
-          usefulness: 0
-        }
+          hallucination_control: -1,
+          quality: -1,
+          professionalism: -1,
+          usefulness: -1
+        },
+        is_empty: true,
+        error: error.message
       }
     });
   }
@@ -615,94 +637,9 @@ router.get('/dbinfo', asyncHandler(async (req, res) => {
   }
 }));
 
-// 获取统计数据 - 用于仪表板
-router.get('/stats', asyncHandler(async (req, res) => {
-  try {
-    console.log('获取统计数据...');
-
-    // 从数据库获取评估数据
-    const evaluations = evaluationsDAL.getAllEvaluations();
-
-    if (!evaluations || evaluations.length === 0) {
-      console.log('数据库中没有评估数据');
-      return res.json({
-        success: true,
-        stats: {
-          count: 0,
-          overall_average: 0,
-          dimension_averages: {
-            hallucination_control: 0,
-            quality: 0,
-            professionalism: 0,
-            usefulness: 0
-          }
-        }
-      });
-    }
-
-    console.log(`从数据库获取到 ${evaluations.length} 条评估数据`);
-
-    // 计算统计数据
-    const dimensions = ['hallucination_control', 'quality', 'professionalism', 'usefulness'];
-    const dimensionTotals = {};
-    const dimensionCounts = {};
-
-    // 初始化维度统计
-    dimensions.forEach(dim => {
-      dimensionTotals[dim] = 0;
-      dimensionCounts[dim] = 0;
-    });
-
-    // 计算总分和各维度总分
-    let overallTotal = 0;
-    let overallCount = 0;
-
-    evaluations.forEach(evaluation => {
-      // 计算各维度得分
-      dimensions.forEach(dim => {
-        const score = evaluation[dim];
-        if (score !== undefined && !isNaN(score)) {
-          dimensionTotals[dim] += score;
-          dimensionCounts[dim]++;
-        }
-      });
-
-      // 计算平均分
-      if (evaluation.average_score !== undefined && !isNaN(evaluation.average_score)) {
-        overallTotal += evaluation.average_score;
-        overallCount++;
-      }
-    });
-
-    // 计算各维度平均分
-    const dimensionAverages = {};
-    dimensions.forEach(dim => {
-      dimensionAverages[dim] = dimensionCounts[dim] > 0 ?
-        Math.round(dimensionTotals[dim] / dimensionCounts[dim] * 10) / 10 : 0;
-    });
-
-    // 计算总平均分
-    const overallAverage = overallCount > 0 ?
-      Math.round(overallTotal / overallCount * 10) / 10 : 0;
-
-    // 返回统计数据
-    const stats = {
-      count: evaluations.length,
-      overall_average: overallAverage,
-      dimension_averages: dimensionAverages
-    };
-
-    console.log('统计数据计算完成:', stats);
-
-    res.json({
-      success: true,
-      stats
-    });
-  } catch (error) {
-    console.error('获取统计数据出错:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-}));
+// 注意：此处原有的重复 /stats 端点已被删除
+// 现在只使用上面定义的 /stats 端点，它使用 getStatsOverview() 函数
+// 该函数已经实现了缓存和特殊值 -1 的处理
 
 // 导出路由
 module.exports = router;
