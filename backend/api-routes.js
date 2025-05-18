@@ -284,6 +284,24 @@ router.get('/test-cases', asyncHandler(async (req, res) => {
     const sortBy = req.query.sortBy || 'timestamp';
     const sortOrder = req.query.sortOrder || 'desc';
 
+    // 首先检查数据库是否为空
+    const stats = evaluationsDAL.getStatsOverview();
+    if (stats.is_empty || stats.overall_average === -1) {
+      console.log('数据库为空，返回空测试用例列表');
+      return res.json({
+        success: false,
+        message: '数据库为空，请等待数据从 Dify 同步',
+        testCases: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          limit,
+          totalPages: 0
+        },
+        is_empty: true
+      });
+    }
+
     // 从数据库获取评估数据
     const result = evaluationsDAL.getEvaluations({
       page,
@@ -316,7 +334,18 @@ router.get('/test-cases', asyncHandler(async (req, res) => {
         hallucination_control: item.hallucination_control || 0,
         quality: item.quality || 0,
         professionalism: item.professionalism || 0,
-        usefulness: item.usefulness || 0
+        usefulness: item.usefulness || 0,
+        Question: item.Question || '',
+        Answer: item.Answer || '',
+        'Question Scenario': item['Question Scenario'] || '',
+        'Answer Source': item['Answer Source'] || '',
+        'Question Complexity': item['Question Complexity'] || '',
+        'Question Frequency': item['Question Frequency'] || '',
+        'Question Category': item['Question Category'] || '',
+        'Source Category': item['Source Category'] || '',
+        MAG: item.MAG || '',
+        summary: item.summary || '',
+        LLM_ANSWER: item.LLM_ANSWER || ''
       };
     });
 
@@ -332,7 +361,8 @@ router.get('/test-cases', asyncHandler(async (req, res) => {
         page,
         limit,
         totalPages: Math.ceil(result.total / limit)
-      }
+      },
+      is_empty: false
     });
   } catch (error) {
     console.error(`获取测试用例出错: ${error.message}`);

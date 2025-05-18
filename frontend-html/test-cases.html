@@ -312,13 +312,14 @@
             document.getElementById('confirmDelete').addEventListener('click', handleDelete);
         });
 
-        // 加载测试用例数据 - 简化版
+        // 加载测试用例数据 - 改进版
         async function loadTestCases() {
             try {
                 console.log('正在加载测试用例...');
 
-                // 使用固定的API URL
-                const url = 'http://10.193.21.115:3000/api/test-cases';
+                // 动态获取API URL
+                const apiBaseUrl = getApiBaseUrl();
+                const url = `${apiBaseUrl}/api/test-cases`;
                 console.log('API URL:', url);
 
                 const response = await fetch(url, {
@@ -339,7 +340,29 @@
 
                 // 检查数据格式
                 if (!data.testCases && !data.data) {
-                    throw new Error('API响应格式不正确，缺少testCases或data字段');
+                    // 检查是否是空数据库响应
+                    if (data.success === false && data.message && data.message.includes('数据库为空')) {
+                        console.log('数据库为空');
+                        testCases = [];
+
+                        // 显示数据库为空提示
+                        testCasesBody.innerHTML = `
+                            <tr>
+                                <td colspan="8" class="text-center py-4">
+                                    <div class="alert alert-info text-center mt-4">
+                                        <i class="fas fa-database me-2"></i>
+                                        <strong>数据库为空</strong> - 请等待数据从 Dify 同步
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+
+                        // 清空分页
+                        pagination.innerHTML = '';
+                        return;
+                    } else {
+                        throw new Error('API响应格式不正确，缺少testCases或data字段');
+                    }
                 }
 
                 // 使用testCases字段或data字段
@@ -368,7 +391,7 @@
             }
         }
 
-        // 渲染测试用例 - 超级简化版
+        // 渲染测试用例 - 完整版
         function renderTestCases() {
             if (testCases.length === 0) {
                 testCasesBody.innerHTML = `
@@ -417,6 +440,137 @@
             // 添加事件监听器
             document.querySelectorAll('.case-checkbox').forEach(checkbox => {
                 checkbox.addEventListener('change', handleCheckboxChange);
+            });
+        }
+
+        // 查看测试用例详情 - 完整版
+        function viewTestCase(id) {
+            const testCase = testCases.find(tc => tc.id === id);
+            if (!testCase) {
+                alert('未找到测试用例');
+                return;
+            }
+
+            // 创建模态框
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.display = 'flex';
+
+            // 创建模态框内容
+            const modalContent = document.createElement('div');
+            modalContent.className = 'modal-content';
+            modalContent.style.maxWidth = '800px';
+            modalContent.style.maxHeight = '80vh';
+            modalContent.style.overflow = 'auto';
+
+            // 格式化日期
+            const date = new Date(testCase.timestamp || testCase.date);
+            const dateStr = date.toLocaleDateString();
+            const timeStr = date.toLocaleTimeString();
+
+            // 创建详情HTML
+            const detailHtml = `
+                <div class="p-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold">测试用例详情 #${testCase.id}</h3>
+                        <button id="closeModal" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="bg-gray-50 p-3 rounded">
+                            <h4 class="font-bold mb-2">基本信息</h4>
+                            <p><strong>ID:</strong> ${testCase.id}</p>
+                            <p><strong>日期:</strong> ${dateStr} ${timeStr}</p>
+                            <p><strong>CAS名称:</strong> ${testCase['CAS Name'] || 'N/A'}</p>
+                            <p><strong>产品系列:</strong> ${testCase['Product Family'] || 'N/A'}</p>
+                            <p><strong>零件编号:</strong> ${testCase['Part Number'] || 'N/A'}</p>
+                            <p><strong>MAG:</strong> ${testCase.MAG || 'N/A'}</p>
+                        </div>
+
+                        <div class="bg-gray-50 p-3 rounded">
+                            <h4 class="font-bold mb-2">评分信息</h4>
+                            <p><strong>总平均分:</strong> ${testCase.average_score ? testCase.average_score.toFixed(1) : 'N/A'}</p>
+                            <p><strong>幻觉控制:</strong> ${testCase.hallucination_control ? testCase.hallucination_control.toFixed(1) : 'N/A'}</p>
+                            <p><strong>质量:</strong> ${testCase.quality ? testCase.quality.toFixed(1) : 'N/A'}</p>
+                            <p><strong>专业性:</strong> ${testCase.professionalism ? testCase.professionalism.toFixed(1) : 'N/A'}</p>
+                            <p><strong>有用性:</strong> ${testCase.usefulness ? testCase.usefulness.toFixed(1) : 'N/A'}</p>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <h4 class="font-bold mb-2">问题与回答</h4>
+                        <div class="bg-gray-50 p-3 rounded mb-2">
+                            <p><strong>问题:</strong> ${testCase.Question || 'N/A'}</p>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded">
+                            <p><strong>回答:</strong> ${testCase.Answer || 'N/A'}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="bg-gray-50 p-3 rounded">
+                            <h4 class="font-bold mb-2">问题信息</h4>
+                            <p><strong>问题场景:</strong> ${testCase['Question Scenario'] || 'N/A'}</p>
+                            <p><strong>问题复杂度:</strong> ${testCase['Question Complexity'] || 'N/A'}</p>
+                            <p><strong>问题频率:</strong> ${testCase['Question Frequency'] || 'N/A'}</p>
+                            <p><strong>问题类别:</strong> ${testCase['Question Category'] || 'N/A'}</p>
+                        </div>
+
+                        <div class="bg-gray-50 p-3 rounded">
+                            <h4 class="font-bold mb-2">其他信息</h4>
+                            <p><strong>答案来源:</strong> ${testCase['Answer Source'] || 'N/A'}</p>
+                            <p><strong>来源类别:</strong> ${testCase['Source Category'] || 'N/A'}</p>
+                            <p><strong>结果键:</strong> ${testCase.result_key || 'N/A'}</p>
+                        </div>
+                    </div>
+
+                    ${testCase.summary ? `
+                    <div class="mb-4">
+                        <h4 class="font-bold mb-2">摘要</h4>
+                        <div class="bg-gray-50 p-3 rounded">
+                            <p>${testCase.summary}</p>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${testCase.LLM_ANSWER ? `
+                    <div class="mb-4">
+                        <h4 class="font-bold mb-2">LLM回答</h4>
+                        <div class="bg-gray-50 p-3 rounded">
+                            <p>${testCase.LLM_ANSWER}</p>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <div class="flex justify-end mt-4">
+                        <button id="closeDetailBtn" class="btn-secondary">关闭</button>
+                    </div>
+                </div>
+            `;
+
+            // 设置模态框内容
+            modalContent.innerHTML = detailHtml;
+            modal.appendChild(modalContent);
+
+            // 添加到文档
+            document.body.appendChild(modal);
+
+            // 添加关闭事件
+            document.getElementById('closeModal').addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+
+            document.getElementById('closeDetailBtn').addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+
+            // 点击模态框背景关闭
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    document.body.removeChild(modal);
+                }
             });
         }
 
@@ -654,16 +808,7 @@
             }
         }
 
-        // 查看测试用例详情 - 简化版
-        function viewTestCase(id) {
-            const testCase = testCases.find(tc => tc.id === id);
-            if (!testCase) return;
-
-            // 直接显示测试用例数据，不需要访问嵌套的data字段
-            alert(JSON.stringify(testCase, null, 2));
-
-            // 在实际实现中，你会显示一个带有详细信息的模态框
-        }
+        // 原简化版 viewTestCase 函数已被上面的完整版替代
 
         // 格式化日期 - 健壮版
         function formatDate(dateString) {
