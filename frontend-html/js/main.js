@@ -279,13 +279,77 @@ function updateStatsCards() {
 
     console.log('[DEBUG] 更新统计卡片，状态:', state.stats);
 
+    const { count, overall_average, dimension_averages, is_empty } = state.stats;
+
+    // 检查数据库是否为空（后端返回特殊值 -1）
+    if (is_empty || overall_average === -1 ||
+        (dimension_averages && Object.values(dimension_averages).some(val => val === -1))) {
+        console.log('[DEBUG] 检测到数据库为空（特殊值 -1）');
+
+        // 显示数据库为空的提示
+        const emptyDbHtml = `
+            <div class="col-12 mb-4">
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-database me-2"></i>
+                    <strong>数据库为空</strong> - 请等待数据从 Dify 同步
+                </div>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-body stat-card">
+                        <div class="stat-icon text-primary">
+                            <i class="fas fa-clipboard-list"></i>
+                        </div>
+                        <div class="stat-value">0</div>
+                        <div class="stat-label">Total Samples</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-body stat-card">
+                        <div class="stat-icon text-success">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <div class="stat-value">-</div>
+                        <div class="stat-label">Average Score</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-body stat-card">
+                        <div class="stat-icon text-warning">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div class="stat-value">-</div>
+                        <div class="stat-label">Highest: N/A</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-body stat-card">
+                        <div class="stat-icon text-danger">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+                        <div class="stat-value">-</div>
+                        <div class="stat-label">Lowest: N/A</div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // 更新 DOM
+        safeUpdateElement(elements.statsCards, emptyDbHtml);
+        return;
+    }
+
     // 如果没有维度平均值，尝试计算
-    if (!state.stats.dimension_averages && state.evaluations && state.evaluations.length > 0) {
+    if (!dimension_averages && state.evaluations && state.evaluations.length > 0) {
         console.log('[DEBUG] 尝试计算维度平均值');
         state.stats.dimension_averages = calculateDimensionAverages(state.evaluations);
     }
-
-    const { count, overall_average, dimension_averages } = state.stats;
 
     // 1. 样本总数直接使用count或评估数据长度
     const totalSamples = count || (state.evaluations ? state.evaluations.length : 0);
@@ -297,7 +361,7 @@ function updateStatsCards() {
     // 如果没有overall_average但有dimension_averages，计算平均值
     if (!overall_average && dimension_averages) {
         const validScores = Object.values(dimension_averages)
-            .filter(score => typeof score === 'number' && !isNaN(score));
+            .filter(score => typeof score === 'number' && !isNaN(score) && score !== -1);
 
         if (validScores.length > 0) {
             formattedAverage = validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
@@ -318,7 +382,8 @@ function updateStatsCards() {
         .filter(([dim, score]) =>
             validDimensions.includes(dim) &&
             typeof score === 'number' &&
-            !isNaN(score)
+            !isNaN(score) &&
+            score !== -1
         )
         .sort((a, b) => b[1] - a[1]);
 
@@ -504,7 +569,40 @@ function updateCharts() {
  * 使用数据更新图表
  */
 function updateChartsWithData() {
-    if (!state.stats.dimension_averages) {
+    // 检查数据库是否为空（后端返回特殊值 -1）
+    const isDbEmpty = state.stats.is_empty ||
+                     state.stats.overall_average === -1 ||
+                     (state.stats.dimension_averages &&
+                      Object.values(state.stats.dimension_averages).some(val => val === -1));
+
+    if (isDbEmpty) {
+        console.log('[DEBUG] 检测到数据库为空（特殊值 -1），显示空数据提示');
+
+        // 显示数据库为空的提示
+        const noDataMessage = document.createElement('div');
+        noDataMessage.className = 'alert alert-info text-center mt-4';
+        noDataMessage.innerHTML = '<i class="fas fa-database me-2"></i><strong>数据库为空</strong> - 请等待数据从 Dify 同步';
+
+        // 在图表容器前插入提示
+        const chartContainers = document.querySelectorAll('.chart-container');
+        if (chartContainers.length > 0) {
+            chartContainers.forEach(container => {
+                // 清空容器内容
+                container.innerHTML = '';
+                // 添加提示
+                container.appendChild(noDataMessage.cloneNode(true));
+            });
+        }
+
+        // 使用空数据初始化图表
+        state.stats.dimension_averages = {
+            hallucination_control: 0,
+            quality: 0,
+            professionalism: 0,
+            usefulness: 0,
+            average_score: 0
+        };
+    } else if (!state.stats.dimension_averages) {
         // 尝试从评估数据中计算维度平均值
         if (state.evaluations && state.evaluations.length > 0) {
             const dimensionAverages = calculateDimensionAverages(state.evaluations);
@@ -514,32 +612,30 @@ function updateChartsWithData() {
                 if (!state.stats) state.stats = {};
                 state.stats.dimension_averages = dimensionAverages;
             }
-        }
-    }
+        } else {
+            // 使用空数据
+            state.stats.dimension_averages = {
+                hallucination_control: 0,
+                quality: 0,
+                professionalism: 0,
+                usefulness: 0,
+                average_score: 0
+            };
 
-    if (!state.stats.dimension_averages) {
-        // 不使用测试数据，而是使用空数据
-        state.stats.dimension_averages = {
-            hallucination_control: 0,
-            quality: 0,
-            professionalism: 0,
-            usefulness: 0,
-            average_score: 0
-        };
+            // 显示暂无数据提示
+            const noDataMessage = document.createElement('div');
+            noDataMessage.className = 'alert alert-info text-center mt-4';
+            noDataMessage.innerHTML = '<i class="fas fa-info-circle me-2"></i>暂无评估数据，请等待数据从 Dify 同步';
 
-        // 显示暂无数据提示
-        const noDataMessage = document.createElement('div');
-        noDataMessage.className = 'alert alert-info text-center mt-4';
-        noDataMessage.innerHTML = '<i class="fas fa-info-circle me-2"></i>暂无评估数据，请等待数据从 Dify 同步';
-
-        // 在图表容器前插入提示
-        const chartContainers = document.querySelectorAll('.chart-container');
-        if (chartContainers.length > 0) {
-            chartContainers.forEach(container => {
-                if (!container.querySelector('.alert')) {
-                    container.insertBefore(noDataMessage.cloneNode(true), container.firstChild);
-                }
-            });
+            // 在图表容器前插入提示
+            const chartContainers = document.querySelectorAll('.chart-container');
+            if (chartContainers.length > 0) {
+                chartContainers.forEach(container => {
+                    if (!container.querySelector('.alert')) {
+                        container.insertBefore(noDataMessage.cloneNode(true), container.firstChild);
+                    }
+                });
+            }
         }
     }
 

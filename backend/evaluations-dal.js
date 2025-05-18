@@ -427,6 +427,31 @@ class EvaluationsDAL {
       const totalStmt = this.db.prepare('SELECT COUNT(*) as count FROM evaluations');
       const { count } = totalStmt.get();
 
+      // 如果数据库为空，返回特殊值 -1
+      if (count === 0) {
+        console.log('数据库为空，返回特殊值 -1');
+        const emptyStats = {
+          count: 0,
+          overall_average: -1,
+          dimension_averages: {
+            hallucination_control: -1,
+            quality: -1,
+            professionalism: -1,
+            usefulness: -1
+          },
+          product_family_count: 0,
+          part_number_count: 0,
+          mag_count: 0,
+          last_updated: Date.now(),
+          is_empty: true
+        };
+
+        // 缓存空数据结果
+        this._saveStatsToCache('overview', emptyStats);
+
+        return emptyStats;
+      }
+
       // 使用JSON1扩展从JSON数据中提取评分
       const avgStmt = this.db.prepare(`
         SELECT
@@ -484,7 +509,8 @@ class EvaluationsDAL {
         product_family_count: productFamilyCount,
         part_number_count: partNumberCount,
         mag_count: magCount,
-        last_updated
+        last_updated,
+        is_empty: false
       };
 
       // 打印调试信息
@@ -496,20 +522,22 @@ class EvaluationsDAL {
       return stats;
     } catch (error) {
       console.error('获取统计概览出错:', error);
-      // 返回默认值
+      // 返回错误状态
       return {
         count: 0,
-        overall_average: 0,
+        overall_average: -1,
         dimension_averages: {
-          hallucination_control: 0,
-          quality: 0,
-          professionalism: 0,
-          usefulness: 0
+          hallucination_control: -1,
+          quality: -1,
+          professionalism: -1,
+          usefulness: -1
         },
         product_family_count: 0,
         part_number_count: 0,
         mag_count: 0,
-        last_updated: Date.now()
+        last_updated: Date.now(),
+        is_empty: true,
+        error: error.message
       };
     }
   }
