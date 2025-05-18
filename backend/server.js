@@ -136,118 +136,182 @@ async function updateIndex(filename, fileData) {
 }
 
 // 初始化数据库
-const dbPath = path.join(__dirname, 'data', 'evaluations.db');
+// 使用配置中的数据目录路径
+const dbDir = path.join(__dirname, config.storage.dataDir);
+const dbPath = path.join(dbDir, 'evaluations.db');
+
+logger.info(`数据库路径: ${dbPath}`);
+logger.info(`操作系统: ${process.platform}`);
+logger.info(`Node.js版本: ${process.version}`);
+logger.info(`当前工作目录: ${process.cwd()}`);
+
+// 确保数据目录存在
+if (!fs.existsSync(dbDir)) {
+  logger.info(`数据目录不存在，正在创建: ${dbDir}`);
+  try {
+    fs.mkdirSync(dbDir, { recursive: true, mode: 0o755 });
+    logger.info(`数据目录创建成功: ${dbDir}`);
+  } catch (dirError) {
+    logger.error(`创建数据目录失败: ${dirError.message}`);
+    logger.error(`错误堆栈: ${dirError.stack}`);
+  }
+}
+
+// 检查数据目录权限
+try {
+  fs.accessSync(dbDir, fs.constants.R_OK | fs.constants.W_OK);
+  logger.info(`数据目录权限正常: ${dbDir}`);
+
+  // 列出目录内容
+  const dirContents = fs.readdirSync(dbDir);
+  logger.info(`数据目录内容: ${dirContents.join(', ') || '(空)'}`);
+} catch (accessError) {
+  logger.error(`数据目录权限不足: ${accessError.message}`);
+}
+
+// 初始化数据库
 logger.info(`初始化数据库: ${dbPath}`);
 try {
+  // 获取数据库连接
   const db = getDatabase(dbPath);
   logger.info('数据库初始化成功');
 
   // 检查数据库是否为空，如果为空则插入测试数据
-  const countStmt = db.prepare('SELECT COUNT(*) as count FROM evaluations');
-  const { count } = countStmt.get();
+  try {
+    const countStmt = db.prepare('SELECT COUNT(*) as count FROM evaluations');
+    const { count } = countStmt.get();
+    logger.info(`数据库中有 ${count} 条评估数据`);
 
-  if (count === 0) {
-    logger.info('数据库为空，插入测试数据');
+    if (count === 0) {
+      logger.info('数据库为空，插入测试数据');
 
-    // 创建测试数据
-    const testData = [
-      {
-        "CAS Name": "test.user1@example.com",
-        "Product Family": "IVN",
-        "MAG": "R16",
-        "Part Number": "TJA1145A",
-        "Question": "Why can't TJA1145 enter sleep mode？",
-        "Answer": "It is recommended to check whether there is a pending wake-up event at this time or whether any wake-up source is enabled",
-        "Question Scenario": "Parameter Configuration",
-        "Answer Source": "TJA1145A: Chapter 7.1.1.3",
-        "Question Complexity": "Low",
-        "Question Frequency": "High",
-        "Question Category": "Low Complexity Question",
-        "Source Category": "Public",
-        "hallucination_control": 90,
-        "quality": 85,
-        "professionalism": 80,
-        "usefulness": 75,
-        "average_score": 82.5,
-        "summary": "The LLM answer provides a detailed explanation of the TJA1145's operating mode and system constraints."
-      },
-      {
-        "CAS Name": "test.user2@example.com",
-        "Product Family": "MCU",
-        "MAG": "R17",
-        "Part Number": "S32K144",
-        "Question": "How to configure the S32K144 clock?",
-        "Answer": "To configure the S32K144 clock, you need to set up the System Clock Generator (SCG) module.",
-        "Question Scenario": "Hardware Configuration",
-        "Answer Source": "S32K144 Reference Manual",
-        "Question Complexity": "Medium",
-        "Question Frequency": "High",
-        "Question Category": "Configuration Question",
-        "Source Category": "Public",
-        "hallucination_control": 95,
-        "quality": 90,
-        "professionalism": 85,
-        "usefulness": 80,
-        "average_score": 87.5,
-        "summary": "The answer correctly explains the clock configuration process for the S32K144 microcontroller."
-      },
-      {
-        "CAS Name": "test.user3@example.com",
-        "Product Family": "IVN",
-        "MAG": "R18",
-        "Part Number": "TJA1102",
-        "Question": "What is the difference between TJA1102 and TJA1100?",
-        "Answer": "The TJA1102 is a dual-port PHY while TJA1100 is a single-port PHY. TJA1102 supports two 100BASE-T1 interfaces.",
-        "Question Scenario": "Product Comparison",
-        "Answer Source": "Product Datasheet",
-        "Question Complexity": "Medium",
-        "Question Frequency": "Medium",
-        "Question Category": "Comparison Question",
-        "Source Category": "Public",
-        "hallucination_control": 85,
-        "quality": 80,
-        "professionalism": 90,
-        "usefulness": 85,
-        "average_score": 85,
-        "summary": "The answer correctly identifies the key difference between the two products."
-      },
-      {
-        "CAS Name": "test.user4@example.com",
-        "Product Family": "MCU",
-        "MAG": "R19",
-        "Part Number": "S32G274A",
-        "Question": "How to enable the Ethernet interface on S32G274A?",
-        "Answer": "To enable the Ethernet interface on S32G274A, you need to configure the NETC module and set up the proper pin muxing.",
-        "Question Scenario": "Network Configuration",
-        "Answer Source": "S32G274A Reference Manual",
-        "Question Complexity": "High",
-        "Question Frequency": "Medium",
-        "Question Category": "Configuration Question",
-        "Source Category": "Public",
-        "hallucination_control": 80,
-        "quality": 75,
-        "professionalism": 85,
-        "usefulness": 90,
-        "average_score": 82.5,
-        "summary": "The answer provides a high-level overview of enabling Ethernet on the S32G274A."
-      }
-    ];
+      // 创建测试数据
+      const testData = [
+        {
+          "CAS Name": "test.user1@example.com",
+          "Product Family": "IVN",
+          "MAG": "R16",
+          "Part Number": "TJA1145A",
+          "Question": "Why can't TJA1145 enter sleep mode？",
+          "Answer": "It is recommended to check whether there is a pending wake-up event at this time or whether any wake-up source is enabled",
+          "Question Scenario": "Parameter Configuration",
+          "Answer Source": "TJA1145A: Chapter 7.1.1.3",
+          "Question Complexity": "Low",
+          "Question Frequency": "High",
+          "Question Category": "Low Complexity Question",
+          "Source Category": "Public",
+          "hallucination_control": 90,
+          "quality": 85,
+          "professionalism": 80,
+          "usefulness": 75,
+          "average_score": 82.5,
+          "summary": "The LLM answer provides a detailed explanation of the TJA1145's operating mode and system constraints."
+        },
+        {
+          "CAS Name": "test.user2@example.com",
+          "Product Family": "MCU",
+          "MAG": "R17",
+          "Part Number": "S32K144",
+          "Question": "How to configure the S32K144 clock?",
+          "Answer": "To configure the S32K144 clock, you need to set up the System Clock Generator (SCG) module.",
+          "Question Scenario": "Hardware Configuration",
+          "Answer Source": "S32K144 Reference Manual",
+          "Question Complexity": "Medium",
+          "Question Frequency": "High",
+          "Question Category": "Configuration Question",
+          "Source Category": "Public",
+          "hallucination_control": 95,
+          "quality": 90,
+          "professionalism": 85,
+          "usefulness": 80,
+          "average_score": 87.5,
+          "summary": "The answer correctly explains the clock configuration process for the S32K144 microcontroller."
+        },
+        {
+          "CAS Name": "test.user3@example.com",
+          "Product Family": "IVN",
+          "MAG": "R18",
+          "Part Number": "TJA1102",
+          "Question": "What is the difference between TJA1102 and TJA1100?",
+          "Answer": "The TJA1102 is a dual-port PHY while TJA1100 is a single-port PHY. TJA1102 supports two 100BASE-T1 interfaces.",
+          "Question Scenario": "Product Comparison",
+          "Answer Source": "Product Datasheet",
+          "Question Complexity": "Medium",
+          "Question Frequency": "Medium",
+          "Question Category": "Comparison Question",
+          "Source Category": "Public",
+          "hallucination_control": 85,
+          "quality": 80,
+          "professionalism": 90,
+          "usefulness": 85,
+          "average_score": 85,
+          "summary": "The answer correctly identifies the key difference between the two products."
+        },
+        {
+          "CAS Name": "test.user4@example.com",
+          "Product Family": "MCU",
+          "MAG": "R19",
+          "Part Number": "S32G274A",
+          "Question": "How to enable the Ethernet interface on S32G274A?",
+          "Answer": "To enable the Ethernet interface on S32G274A, you need to configure the NETC module and set up the proper pin muxing.",
+          "Question Scenario": "Network Configuration",
+          "Answer Source": "S32G274A Reference Manual",
+          "Question Complexity": "High",
+          "Question Frequency": "Medium",
+          "Question Category": "Configuration Question",
+          "Source Category": "Public",
+          "hallucination_control": 80,
+          "quality": 75,
+          "professionalism": 85,
+          "usefulness": 90,
+          "average_score": 82.5,
+          "summary": "The answer provides a high-level overview of enabling Ethernet on the S32G274A."
+        }
+      ];
 
-    // 插入测试数据
-    const EvaluationsDAL = require('./evaluations-dal');
-    const evaluationsDAL = new EvaluationsDAL(dbPath);
+      // 插入测试数据
+      const EvaluationsDAL = require('./evaluations-dal');
+      const evaluationsDAL = new EvaluationsDAL(dbPath);
 
-    testData.forEach((data, index) => {
-      const resultKey = `result${index}`;
-      evaluationsDAL.saveEvaluation(resultKey, data);
-    });
+      testData.forEach((data, index) => {
+        try {
+          const resultKey = `result${index}`;
+          logger.info(`插入测试数据 #${index}: ${resultKey}`);
+          const result = evaluationsDAL.saveEvaluation(resultKey, data);
+          logger.info(`测试数据 #${index} 插入成功，ID: ${result.lastInsertRowid}`);
+        } catch (insertError) {
+          logger.error(`插入测试数据 #${index} 失败: ${insertError.message}`);
+        }
+      });
 
-    logger.info(`成功插入 ${testData.length} 条测试数据`);
-  } else {
-    logger.info(`数据库中已有 ${count} 条评估数据`);
+      logger.info(`测试数据插入完成`);
+
+      // 验证插入结果
+      const verifyStmt = db.prepare('SELECT COUNT(*) as count FROM evaluations');
+      const { count: newCount } = verifyStmt.get();
+      logger.info(`插入后数据库中有 ${newCount} 条评估数据`);
+    } else {
+      logger.info(`数据库中已有 ${count} 条评估数据，跳过测试数据插入`);
+    }
+  } catch (countError) {
+    logger.error(`查询数据库记录数失败: ${countError.message}`);
+    logger.error(`错误堆栈: ${countError.stack}`);
   }
 } catch (error) {
   logger.error(`数据库初始化失败: ${error.message}`);
+  logger.error(`错误堆栈: ${error.stack}`);
+
+  // 尝试使用绝对路径
+  try {
+    logger.info(`尝试使用绝对路径初始化数据库...`);
+    const absoluteDbPath = path.resolve(__dirname, config.storage.dataDir, 'evaluations.db');
+    logger.info(`绝对路径: ${absoluteDbPath}`);
+
+    const db = getDatabase(absoluteDbPath);
+    logger.info(`使用绝对路径初始化数据库成功`);
+  } catch (absPathError) {
+    logger.error(`使用绝对路径初始化数据库失败: ${absPathError.message}`);
+  }
 }
 
 // 注册API路由
