@@ -617,6 +617,65 @@ class EvaluationsDAL {
     const stmt = this.db.prepare('DELETE FROM stats_cache');
     stmt.run();
   }
+
+  // 调试方法：获取数据库信息
+  getDebugInfo() {
+    try {
+      // 获取数据库中的记录总数
+      const countStmt = this.db.prepare('SELECT COUNT(*) as count FROM evaluations');
+      const { count } = countStmt.get();
+
+      // 获取表结构信息
+      const tablesStmt = this.db.prepare("SELECT name FROM sqlite_master WHERE type='table'");
+      const tables = tablesStmt.all();
+
+      const tableInfo = {};
+      tables.forEach(table => {
+        const columnsStmt = this.db.prepare(`PRAGMA table_info(${table.name})`);
+        tableInfo[table.name] = columnsStmt.all();
+      });
+
+      return {
+        total_records: count,
+        tables: tables.map(t => t.name),
+        table_structure: tableInfo
+      };
+    } catch (error) {
+      console.error('获取数据库调试信息出错:', error);
+      return {
+        error: error.message,
+        stack: error.stack
+      };
+    }
+  }
+
+  // 调试方法：获取最近的评估数据
+  getRecentEvaluations(limit = 5) {
+    try {
+      // 获取最新的记录
+      const recentStmt = this.db.prepare(`
+        SELECT id, result_key, timestamp, date, data
+        FROM evaluations
+        ORDER BY timestamp DESC
+        LIMIT ?
+      `);
+
+      const recentData = recentStmt.all(limit).map(row => {
+        return {
+          id: row.id,
+          result_key: row.result_key,
+          timestamp: row.timestamp,
+          date: row.date,
+          data: JSON.parse(row.data)
+        };
+      });
+
+      return recentData;
+    } catch (error) {
+      console.error('获取最近评估数据出错:', error);
+      return [];
+    }
+  }
 }
 
 module.exports = EvaluationsDAL;

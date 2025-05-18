@@ -588,5 +588,32 @@ router.post('/dify-evaluation', asyncHandler(async (req, res) => {
   }
 }));
 
+// 数据库检查 API - 仅用于调试
+router.get('/debug/db-info', asyncHandler(async (req, res) => {
+  try {
+    // 获取数据库信息
+    const dbInfo = evaluationsDAL.getDebugInfo();
+
+    // 获取最新的5条记录
+    const recentData = evaluationsDAL.getRecentEvaluations(5);
+
+    // 返回数据库信息
+    res.json({
+      success: true,
+      database_info: {
+        ...dbInfo,
+        recent_records: recentData
+      }
+    });
+  } catch (error) {
+    console.error('获取数据库信息出错:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+      stack: process.env.NODE_ENV === 'production' ? undefined : error.stack
+    });
+  }
+}));
+
 // 导出路由
 module.exports = router;
