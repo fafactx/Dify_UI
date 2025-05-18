@@ -153,7 +153,7 @@
         </div>
         <div class="flex items-center">
             <div class="relative mr-4">
-                <input type="text" placeholder="Search test cases..." class="px-4 py-2 rounded-full text-sm text-gray-700 focus:outline-none">
+                <input type="text" id="searchInput" placeholder="Search test cases..." class="px-4 py-2 rounded-full text-sm text-gray-700 focus:outline-none">
                 <i class="fas fa-search absolute right-3 top-2.5 text-gray-400"></i>
             </div>
             <div class="flex items-center">
@@ -206,6 +206,46 @@
                     <button id="refreshBtn" class="btn-primary">
                         <i class="fas fa-sync-alt mr-2"></i>Refresh
                     </button>
+                </div>
+            </div>
+
+            <!-- Stats Summary Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="card p-4 flex items-center">
+                    <div class="bg-blue-100 p-3 rounded-full mr-4">
+                        <i class="fas fa-clipboard-list text-blue-500 text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-gray-500 text-sm">Total Samples</h3>
+                        <p class="text-2xl font-bold" id="totalSamples">0</p>
+                    </div>
+                </div>
+                <div class="card p-4 flex items-center">
+                    <div class="bg-green-100 p-3 rounded-full mr-4">
+                        <i class="fas fa-star text-green-500 text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-gray-500 text-sm">Average Score</h3>
+                        <p class="text-2xl font-bold" id="avgScore">0.0</p>
+                    </div>
+                </div>
+                <div class="card p-4 flex items-center">
+                    <div class="bg-purple-100 p-3 rounded-full mr-4">
+                        <i class="fas fa-microchip text-purple-500 text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-gray-500 text-sm">Product Families</h3>
+                        <p class="text-2xl font-bold" id="productFamilies">0</p>
+                    </div>
+                </div>
+                <div class="card p-4 flex items-center">
+                    <div class="bg-yellow-100 p-3 rounded-full mr-4">
+                        <i class="fas fa-code-branch text-yellow-500 text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-gray-500 text-sm">MAGs</h3>
+                        <p class="text-2xl font-bold" id="magCount">0</p>
+                    </div>
                 </div>
             </div>
 
@@ -282,6 +322,8 @@
         let currentPage = 1;
         const pageSize = 10;
         let selectedIds = new Set();
+        let statsData = null;
+        let searchTerm = '';
 
         // DOM elements
         const testCasesBody = document.getElementById('testCasesBody');
@@ -294,16 +336,26 @@
         const confirmationModal = document.getElementById('confirmationModal');
         const fromIdInput = document.getElementById('fromId');
         const toIdInput = document.getElementById('toId');
+        const totalSamplesElement = document.getElementById('totalSamples');
+        const avgScoreElement = document.getElementById('avgScore');
+        const productFamiliesElement = document.getElementById('productFamilies');
+        const magCountElement = document.getElementById('magCount');
 
         // Initialize the page
         document.addEventListener('DOMContentLoaded', () => {
-            loadTestCases();
+            loadData();
 
             // Event listeners
             selectAllCheckbox.addEventListener('change', handleSelectAll);
             deleteSelectedBtn.addEventListener('click', showDeleteConfirmation);
             deleteRangeBtn.addEventListener('click', showDeleteRangeModal);
-            refreshBtn.addEventListener('click', loadTestCases);
+            refreshBtn.addEventListener('click', loadData);
+
+            // 搜索功能
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', handleSearch);
+            }
 
             // Modal event listeners
             document.getElementById('cancelDeleteRange').addEventListener('click', hideDeleteRangeModal);
@@ -312,10 +364,123 @@
             document.getElementById('confirmDelete').addEventListener('click', handleDelete);
         });
 
-        // 加载测试用例数据 - 改进版
+        /**
+         * 加载所有数据（测试用例和统计信息）
+         */
+        async function loadData() {
+            try {
+                // 显示加载状态
+                refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Loading...';
+                refreshBtn.disabled = true;
+
+                // 先加载统计信息
+                await loadStats();
+
+                // 然后加载测试用例
+                await loadTestCases();
+
+                // 恢复按钮状态
+                refreshBtn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Refresh';
+                refreshBtn.disabled = false;
+            } catch (error) {
+                console.error('加载数据错误:', error);
+                refreshBtn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Refresh';
+                refreshBtn.disabled = false;
+
+                testCasesBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center py-4 text-red-500">
+                            加载数据错误: ${error.message}<br>
+                            <button onclick="loadData()" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded">
+                                重试
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        /**
+         * 加载统计信息
+         */
+        async function loadStats() {
+            try {
+                const apiBaseUrl = getApiBaseUrl();
+                const url = `${apiBaseUrl}/api/stats`;
+                console.log('加载统计信息, API URL:', url);
+
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    mode: 'cors'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log('统计信息响应:', data);
+
+                // 保存统计数据
+                statsData = data.stats;
+
+                // 更新统计UI
+                updateStatsUI();
+            } catch (error) {
+                console.error('加载统计信息错误:', error);
+                statsData = null;
+                // 显示默认统计信息
+                updateStatsUI();
+            }
+        }
+
+        /**
+         * 更新统计UI
+         */
+        function updateStatsUI() {
+            // 如果有统计数据且不为空
+            if (statsData && !statsData.is_empty) {
+                totalSamplesElement.textContent = statsData.count || 0;
+                avgScoreElement.textContent = statsData.overall_average !== -1 ?
+                    (statsData.overall_average || 0).toFixed(1) : '-';
+                productFamiliesElement.textContent = statsData.product_family_count || 0;
+                magCountElement.textContent = statsData.mag_count || 0;
+            } else {
+                // 显示空状态
+                totalSamplesElement.textContent = '0';
+                avgScoreElement.textContent = '-';
+                productFamiliesElement.textContent = '0';
+                magCountElement.textContent = '0';
+            }
+        }
+
+        /**
+         * 加载测试用例数据 - 改进版
+         */
         async function loadTestCases() {
             try {
                 console.log('正在加载测试用例...');
+
+                // 重置选择
+                selectedIds.clear();
+                selectAllCheckbox.checked = false;
+                updateDeleteSelectedButton();
+
+                // 显示加载状态
+                testCasesBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center py-4">
+                            <div class="flex justify-center items-center">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-2"></div>
+                                <span>加载测试用例...</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
 
                 // 动态获取API URL
                 const apiBaseUrl = getApiBaseUrl();
@@ -341,7 +506,7 @@
                 // 检查数据格式
                 if (!data.testCases && !data.data) {
                     // 检查是否是空数据库响应
-                    if (data.success === false && data.message && data.message.includes('数据库为空')) {
+                    if (data.success === false && data.message && data.message.includes('数据库为空') || data.is_empty) {
                         console.log('数据库为空');
                         testCases = [];
 
@@ -349,9 +514,10 @@
                         testCasesBody.innerHTML = `
                             <tr>
                                 <td colspan="8" class="text-center py-4">
-                                    <div class="alert alert-info text-center mt-4">
-                                        <i class="fas fa-database me-2"></i>
-                                        <strong>数据库为空</strong> - 请等待数据从 Dify 同步
+                                    <div class="bg-blue-50 p-4 rounded text-center">
+                                        <i class="fas fa-database text-blue-500 text-3xl mb-2"></i>
+                                        <h4 class="text-lg font-bold text-blue-800">数据库为空</h4>
+                                        <p class="text-blue-600">请等待数据从 Dify 同步</p>
                                     </div>
                                 </td>
                             </tr>
@@ -368,10 +534,10 @@
                 // 使用testCases字段或data字段
                 testCases = data.testCases || data.data || [];
 
-                // 重置选择
-                selectedIds.clear();
-                selectAllCheckbox.checked = false;
-                updateDeleteSelectedButton();
+                // 应用搜索过滤（如果有）
+                if (searchTerm) {
+                    testCases = filterTestCases(testCases, searchTerm);
+                }
 
                 // 渲染测试用例
                 renderTestCases();
@@ -380,15 +546,45 @@
                 console.error('加载测试用例错误:', error);
                 testCasesBody.innerHTML = `
                     <tr>
-                        <td colspan="8" class="text-center py-4 text-red-500">
-                            加载测试用例错误: ${error.message}<br>
-                            <button onclick="loadTestCases()" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded">
-                                重试
-                            </button>
+                        <td colspan="8" class="text-center py-4">
+                            <div class="bg-red-50 p-4 rounded text-center">
+                                <i class="fas fa-exclamation-circle text-red-500 text-3xl mb-2"></i>
+                                <h4 class="text-lg font-bold text-red-800">加载测试用例错误</h4>
+                                <p class="text-red-600">${error.message}</p>
+                                <button onclick="loadData()" class="mt-3 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
+                                    <i class="fas fa-redo mr-1"></i> 重试
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `;
+
+                // 清空分页
+                pagination.innerHTML = '';
             }
+        }
+
+        /**
+         * 过滤测试用例
+         */
+        function filterTestCases(cases, term) {
+            if (!term) return cases;
+
+            const lowerTerm = term.toLowerCase();
+            return cases.filter(testCase => {
+                // 搜索基本字段
+                if (testCase.id && testCase.id.toString().includes(lowerTerm)) return true;
+                if (testCase['CAS Name'] && testCase['CAS Name'].toLowerCase().includes(lowerTerm)) return true;
+                if (testCase['Product Family'] && testCase['Product Family'].toLowerCase().includes(lowerTerm)) return true;
+                if (testCase['Part Number'] && testCase['Part Number'].toLowerCase().includes(lowerTerm)) return true;
+                if (testCase.MAG && testCase.MAG.toLowerCase().includes(lowerTerm)) return true;
+
+                // 搜索问题和答案
+                if (testCase.Question && testCase.Question.toLowerCase().includes(lowerTerm)) return true;
+                if (testCase.Answer && testCase.Answer.toLowerCase().includes(lowerTerm)) return true;
+
+                return false;
+            });
         }
 
         // 渲染测试用例 - 完整版
@@ -828,6 +1024,43 @@
             } catch (error) {
                 console.error('日期格式化错误:', error);
                 return 'Error';
+            }
+        }
+
+        /**
+         * 处理搜索输入
+         */
+        function handleSearch(e) {
+            searchTerm = e.target.value.trim();
+            console.log('搜索关键词:', searchTerm);
+
+            // 重置到第一页
+            currentPage = 1;
+
+            // 如果已经加载了测试用例，直接过滤
+            if (testCases.length > 0) {
+                const filteredCases = filterTestCases(testCases, searchTerm);
+
+                // 如果过滤后没有结果
+                if (filteredCases.length === 0 && searchTerm !== '') {
+                    testCasesBody.innerHTML = `
+                        <tr>
+                            <td colspan="8" class="text-center py-4">
+                                <div class="bg-gray-50 p-4 rounded text-center">
+                                    <i class="fas fa-search text-gray-500 text-3xl mb-2"></i>
+                                    <h4 class="text-lg font-bold text-gray-800">没有找到匹配的测试用例</h4>
+                                    <p class="text-gray-600">尝试使用不同的搜索关键词</p>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    pagination.innerHTML = '';
+                } else {
+                    // 更新过滤后的测试用例并渲染
+                    testCases = filteredCases;
+                    renderTestCases();
+                    renderPagination();
+                }
             }
         }
 
