@@ -71,7 +71,7 @@ app.use(cors({
 }));
 
 // 添加JSON解析中间件
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
 // 请求限流中间件
 if (config.rateLimit && config.rateLimit.enabled) {
@@ -83,7 +83,8 @@ if (config.rateLimit && config.rateLimit.enabled) {
 }
 
 // 其他中间件
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 // 静态文件服务 - 同时支持 frontend 和 frontend-html 目录
 app.use(express.static(path.join(__dirname, '../frontend')));
