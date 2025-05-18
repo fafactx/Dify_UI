@@ -316,41 +316,77 @@
         async function loadTestCases() {
             try {
                 console.log('Loading test cases...');
-                const apiBaseUrl = getApiBaseUrl();
-                const url = `${apiBaseUrl}/api/test-cases`;
-                console.log('API URL:', url);
 
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    mode: 'cors'
-                });
+                // 尝试多种API基础URL
+                const apiUrls = [
+                    getApiBaseUrl(),                                // 动态检测的URL
+                    '',                                             // 相对路径
+                    'http://10.103.21.115:3000',                    // 配置文件中的URL
+                    'http://10.193.21.115:3000',                    // 之前硬编码的URL
+                    `${window.location.protocol}//${window.location.hostname}:3000` // 当前主机名，固定端口
+                ];
 
-                if (!response.ok) {
-                    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+                let lastError = null;
+
+                // 尝试每个URL，直到成功或全部失败
+                for (const baseUrl of apiUrls) {
+                    try {
+                        const url = `${baseUrl}/api/test-cases`;
+                        console.log('尝试API URL:', url);
+
+                        const response = await fetch(url, {
+                            method: 'GET',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                            },
+                            mode: 'cors'
+                        });
+
+                        if (!response.ok) {
+                            console.warn(`API请求失败 (${url}): ${response.status} ${response.statusText}`);
+                            continue; // 尝试下一个URL
+                        }
+
+                        const data = await response.json();
+                        console.log('API响应成功:', data);
+
+                        if (!data.testCases) {
+                            console.warn(`API响应缺少testCases字段 (${url})`, data);
+                            continue; // 尝试下一个URL
+                        }
+
+                        testCases = data.testCases;
+
+                        // 成功获取数据，重置选择
+                        selectedIds.clear();
+                        selectAllCheckbox.checked = false;
+                        updateDeleteSelectedButton();
+
+                        // 渲染测试用例
+                        renderTestCases();
+                        renderPagination();
+
+                        // 成功后退出循环
+                        return;
+                    } catch (err) {
+                        console.warn(`尝试URL失败 (${baseUrl}):`, err);
+                        lastError = err;
+                    }
                 }
 
-                const data = await response.json();
-                console.log('API response:', data);
-                testCases = data.testCases || [];
-
-                // Reset selection
-                selectedIds.clear();
-                selectAllCheckbox.checked = false;
-                updateDeleteSelectedButton();
-
-                // Render the test cases
-                renderTestCases();
-                renderPagination();
+                // 如果所有URL都失败，抛出最后一个错误
+                throw lastError || new Error('所有API URL尝试均失败');
             } catch (error) {
-                console.error('Error loading test cases:', error);
+                console.error('加载测试用例错误:', error);
                 testCasesBody.innerHTML = `
                     <tr>
                         <td colspan="8" class="text-center py-4 text-red-500">
-                            Error loading test cases: ${error.message}
+                            加载测试用例错误: ${error.message}<br>
+                            请检查服务器是否正在运行，以及网络连接是否正常。<br>
+                            <button onclick="loadTestCases()" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded">
+                                重试
+                            </button>
                         </td>
                     </tr>
                 `;
@@ -662,14 +698,21 @@
 
         // Get API base URL
         function getApiBaseUrl() {
-            // 使用相对路径，避免硬编码IP地址
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                // 本地开发环境
-                return `${window.location.protocol}//${window.location.hostname}:3000`;
-            } else {
-                // 生产环境，使用相对路径
-                return '';
+            // 检测当前URL中的主机名
+            const currentHost = window.location.hostname;
+            const currentPort = window.location.port;
+
+            console.log('Current hostname:', currentHost);
+            console.log('Current port:', currentPort);
+
+            // 如果当前页面是通过IP地址访问的，使用相同的IP地址
+            if (/^\d+\.\d+\.\d+\.\d+$/.test(currentHost)) {
+                // 使用当前主机名和端口（如果有）
+                return `${window.location.protocol}//${currentHost}${currentPort ? ':' + currentPort : ''}`;
             }
+
+            // 默认情况下，使用相对路径
+            return '';
         }
     </script>
 </body>
