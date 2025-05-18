@@ -18,6 +18,16 @@ function ensureDbDirectory(dbPath) {
       // 检查目录是否真的创建成功
       if (fs.existsSync(dir)) {
         console.log(`确认数据目录已存在: ${dir}`);
+
+        // 在 Linux 环境中设置明确的权限
+        if (process.platform !== 'win32') {
+          try {
+            fs.chmodSync(dir, 0o755);
+            console.log(`设置数据目录权限为 755: ${dir}`);
+          } catch (chmodError) {
+            console.error(`设置目录权限失败: ${chmodError.message}`);
+          }
+        }
       } else {
         console.error(`错误: 数据目录创建失败: ${dir}`);
       }
@@ -36,7 +46,28 @@ function ensureDbDirectory(dbPath) {
     } catch (error) {
       console.error(`数据目录权限不足: ${dir}`);
       console.error(`错误: ${error.message}`);
-      throw new Error(`数据目录权限不足 ${dir}: ${error.message}`);
+
+      // 尝试修复权限（在 Linux 环境中）
+      if (process.platform !== 'win32') {
+        try {
+          fs.chmodSync(dir, 0o755);
+          console.log(`尝试修复数据目录权限: ${dir}`);
+
+          // 再次检查权限
+          try {
+            fs.accessSync(dir, fs.constants.R_OK | fs.constants.W_OK);
+            console.log(`数据目录权限已修复: ${dir}`);
+          } catch (accessError) {
+            console.error(`修复权限后仍无法访问数据目录: ${accessError.message}`);
+            throw new Error(`数据目录权限不足 ${dir}: ${accessError.message}`);
+          }
+        } catch (chmodError) {
+          console.error(`修复目录权限失败: ${chmodError.message}`);
+          throw new Error(`数据目录权限不足 ${dir}: ${error.message}`);
+        }
+      } else {
+        throw new Error(`数据目录权限不足 ${dir}: ${error.message}`);
+      }
     }
   }
 }
@@ -215,6 +246,45 @@ function getDatabase(dbPath) {
       db = null;
     }
 
+    // 确保数据库目录存在
+    ensureDbDirectory(dbPath);
+
+    // 检查数据库文件是否存在
+    if (!fs.existsSync(dbPath)) {
+      console.log(`数据库文件不存在，将创建新文件: ${dbPath}`);
+
+      // 在 Linux 环境中，尝试创建空文件并设置权限
+      if (process.platform !== 'win32') {
+        try {
+          fs.writeFileSync(dbPath, '', { mode: 0o666 });
+          console.log(`创建空数据库文件: ${dbPath}`);
+        } catch (createError) {
+          console.error(`创建空数据库文件失败: ${createError.message}`);
+        }
+      }
+    } else {
+      console.log(`数据库文件已存在: ${dbPath}`);
+      console.log(`文件大小: ${(fs.statSync(dbPath).size / 1024).toFixed(2)} KB`);
+
+      // 检查文件权限
+      try {
+        fs.accessSync(dbPath, fs.constants.R_OK | fs.constants.W_OK);
+        console.log(`数据库文件权限正常: ${dbPath}`);
+      } catch (accessError) {
+        console.error(`数据库文件权限不足: ${dbPath}`);
+
+        // 尝试修复权限（在 Linux 环境中）
+        if (process.platform !== 'win32') {
+          try {
+            fs.chmodSync(dbPath, 0o666);
+            console.log(`已修复数据库文件权限: ${dbPath}`);
+          } catch (chmodError) {
+            console.error(`修复数据库文件权限失败: ${chmodError.message}`);
+          }
+        }
+      }
+    }
+
     // 初始化新数据库连接
     console.log(`初始化新数据库连接: ${dbPath}`);
     db = initializeDatabase(dbPath);
@@ -225,29 +295,44 @@ function getDatabase(dbPath) {
     console.error(`获取数据库连接失败: ${error.message}`);
     console.error(`错误堆栈: ${error.stack}`);
 
-    // 如果初始化失败，尝试使用内存数据库作为备用方案
-    console.log(`尝试使用内存数据库作为备用方案...`);
+    // 获取更多错误信息
     try {
-      db = sqlite3(':memory:');
-      dbFilePath = ':memory:';
-      console.log(`成功创建内存数据库作为备用`);
+      if (fs.existsSync(dbPath)) {
+        const stats = fs.statSync(dbPath);
+        console.error(`数据库文件信息: 大小=${stats.size}字节, 权限=${stats.mode.toString(8)}`);
 
-      // 创建基本表结构
-      db.exec(`
-        CREATE TABLE IF NOT EXISTS evaluations (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          result_key TEXT UNIQUE,
-          timestamp INTEGER NOT NULL,
-          date TEXT NOT NULL,
-          data JSON NOT NULL
-        )
-      `);
+        // 在 Linux 环境中显示用户和组信息
+        if (process.platform !== 'win32') {
+          console.error(`用户=${stats.uid}, 组=${stats.gid}`);
+        }
+      } else {
+        console.error(`数据库文件不存在: ${dbPath}`);
+      }
 
-      return db;
-    } catch (memoryDbError) {
-      console.error(`创建内存数据库失败: ${memoryDbError.message}`);
-      throw error; // 抛出原始错误
+      // 检查父目录权限
+      const dir = path.dirname(dbPath);
+      if (fs.existsSync(dir)) {
+        const dirStats = fs.statSync(dir);
+        console.error(`数据目录信息: 权限=${dirStats.mode.toString(8)}`);
+
+        // 在 Linux 环境中显示用户和组信息
+        if (process.platform !== 'win32') {
+          console.error(`用户=${dirStats.uid}, 组=${dirStats.gid}`);
+        }
+
+        // 列出目录内容
+        const dirContents = fs.readdirSync(dir);
+        console.error(`目录内容: ${dirContents.join(', ')}`);
+      } else {
+        console.error(`数据目录不存在: ${dir}`);
+      }
+    } catch (statError) {
+      console.error(`获取文件信息失败: ${statError.message}`);
     }
+
+    // 不再使用内存数据库作为备用方案，而是抛出错误
+    console.error('数据库连接失败，无法继续。请检查数据库文件和目录权限。');
+    throw new Error(`无法连接到数据库: ${error.message}`);
   }
 }
 

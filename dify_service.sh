@@ -367,9 +367,11 @@ start_services() {
     cd backend
     echo "创建数据目录"
     mkdir -p data
+    chmod 755 data
 
-    # 确保数据库目录存在
+    # 确保数据库目录存在并具有正确的权限
     mkdir -p data/db
+    chmod 755 data/db
 
     # 检查是否需要初始化数据库
     if [ ! -f "data/evaluations.db" ]; then
@@ -377,6 +379,7 @@ start_services() {
 
         # 创建空数据库文件
         touch "data/evaluations.db"
+        chmod 666 "data/evaluations.db"
 
         # 使用 SQLite 初始化数据库结构
         if command -v sqlite3 &> /dev/null; then
@@ -425,6 +428,14 @@ CREATE TABLE IF NOT EXISTS field_labels (
 );
 EOF
             echo "数据库结构初始化完成"
+
+            # 验证数据库是否创建成功
+            if [ -f "data/evaluations.db" ]; then
+                echo "验证数据库文件存在: data/evaluations.db"
+                ls -la "data/evaluations.db"
+            else
+                echo "错误: 数据库文件创建失败"
+            fi
         else
             echo "SQLite 未安装，将由应用程序自动创建数据库结构"
         fi
@@ -432,8 +443,37 @@ EOF
         # 设置适当的权限
         chmod 666 "data/evaluations.db"
         echo "空数据库文件创建完成: data/evaluations.db"
+
+        # 验证权限
+        ls -la "data/evaluations.db"
     else
         echo "SQLite 数据库已存在"
+        ls -la "data/evaluations.db"
+
+        # 确保权限正确
+        chmod 666 "data/evaluations.db"
+        echo "已更新数据库文件权限"
+    fi
+
+    # 检查是否存在 JSON 文件，如果存在则提示删除
+    JSON_FILES=$(find data -name "*.json" | grep -E 'evaluation_|index.json')
+    if [ ! -z "$JSON_FILES" ]; then
+        echo "警告: 发现 JSON 文件，这些文件不应该存在:"
+        echo "$JSON_FILES"
+        echo "这些 JSON 文件可能会导致系统行为异常，建议删除它们"
+
+        # 询问是否删除这些文件
+        read -p "是否删除这些 JSON 文件? (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            echo "删除 JSON 文件..."
+            rm -f $JSON_FILES
+            echo "JSON 文件已删除"
+        else
+            echo "保留 JSON 文件"
+        fi
+    else
+        echo "未发现 JSON 文件，系统正确使用 SQLite 数据库"
     fi
 
     echo "步骤 2: 检查并终止占用 $BACKEND_PORT 端口的进程"

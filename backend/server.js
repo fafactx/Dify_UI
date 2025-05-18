@@ -144,10 +144,93 @@ try {
 
 // 初始化数据库
 logger.info(`初始化数据库: ${dbPath}`);
+logger.info('验证数据库连接和结构...');
+
 try {
   // 获取数据库连接
   const db = getDatabase(dbPath);
   logger.info('数据库初始化成功');
+
+  // 验证数据库表结构
+  const tablesStmt = db.prepare("SELECT name FROM sqlite_master WHERE type='table'");
+  const tables = tablesStmt.all().map(t => t.name);
+
+  // 检查必要的表是否存在
+  const requiredTables = ['evaluations', 'products', 'mags', 'stats_cache', 'field_labels'];
+  const missingTables = requiredTables.filter(table => !tables.includes(table));
+
+  if (missingTables.length > 0) {
+    logger.warn(`数据库缺少以下表: ${missingTables.join(', ')}`);
+    logger.warn('将尝试创建缺失的表');
+
+    // 创建缺失的表
+    if (missingTables.includes('evaluations')) {
+      logger.info('创建 evaluations 表...');
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS evaluations (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          result_key TEXT UNIQUE,
+          timestamp INTEGER NOT NULL,
+          date TEXT NOT NULL,
+          data JSON NOT NULL
+        )
+      `);
+    }
+
+    if (missingTables.includes('products')) {
+      logger.info('创建 products 表...');
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS products (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          part_number TEXT UNIQUE NOT NULL,
+          product_family TEXT NOT NULL,
+          last_updated INTEGER NOT NULL,
+          evaluation_count INTEGER DEFAULT 0,
+          avg_score REAL DEFAULT 0
+        )
+      `);
+    }
+
+    if (missingTables.includes('mags')) {
+      logger.info('创建 mags 表...');
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS mags (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          mag_id TEXT UNIQUE NOT NULL,
+          last_updated INTEGER NOT NULL,
+          evaluation_count INTEGER DEFAULT 0,
+          avg_score REAL DEFAULT 0
+        )
+      `);
+    }
+
+    if (missingTables.includes('stats_cache')) {
+      logger.info('创建 stats_cache 表...');
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS stats_cache (
+          id TEXT PRIMARY KEY,
+          data JSON NOT NULL,
+          last_updated INTEGER NOT NULL
+        )
+      `);
+    }
+
+    if (missingTables.includes('field_labels')) {
+      logger.info('创建 field_labels 表...');
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS field_labels (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          field_key TEXT UNIQUE NOT NULL,
+          display_name TEXT NOT NULL,
+          is_visible INTEGER DEFAULT 1,
+          display_order INTEGER DEFAULT 999,
+          last_updated INTEGER NOT NULL
+        )
+      `);
+    }
+  } else {
+    logger.info('数据库表结构验证成功，所有必要的表都存在');
+  }
 
   // 检查数据库记录数
   try {
@@ -160,6 +243,40 @@ try {
   } catch (countError) {
     logger.error(`查询数据库记录数失败: ${countError.message}`);
     logger.error(`错误堆栈: ${countError.stack}`);
+  }
+
+  // 检查是否有 JSON 文件
+  const jsonFiles = fs.readdirSync(dbDir).filter(file =>
+    file.endsWith('.json') && (file.startsWith('evaluation_') || file === 'index.json')
+  );
+
+  if (jsonFiles.length > 0) {
+    logger.warn(`发现 ${jsonFiles.length} 个 JSON 文件，这些文件不应该存在:`);
+    jsonFiles.forEach(file => {
+      logger.warn(`- ${file}`);
+    });
+
+    logger.info('这些 JSON 文件可能会导致系统行为异常，建议删除它们');
+    logger.info('您可以手动删除这些文件，或者在启动后使用 API 删除它们');
+  } else {
+    logger.info('未发现 JSON 文件，系统正确使用 SQLite 数据库');
+  }
+
+  // 验证数据库是否可写
+  try {
+    const testStmt = db.prepare('CREATE TABLE IF NOT EXISTS db_test (id INTEGER PRIMARY KEY, test TEXT)');
+    testStmt.run();
+
+    const insertStmt = db.prepare('INSERT INTO db_test (test) VALUES (?)');
+    const result = insertStmt.run('test_' + Date.now());
+
+    const deleteStmt = db.prepare('DELETE FROM db_test WHERE id = ?');
+    deleteStmt.run(result.lastInsertRowid);
+
+    logger.info('数据库写入测试成功，数据库可正常工作');
+  } catch (writeError) {
+    logger.error(`数据库写入测试失败: ${writeError.message}`);
+    logger.error('数据库可能是只读的，请检查文件权限');
   }
 } catch (error) {
   logger.error(`数据库初始化失败: ${error.message}`);
@@ -175,6 +292,7 @@ try {
     logger.info(`使用绝对路径初始化数据库成功`);
   } catch (absPathError) {
     logger.error(`使用绝对路径初始化数据库失败: ${absPathError.message}`);
+    logger.error('服务器将继续启动，但可能无法正常工作');
   }
 }
 

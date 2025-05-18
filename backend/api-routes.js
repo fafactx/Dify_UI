@@ -10,14 +10,40 @@ const fs = require('fs');
 // 初始化数据访问层
 // 使用与 server.js 相同的路径构建方式
 const config = require('./config');
-const dbDir = path.join(__dirname, config.storage.dataDir);
-const dbPath = path.join(dbDir, 'evaluations.db');
+
+// 使用绝对路径构建数据库路径
+let dbPath;
+if (path.isAbsolute(config.storage.dataDir)) {
+  dbPath = path.join(config.storage.dataDir, 'evaluations.db');
+  console.log(`使用绝对路径构建数据库路径: ${dbPath}`);
+} else {
+  dbPath = path.join(__dirname, config.storage.dataDir, 'evaluations.db');
+  console.log(`使用相对路径构建数据库路径: ${dbPath}`);
+}
+
 console.log(`API路由使用数据库路径: ${dbPath}`);
 
 // 确保数据目录存在
+const dbDir = path.dirname(dbPath);
 if (!fs.existsSync(dbDir)) {
   console.log(`数据目录不存在，正在创建: ${dbDir}`);
-  fs.mkdirSync(dbDir, { recursive: true });
+  try {
+    fs.mkdirSync(dbDir, { recursive: true, mode: 0o755 });
+    console.log(`数据目录创建成功: ${dbDir}`);
+
+    // 在 Linux 环境中设置明确的权限
+    if (process.platform !== 'win32') {
+      try {
+        fs.chmodSync(dbDir, 0o755);
+        console.log(`设置数据目录权限为 755: ${dbDir}`);
+      } catch (chmodError) {
+        console.error(`设置目录权限失败: ${chmodError.message}`);
+      }
+    }
+  } catch (error) {
+    console.error(`创建数据目录失败: ${error.message}`);
+    console.error(`错误堆栈: ${error.stack}`);
+  }
 }
 
 const evaluationsDAL = new EvaluationsDAL(dbPath);
