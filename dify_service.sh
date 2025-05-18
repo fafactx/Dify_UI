@@ -12,6 +12,44 @@ DEFAULT_ACTION="start"
 DEFAULT_FRONTEND_TYPE="python"  # 默认使用 Python HTTP 服务器
 INSTALL=false
 
+# 清理 Node.js 版本，只保留 v18
+clean_node_versions() {
+    echo "清理 Node.js 版本，只保留 v18..."
+
+    # 检查是否安装了 nvm
+    if [ -d "$HOME/.nvm" ] || command -v nvm &> /dev/null; then
+        # 确保 nvm 命令可用
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+        # 安装 Node.js v18（如果尚未安装）
+        if ! nvm ls | grep -q "v18"; then
+            echo "安装 Node.js v18..."
+            nvm install 18
+        fi
+
+        # 设置 v18 为默认版本
+        nvm alias default 18
+
+        # 获取所有已安装的 Node.js 版本并删除非 v18 版本
+        echo "删除非 v18 的 Node.js 版本..."
+        for version in $(nvm ls --no-colors | grep -o "v[0-9.]*" | grep -v "v18"); do
+            echo "删除 $version..."
+            nvm uninstall ${version/v/}
+        done
+
+        # 确认当前使用的是 v18
+        nvm use 18
+        NODE_VERSION=$(node -v)
+        echo "当前 Node.js 版本: $NODE_VERSION"
+
+        echo "Node.js 版本清理完成，现在只保留 v18"
+    else
+        echo "未检测到 NVM，无法清理 Node.js 版本"
+        echo "请先安装 NVM: https://github.com/nvm-sh/nvm#installing-and-updating"
+    fi
+}
+
 # 显示帮助信息
 show_help() {
     echo "Dify 评估结果可视化框架服务脚本"
@@ -28,6 +66,7 @@ show_help() {
     echo "  --host=HOST             指定主机地址 (默认: 10.193.21.115)"
     echo "  --frontend-type=TYPE    指定前端服务类型，python 或 nginx (默认: python)"
     echo "  --install               安装依赖 (仅在 start 操作时有效)"
+    echo "  --clean-node            清理 Node.js 版本，只保留 v18 (需要 NVM)"
     echo "  --help, -h              显示此帮助信息"
     echo ""
     echo "前端类型说明:"
@@ -41,6 +80,7 @@ show_help() {
     echo "  $0 --frontend-port=8080 --backend-port=8000    # 使用自定义端口"
     echo "  $0 --action=start --frontend-type=nginx        # 使用 Nginx 部署前端"
     echo "  $0 --action=start --frontend-type=python       # 使用 Python HTTP 服务器部署前端"
+    echo "  $0 --clean-node                                # 清理 Node.js 版本，只保留 v18"
     echo "  $0 -h                                          # 显示帮助信息"
     echo ""
     echo "注意:"
@@ -48,9 +88,12 @@ show_help() {
     echo "  2. 如果使用 Python HTTP 服务器部署前端，请确保已安装 Python"
     echo "  3. 启动服务后，可以通过浏览器访问 http://HOST:FRONTEND_PORT 使用可视化仪表板"
     echo "  4. 停止服务时，会终止所有相关进程"
+    echo "  5. better-sqlite3 模块与 Node.js v22+ 不兼容，建议使用 Node.js v18"
 }
 
 # 解析命令行参数
+CLEAN_NODE=false
+
 while [[ $# -gt 0 ]]; do
     case $1 in
         --action=*)
@@ -75,6 +118,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --install)
             INSTALL=true
+            shift
+            ;;
+        --clean-node)
+            CLEAN_NODE=true
             shift
             ;;
         --help|-h)
@@ -133,6 +180,66 @@ start_services() {
             echo "无法检测操作系统类型，将尝试通用安装方法"
         fi
 
+        # 检查 Node.js 版本
+        echo "检查 Node.js 版本..."
+        if command -v node &> /dev/null; then
+            NODE_VERSION=$(node -v)
+            echo "当前 Node.js 版本: $NODE_VERSION"
+
+            # 提取主版本号
+            NODE_MAJOR_VERSION=$(echo $NODE_VERSION | cut -d. -f1 | tr -d 'v')
+
+            # 检查是否安装了 nvm
+            if [ -d "$HOME/.nvm" ] || command -v nvm &> /dev/null; then
+                echo "检测到 NVM 已安装"
+
+                # 确保 nvm 命令可用
+                export NVM_DIR="$HOME/.nvm"
+                [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+                # 如果 Node.js 版本不是 v18，则切换到 v18
+                if [ "$NODE_MAJOR_VERSION" != "18" ]; then
+                    echo "当前 Node.js 版本 ($NODE_VERSION) 不是 v18，正在切换..."
+
+                    # 检查是否已安装 v18
+                    if nvm ls | grep -q "v18"; then
+                        echo "使用已安装的 Node.js v18"
+                    else
+                        echo "安装 Node.js v18..."
+                        nvm install 18
+                    fi
+
+                    # 切换到 v18
+                    nvm use 18
+                    nvm alias default 18
+
+                    # 验证版本
+                    NODE_VERSION=$(node -v)
+                    echo "已切换到 Node.js 版本: $NODE_VERSION"
+                else
+                    echo "当前 Node.js 版本 ($NODE_VERSION) 已经是 v18，无需切换"
+                fi
+            else
+                echo "未检测到 NVM，无法自动切换 Node.js 版本"
+                if [ "$NODE_MAJOR_VERSION" -gt "20" ]; then
+                    echo "警告: 当前 Node.js 版本 ($NODE_VERSION) 可能与 better-sqlite3 不兼容"
+                    echo "建议安装 NVM 并使用 Node.js v18 LTS 版本"
+                    echo "可以参考: https://github.com/nvm-sh/nvm#installing-and-updating"
+
+                    # 询问是否继续
+                    read -p "是否继续安装？(y/n) " -n 1 -r
+                    echo
+                    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                        echo "安装已取消"
+                        exit 1
+                    fi
+                fi
+            fi
+        else
+            echo "未检测到 Node.js，请先安装 Node.js"
+            exit 1
+        fi
+
         # 在 Linux 环境中安装系统依赖
         if [ "$OS_TYPE" = "ubuntu" ] || [ "$OS_TYPE" = "debian" ]; then
             echo "安装 Linux 系统依赖..."
@@ -177,32 +284,70 @@ start_services() {
             if ! npm list | grep -q "better-sqlite3"; then
                 echo "安装 SQLite 数据库依赖..."
 
-                # 在 Linux 环境中，先尝试使用 --build-from-source 选项
-                if [ "$OS_TYPE" = "ubuntu" ] || [ "$OS_TYPE" = "debian" ] || [ "$OS_TYPE" = "centos" ] || [ "$OS_TYPE" = "rhel" ] || [ "$OS_TYPE" = "fedora" ]; then
-                    echo "在 Linux 环境中使用 --build-from-source 选项安装 better-sqlite3..."
-                    npm install better-sqlite3 --build-from-source
-                else
-                    # 在其他环境中，先尝试常规安装
-                    npm install better-sqlite3@8.5.0
+                # 清理 node_modules 目录，确保干净安装
+                if [ -d "node_modules" ]; then
+                    echo "清理现有 node_modules 目录..."
+                    rm -rf node_modules
                 fi
 
-                if [ $? -ne 0 ]; then
-                    echo "安装 SQLite 数据库依赖失败，尝试其他方法..."
+                # 在 Node.js v18 环境下安装兼容版本
+                echo "在 Node.js v18 环境下安装 better-sqlite3..."
 
-                    # 尝试安装特定版本
-                    echo "尝试安装特定版本的 better-sqlite3..."
+                # 首先尝试安装 better-sqlite3 v7.6.2（与 Node.js v18 兼容性良好）
+                echo "尝试安装 better-sqlite3 v7.6.2..."
+                npm install better-sqlite3@7.6.2 --build-from-source
+
+                if [ $? -ne 0 ]; then
+                    echo "安装 better-sqlite3 v7.6.2 失败，尝试其他版本..."
+
+                    # 尝试安装 better-sqlite3 v7.4.5
+                    echo "尝试安装 better-sqlite3 v7.4.5..."
                     npm install better-sqlite3@7.4.5 --build-from-source
 
                     if [ $? -ne 0 ]; then
-                        echo "警告: SQLite 数据库依赖安装失败，系统将使用文件存储模式"
+                        echo "安装 better-sqlite3 v7.4.5 失败，尝试最后一种方法..."
+
+                        # 最后尝试安装 sqlite3 作为替代
+                        echo "尝试安装 sqlite3 作为替代..."
+                        npm install sqlite3
+
+                        if [ $? -ne 0 ]; then
+                            echo "警告: 所有 SQLite 数据库依赖安装尝试均失败，系统将使用文件存储模式"
+                            echo "您可能需要手动安装数据库依赖"
+                        else
+                            echo "sqlite3 安装成功，但需要修改代码以适配 sqlite3 API"
+                            echo "请参考文档进行代码修改"
+                        fi
                     else
-                        echo "SQLite 数据库依赖安装成功 (版本 7.4.5)"
+                        echo "better-sqlite3 v7.4.5 安装成功"
                     fi
                 else
-                    echo "SQLite 数据库依赖安装成功"
+                    echo "better-sqlite3 v7.6.2 安装成功"
                 fi
             else
                 echo "SQLite 数据库依赖已安装"
+
+                # 验证已安装的 better-sqlite3 是否可用
+                echo "验证 better-sqlite3 是否可用..."
+                node -e "try { require('better-sqlite3'); console.log('better-sqlite3 可用'); } catch(e) { console.error('better-sqlite3 不可用:', e.message); process.exit(1); }"
+
+                if [ $? -ne 0 ]; then
+                    echo "警告: 已安装的 better-sqlite3 不可用，尝试重新安装..."
+
+                    # 卸载并重新安装
+                    npm uninstall better-sqlite3
+                    rm -rf node_modules/better-sqlite3
+
+                    # 安装兼容版本
+                    echo "尝试安装 better-sqlite3 v7.6.2..."
+                    npm install better-sqlite3@7.6.2 --build-from-source
+
+                    if [ $? -ne 0 ]; then
+                        echo "重新安装 better-sqlite3 失败，请手动解决此问题"
+                    else
+                        echo "better-sqlite3 重新安装成功"
+                    fi
+                fi
             fi
 
             echo "后端依赖安装完成"
@@ -448,6 +593,17 @@ stop_services() {
     echo "所有服务已停止"
     echo "如需重新启动服务，请运行 $0 --action=start"
 }
+
+# 如果指定了 --clean-node 参数，则执行清理 Node.js 版本的操作
+if [ "$CLEAN_NODE" = true ]; then
+    clean_node_versions
+    # 如果没有指定其他操作，则退出
+    if [ "$ACTION" = "start" ] || [ "$ACTION" = "stop" ]; then
+        echo "Node.js 版本清理完成，继续执行 $ACTION 操作..."
+    else
+        exit 0
+    fi
+fi
 
 # 根据 ACTION 参数执行相应操作
 if [ "$ACTION" = "start" ]; then
