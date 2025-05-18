@@ -57,11 +57,21 @@ class EvaluationsDAL {
 
       return transaction();
     } catch (error) {
-      console.error(`保存评估数据 [${resultKey}] 时出错:`, error);
-      if (this.logger) {
-        this.logger.logError('save_evaluation', error);
+      // 检查是否是维度验证错误
+      if (error.message && error.message.includes('评估数据只能包含4个指定维度')) {
+        console.error(`维度验证错误 [${resultKey}]:`, error.message);
+        if (this.logger) {
+          this.logger.logError('dimension_validation', error);
+        }
+        // 重新抛出错误，但保留原始消息以便API可以返回给客户端
+        throw new Error(`维度验证失败: ${error.message}`);
+      } else {
+        console.error(`保存评估数据 [${resultKey}] 时出错:`, error);
+        if (this.logger) {
+          this.logger.logError('save_evaluation', error);
+        }
+        throw error;
       }
-      throw error;
     }
   }
 
@@ -96,8 +106,40 @@ class EvaluationsDAL {
       }
     }
 
+    // 定义必需的维度字段
+    const requiredDimensions = ['hallucination_control', 'quality', 'professionalism', 'usefulness'];
+
+    // 检查是否有额外的维度字段
+    const extraDimensions = Object.keys(processedData).filter(key =>
+      key !== 'hallucination_control' &&
+      key !== 'quality' &&
+      key !== 'professionalism' &&
+      key !== 'usefulness' &&
+      key !== 'average_score' &&
+      key.startsWith('dimension_') // 检查是否有其他以dimension_开头的字段
+    );
+
+    if (extraDimensions.length > 0) {
+      console.error(`错误: 评估数据 [${resultKey}] 包含额外的维度字段: ${extraDimensions.join(', ')}`);
+      throw new Error(`评估数据只能包含4个指定维度: hallucination_control, quality, professionalism, usefulness。发现额外维度: ${extraDimensions.join(', ')}`);
+    }
+
+    // 确保所有必需的维度字段都存在
+    let missingDimensions = [];
+    requiredDimensions.forEach(dim => {
+      if (processedData[dim] === undefined) {
+        missingDimensions.push(dim);
+        // 为缺失的维度设置默认值
+        processedData[dim] = 0;
+      }
+    });
+
+    if (missingDimensions.length > 0) {
+      console.warn(`警告: 评估数据 [${resultKey}] 缺少维度字段: ${missingDimensions.join(', ')}，已设置为默认值0`);
+    }
+
     // 确保评分字段是数字类型
-    const scoreFields = ['hallucination_control', 'quality', 'professionalism', 'usefulness', 'average_score'];
+    const scoreFields = [...requiredDimensions, 'average_score'];
     scoreFields.forEach(field => {
       if (processedData[field] !== undefined) {
         // 转换为数字
@@ -116,7 +158,7 @@ class EvaluationsDAL {
       let totalScore = 0;
       let scoreCount = 0;
 
-      ['hallucination_control', 'quality', 'professionalism', 'usefulness'].forEach(field => {
+      requiredDimensions.forEach(field => {
         if (processedData[field] !== undefined) {
           totalScore += processedData[field];
           scoreCount++;
