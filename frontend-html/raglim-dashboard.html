@@ -1091,16 +1091,37 @@
 
         // 初始化所有图表
         function initializeCharts() {
-            // Dashboard charts
-            initializeDimensionChart();
-            initializeCorrelationChart();
-            initializeDistributionChart();
+            try {
+                // Dashboard charts
+                initializeDimensionChart();
+                initializeCorrelationChart();
+                initializeDistributionChart();
 
-            // Performance charts
-            initializeTimeTrendChart();
-            initializeProductComparisonChart();
-            initializeComplexityChart();
-            initializeScoreDistributionChart();
+                // Performance charts
+                initializeTimeTrendChart();
+                initializeProductComparisonChart();
+                initializeComplexityChart();
+                initializeScoreDistributionChart();
+            } catch (error) {
+                console.error('初始化图表时出错:', error);
+                // 显示错误消息
+                showErrorMessage('图表初始化失败，请确保数据库中有数据。');
+            }
+        }
+
+        // 显示错误消息
+        function showErrorMessage(message) {
+            // 创建错误消息元素
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'alert alert-danger mt-3';
+            errorDiv.role = 'alert';
+            errorDiv.innerHTML = `<strong>错误:</strong> ${message}`;
+
+            // 添加到页面
+            const mainContent = document.querySelector('.main-content');
+            if (mainContent) {
+                mainContent.prepend(errorDiv);
+            }
         }
 
         // 初始化产品分布图表
@@ -1126,6 +1147,23 @@
 
                         // 处理产品数据
                         const processedData = processProductData(productData);
+
+                        // 检查是否有数据
+                        if (processedData.length === 0) {
+                            // 显示无数据提示
+                            myChart.setOption({
+                                title: {
+                                    text: '暂无数据',
+                                    left: 'center',
+                                    top: 'center',
+                                    textStyle: {
+                                        color: '#999',
+                                        fontSize: 16
+                                    }
+                                }
+                            });
+                            return;
+                        }
 
                         // 设置图表配置
                         const option = createProductChartOption(processedData);
@@ -1183,8 +1221,8 @@
                 // 检查数据格式
                 if (!data || !data.products || !Array.isArray(data.products)) {
                     console.warn('后端返回的数据格式不正确:', data);
-                    // 如果数据格式不正确，使用模拟数据
-                    return generateMockRawData(100);
+                    // 返回空数组，不使用模拟数据
+                    return [];
                 }
 
                 // 转换产品数据为所需格式
@@ -1194,9 +1232,8 @@
                 return rawData;
             } catch (error) {
                 console.error('获取产品评分数据失败:', error);
-                // 出错时使用模拟数据
-                console.log('使用模拟数据代替...');
-                return generateMockRawData(100);
+                // 返回错误，不使用模拟数据
+                throw error;
             }
         }
 
@@ -1389,6 +1426,23 @@
                         // 处理维度数据
                         const dimensionData = processDimensionData(stats);
 
+                        // 检查是否有数据
+                        if (stats.count === 0) {
+                            // 显示无数据提示
+                            myChart.setOption({
+                                title: {
+                                    text: '暂无数据',
+                                    left: 'center',
+                                    top: 'center',
+                                    textStyle: {
+                                        color: '#999',
+                                        fontSize: 16
+                                    }
+                                }
+                            });
+                            return;
+                        }
+
                         // 设置图表配置
                         const option = {
                             tooltip: {
@@ -1476,14 +1530,24 @@
                 // 检查数据格式
                 if (!data || !data.stats) {
                     console.warn('后端返回的统计数据格式不正确:', data);
-                    return generateMockStatsData();
+                    // 返回空对象，不使用模拟数据
+                    return {
+                        count: 0,
+                        overall_average: 0,
+                        dimension_averages: {
+                            hallucination_control: 0,
+                            quality: 0,
+                            professionalism: 0,
+                            usefulness: 0
+                        }
+                    };
                 }
 
                 return data.stats;
             } catch (error) {
                 console.error('获取统计数据失败:', error);
-                // 出错时使用模拟数据
-                return generateMockStatsData();
+                // 返回错误，不使用模拟数据
+                throw error;
             }
         }
 
@@ -1552,6 +1616,23 @@
 
                         // 处理维度数据
                         const dimensionData = processDimensionData(stats);
+
+                        // 检查是否有数据
+                        if (stats.count === 0) {
+                            // 显示无数据提示
+                            myChart.setOption({
+                                title: {
+                                    text: '暂无数据',
+                                    left: 'center',
+                                    top: 'center',
+                                    textStyle: {
+                                        color: '#999',
+                                        fontSize: 16
+                                    }
+                                }
+                            });
+                            return;
+                        }
 
                         // 设置图表配置
                         const option = {
@@ -1645,8 +1726,40 @@
             if (chartDom) {
                 const myChart = echarts.init(chartDom);
 
-                // 图表配置
-                const option = {
+                // 显示加载动画
+                myChart.showLoading({
+                    text: 'Loading data...',
+                    color: '#3B82F6',
+                    textColor: '#000',
+                    maskColor: 'rgba(255, 255, 255, 0.8)',
+                    zlevel: 0
+                });
+
+                // 从后端获取统计数据
+                fetchStatsData()
+                    .then(stats => {
+                        // 隐藏加载动画
+                        myChart.hideLoading();
+
+                        // 检查是否有数据
+                        if (stats.count === 0) {
+                            // 显示无数据提示
+                            myChart.setOption({
+                                title: {
+                                    text: '暂无数据',
+                                    left: 'center',
+                                    top: 'center',
+                                    textStyle: {
+                                        color: '#999',
+                                        fontSize: 16
+                                    }
+                                }
+                            });
+                            return;
+                        }
+
+                        // 图表配置
+                        const option = {
                     tooltip: {
                         trigger: 'axis'
                     },
@@ -1720,12 +1833,30 @@
                     ]
                 };
 
-                myChart.setOption(option);
+                        myChart.setOption(option);
 
-                // 响应窗口大小变化
-                window.addEventListener('resize', function() {
-                    myChart.resize();
-                });
+                        // 响应窗口大小变化
+                        window.addEventListener('resize', function() {
+                            myChart.resize();
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error fetching stats data:', error);
+                        myChart.hideLoading();
+
+                        // 显示错误信息
+                        myChart.setOption({
+                            title: {
+                                text: 'Error loading data',
+                                left: 'center',
+                                top: 'center',
+                                textStyle: {
+                                    color: '#EF4444',
+                                    fontSize: 16
+                                }
+                            }
+                        });
+                    });
             }
         }
 
