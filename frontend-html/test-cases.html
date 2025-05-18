@@ -316,8 +316,11 @@
         </div>
     </div>
 
+    <!-- 引入外部 JavaScript 文件 -->
+    <script src="js/test-cases.js"></script>
+
     <script>
-        // Global variables
+        // 全局变量 - 保留这些变量以确保兼容性
         let testCases = [];
         let currentPage = 1;
         const pageSize = 10;
@@ -325,7 +328,7 @@
         let statsData = null;
         let searchTerm = '';
 
-        // DOM elements
+        // DOM 元素
         const testCasesBody = document.getElementById('testCasesBody');
         const pagination = document.getElementById('pagination');
         const selectAllCheckbox = document.getElementById('selectAll');

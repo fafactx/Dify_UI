@@ -86,8 +86,8 @@ if (config.rateLimit && config.rateLimit.enabled) {
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
-// 静态文件服务 - 同时支持 frontend 和 frontend-html 目录
-app.use(express.static(path.join(__dirname, '../frontend')));
+// 静态文件服务 - 使用 frontend-html 目录
+app.use(express.static(path.join(__dirname, '../frontend-html')));
 app.use(express.static(path.join(__dirname, '..')));
 
 // 添加调试中间件，记录所有请求
