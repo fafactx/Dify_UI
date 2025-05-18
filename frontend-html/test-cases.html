@@ -252,24 +252,13 @@
             <div class="card">
                 <div class="overflow-x-auto">
                     <table id="testCasesTable">
-                        <thead>
-                            <tr>
-                                <th class="w-12">
-                                    <input type="checkbox" id="selectAll" class="rounded">
-                                </th>
-                                <th class="w-16">ID</th>
-                                <th class="w-32">Date</th>
-                                <th class="w-48">CAS Name</th>
-                                <th class="w-32">Product Family</th>
-                                <th class="w-32">Part Number</th>
-                                <th class="w-24">Score</th>
-                                <th class="w-24">Actions</th>
-                            </tr>
+                        <thead id="testCasesTableHead">
+                            <!-- 表头将由JavaScript动态生成 -->
                         </thead>
                         <tbody id="testCasesBody">
                             <!-- Test cases will be loaded here -->
                             <tr>
-                                <td colspan="8" class="text-center py-4">Loading test cases...</td>
+                                <td colspan="3" class="text-center py-4">Loading test cases...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -380,6 +369,9 @@
                 // 先加载字段标签
                 await loadFieldLabels();
 
+                // 初始化表格标题
+                initializeTableHeaders();
+
                 // 然后加载统计信息
                 await loadStats();
 
@@ -393,6 +385,11 @@
                 console.error('加载数据错误:', error);
                 refreshBtn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Refresh';
                 refreshBtn.disabled = false;
+
+                // 确保表头已初始化
+                if (!document.querySelector('#testCasesTableHead tr')) {
+                    initializeTableHeaders();
+                }
 
                 testCasesBody.innerHTML = `
                     <tr>
@@ -897,22 +894,21 @@
         }
 
         /**
-         * 更新表格标题
+         * 初始化表格标题
          */
-        function updateTableHeaders(sampleData) {
-            if (!sampleData) return;
-
-            // 获取表格标题行
-            const tableHead = document.querySelector('#testCasesTable thead tr');
+        function initializeTableHeaders() {
+            // 获取表头容器
+            const tableHead = document.getElementById('testCasesTableHead');
             if (!tableHead) return;
 
-            // 清除现有标题，只保留第一个（复选框）
-            while (tableHead.children.length > 1) {
-                tableHead.removeChild(tableHead.lastChild);
-            }
+            // 创建表头行
+            const headerRow = document.createElement('tr');
 
-            // 添加ID和日期列（始终存在）
-            tableHead.innerHTML += `
+            // 添加复选框列
+            headerRow.innerHTML = `
+                <th class="w-12">
+                    <input type="checkbox" id="selectAll" class="rounded">
+                </th>
                 <th class="w-16">ID</th>
                 <th class="w-32">Date</th>`;
 
@@ -932,13 +928,22 @@
                     displayName = 'Score';
                 }
 
-                tableHead.innerHTML += `<th class="w-32">${displayName}</th>`;
+                headerRow.innerHTML += `<th class="w-32">${displayName}</th>`;
             });
 
             // 添加操作列
-            tableHead.innerHTML += `<th class="w-24">Actions</th>`;
+            headerRow.innerHTML += `<th class="w-24">Actions</th>`;
 
-            console.log("已根据样本数据更新表格标题");
+            // 将行添加到表头
+            tableHead.appendChild(headerRow);
+
+            // 添加全选复选框事件监听器
+            const selectAllCheckbox = document.getElementById('selectAll');
+            if (selectAllCheckbox) {
+                selectAllCheckbox.addEventListener('change', handleSelectAll);
+            }
+
+            console.log("已初始化表格标题");
         }
 
         // 渲染分页控件 - 简化版

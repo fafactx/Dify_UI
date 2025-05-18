@@ -28,10 +28,7 @@ module.exports = {
   // 数据存储配置
   storage: {
     // 数据目录路径（相对于后端目录）
-    dataDir: process.env.DATA_DIR || 'data',
-
-    // 索引文件名
-    indexFile: process.env.INDEX_FILE || 'index.json'
+    dataDir: process.env.DATA_DIR || 'data'
   },
 
   // 数据备份配置

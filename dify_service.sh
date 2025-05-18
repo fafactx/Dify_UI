@@ -414,6 +414,15 @@ CREATE TABLE IF NOT EXISTS stats_cache (
   data JSON NOT NULL,
   last_updated INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS field_labels (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  field_key TEXT UNIQUE NOT NULL,
+  display_name TEXT NOT NULL,
+  is_visible INTEGER DEFAULT 1,
+  display_order INTEGER DEFAULT 999,
+  last_updated INTEGER NOT NULL
+);
 EOF
             echo "数据库结构初始化完成"
         else

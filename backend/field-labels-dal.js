@@ -17,7 +17,7 @@ function getAllFieldLabels() {
       FROM field_labels
       ORDER BY display_order ASC
     `);
-    
+
     return stmt.all();
   } catch (error) {
     console.error('获取字段标签失败:', error);
@@ -37,7 +37,7 @@ function getVisibleFieldLabels() {
       WHERE is_visible = 1
       ORDER BY display_order ASC
     `);
-    
+
     return stmt.all();
   } catch (error) {
     console.error('获取可见字段标签失败:', error);
@@ -52,7 +52,7 @@ function upsertFieldLabel(fieldKey, displayName, isVisible = 1, displayOrder = 9
   try {
     const db = getDatabase(dbPath);
     const timestamp = Date.now();
-    
+
     const stmt = db.prepare(`
       INSERT INTO field_labels (field_key, display_name, is_visible, display_order, last_updated)
       VALUES (?, ?, ?, ?, ?)
@@ -62,7 +62,7 @@ function upsertFieldLabel(fieldKey, displayName, isVisible = 1, displayOrder = 9
         display_order = excluded.display_order,
         last_updated = excluded.last_updated
     `);
-    
+
     const result = stmt.run(fieldKey, displayName, isVisible, displayOrder, timestamp);
     return result.changes > 0;
   } catch (error) {
@@ -111,44 +111,64 @@ function initializeFieldLabelsFromSample(sampleData) {
       console.log('字段标签表已有数据，跳过初始化');
       return true;
     }
-    
+
     console.log('从样本数据初始化字段标签...');
-    
-    // 默认字段和顺序
+
+    // 默认字段和顺序 - 包含所有19个字段
     const defaultFields = [
       { key: 'id', name: 'ID', order: 10, visible: 1 },
       { key: 'date', name: 'Date', order: 20, visible: 1 },
       { key: 'CAS Name', name: 'CAS Name', order: 30, visible: 1 },
       { key: 'Product Family', name: 'Product Family', order: 40, visible: 1 },
-      { key: 'Part Number', name: 'Part Number', order: 50, visible: 1 },
-      { key: 'MAG', name: 'MAG', order: 60, visible: 1 },
-      { key: 'average_score', name: 'Score', order: 70, visible: 1 }
+      { key: 'MAG', name: 'MAG', order: 50, visible: 1 },
+      { key: 'Part Number', name: 'Part Number', order: 60, visible: 1 },
+      { key: 'Question', name: 'Question', order: 70, visible: 1 },
+      { key: 'Answer', name: 'Answer', order: 80, visible: 1 },
+      { key: 'Question Scenario', name: 'Question Scenario', order: 90, visible: 1 },
+      { key: 'Answer Source', name: 'Answer Source', order: 100, visible: 1 },
+      { key: 'Question Complexity', name: 'Question Complexity', order: 110, visible: 1 },
+      { key: 'Question Frequency', name: 'Question Frequency', order: 120, visible: 1 },
+      { key: 'Question Category', name: 'Question Category', order: 130, visible: 1 },
+      { key: 'Source Category', name: 'Source Category', order: 140, visible: 1 },
+      { key: 'hallucination_control', name: 'Hallucination Control', order: 150, visible: 1 },
+      { key: 'quality', name: 'Quality', order: 160, visible: 1 },
+      { key: 'professionalism', name: 'Professionalism', order: 170, visible: 1 },
+      { key: 'usefulness', name: 'Usefulness', order: 180, visible: 1 },
+      { key: 'average_score', name: 'Score', order: 190, visible: 1 },
+      { key: 'summary', name: 'Summary', order: 200, visible: 1 },
+      { key: 'LLM_ANSWER', name: 'LLM Answer', order: 210, visible: 1 }
     ];
-    
+
     // 添加默认字段
     for (const field of defaultFields) {
       upsertFieldLabel(field.key, field.name, field.visible, field.order);
     }
-    
-    // 如果有样本数据，添加样本中的其他字段
+
+    // 如果有样本数据，更新第一个样本中的字段标签
     if (sampleData && typeof sampleData === 'object') {
-      let order = 100;
+      // 遍历样本数据中的字段
       for (const key in sampleData) {
-        // 跳过已添加的默认字段
-        if (defaultFields.some(f => f.key === key)) {
-          continue;
-        }
-        
         // 跳过不需要显示的字段
         if (['timestamp', 'result_key', 'data'].includes(key)) {
           continue;
         }
-        
-        // 添加其他字段，默认不可见
-        upsertFieldLabel(key, key, 0, order++);
+
+        // 查找默认字段中是否已存在该字段
+        const existingField = defaultFields.find(f => f.key === key);
+
+        if (existingField) {
+          // 如果字段已存在，使用样本中的值作为显示名称（如果样本中的值是字符串）
+          if (typeof sampleData[key] === 'string' && sampleData[key].trim() !== '') {
+            upsertFieldLabel(key, sampleData[key], existingField.visible, existingField.order);
+          }
+        } else {
+          // 如果字段不存在，添加为新字段
+          let order = 300; // 为新字段设置较高的顺序值
+          upsertFieldLabel(key, key, 0, order++);
+        }
       }
     }
-    
+
     console.log('字段标签初始化完成');
     return true;
   } catch (error) {

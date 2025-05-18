@@ -5,9 +5,21 @@ const router = express.Router();
 const EvaluationsDAL = require('./evaluations-dal');
 const fieldLabelsDAL = require('./field-labels-dal');
 const path = require('path');
+const fs = require('fs');
 
 // 初始化数据访问层
-const dbPath = path.join(__dirname, 'data', 'evaluations.db');
+// 使用与 server.js 相同的路径构建方式
+const config = require('./config');
+const dbDir = path.join(__dirname, config.storage.dataDir);
+const dbPath = path.join(dbDir, 'evaluations.db');
+console.log(`API路由使用数据库路径: ${dbPath}`);
+
+// 确保数据目录存在
+if (!fs.existsSync(dbDir)) {
+  console.log(`数据目录不存在，正在创建: ${dbDir}`);
+  fs.mkdirSync(dbDir, { recursive: true });
+}
+
 const evaluationsDAL = new EvaluationsDAL(dbPath);
 
 // 中间件：错误处理
@@ -601,10 +613,31 @@ router.post('/save-evaluation', asyncHandler(async (req, res) => {
 
 // 专门用于Dify工作流的评估数据保存接口
 router.post('/dify-evaluation', asyncHandler(async (req, res) => {
+  console.log('收到 /dify-evaluation 请求');
+
+  // 检查数据库连接
+  try {
+    // 检查数据库目录是否存在
+    if (!fs.existsSync(dbDir)) {
+      console.log(`数据目录不存在，正在创建: ${dbDir}`);
+      fs.mkdirSync(dbDir, { recursive: true });
+    }
+
+    // 检查数据库文件是否存在
+    if (!fs.existsSync(dbPath)) {
+      console.log(`数据库文件不存在: ${dbPath}`);
+    } else {
+      console.log(`数据库文件存在: ${dbPath}, 大小: ${fs.statSync(dbPath).size} 字节`);
+    }
+  } catch (fsError) {
+    console.error('检查数据库文件时出错:', fsError);
+  }
+
   const evaluationData = req.body;
 
   // 验证请求数据
   if (!evaluationData || Object.keys(evaluationData).length === 0) {
+    console.error('请求体为空');
     return res.status(400).json({
       success: false,
       message: '请求体不能为空'
@@ -612,6 +645,8 @@ router.post('/dify-evaluation', asyncHandler(async (req, res) => {
   }
 
   console.log('接收到Dify工作流数据:', JSON.stringify(evaluationData).substring(0, 200) + '...');
+  console.log('数据类型:', typeof evaluationData);
+  console.log('数据键:', Object.keys(evaluationData));
 
   try {
     // 处理评估结果
@@ -621,6 +656,8 @@ router.post('/dify-evaluation', asyncHandler(async (req, res) => {
     // 检查是否是Dify工作流格式 (arg1嵌套格式)
     if (evaluationData.arg1 && typeof evaluationData.arg1 === 'object') {
       console.log('处理arg1中的数据');
+      console.log('arg1类型:', typeof evaluationData.arg1);
+      console.log('arg1键:', Object.keys(evaluationData.arg1));
 
       // 处理arg1中的数据
       const difyData = evaluationData.arg1;
@@ -628,28 +665,67 @@ router.post('/dify-evaluation', asyncHandler(async (req, res) => {
       // 如果arg1中包含result0, result1等键，分别处理每个评估
       for (const key in difyData) {
         if (key.startsWith('result')) {
+          console.log(`处理结果键: ${key}`);
           const result = difyData[key];
-          const saveResult = evaluationsDAL.saveEvaluation(key, result);
-          results[key] = { success: true, id: saveResult.lastInsertRowid };
-          resultCount++;
+          console.log(`结果数据类型: ${typeof result}`);
+          console.log(`结果数据键: ${Object.keys(result)}`);
+
+          try {
+            console.log(`保存评估数据: ${key}`);
+            const saveResult = evaluationsDAL.saveEvaluation(key, result);
+            console.log(`保存成功, ID: ${saveResult.lastInsertRowid}`);
+            results[key] = { success: true, id: saveResult.lastInsertRowid };
+            resultCount++;
+          } catch (saveError) {
+            console.error(`保存评估数据 ${key} 时出错:`, saveError);
+            results[key] = { success: false, error: saveError.message };
+          }
         }
       }
 
       // 如果arg1不包含result开头的键，将整个arg1视为单个评估
       if (resultCount === 0) {
+        console.log('未找到result开头的键，将整个arg1视为单个评估');
         const resultKey = `result${Date.now()}`;
-        const saveResult = evaluationsDAL.saveEvaluation(resultKey, difyData);
-        results[resultKey] = { success: true, id: saveResult.lastInsertRowid };
-        resultCount = 1;
+        try {
+          console.log(`保存评估数据: ${resultKey}`);
+          const saveResult = evaluationsDAL.saveEvaluation(resultKey, difyData);
+          console.log(`保存成功, ID: ${saveResult.lastInsertRowid}`);
+          results[resultKey] = { success: true, id: saveResult.lastInsertRowid };
+          resultCount = 1;
+        } catch (saveError) {
+          console.error(`保存评估数据 ${resultKey} 时出错:`, saveError);
+          results[resultKey] = { success: false, error: saveError.message };
+        }
       }
     } else {
       // 直接处理整个请求体
+      console.log('直接处理整个请求体');
       const resultKey = `result${Date.now()}`;
-      const saveResult = evaluationsDAL.saveEvaluation(resultKey, evaluationData);
-      results[resultKey] = { success: true, id: saveResult.lastInsertRowid };
-      resultCount = 1;
+      try {
+        console.log(`保存评估数据: ${resultKey}`);
+        const saveResult = evaluationsDAL.saveEvaluation(resultKey, evaluationData);
+        console.log(`保存成功, ID: ${saveResult.lastInsertRowid}`);
+        results[resultKey] = { success: true, id: saveResult.lastInsertRowid };
+        resultCount = 1;
+      } catch (saveError) {
+        console.error(`保存评估数据 ${resultKey} 时出错:`, saveError);
+        results[resultKey] = { success: false, error: saveError.message };
+      }
     }
 
+    // 检查数据库文件是否存在
+    try {
+      if (!fs.existsSync(dbPath)) {
+        console.log(`保存后数据库文件仍不存在: ${dbPath}`);
+      } else {
+        console.log(`保存后数据库文件存在: ${dbPath}, 大小: ${fs.statSync(dbPath).size} 字节`);
+      }
+    } catch (fsError) {
+      console.error('检查数据库文件时出错:', fsError);
+    }
+
+    console.log(`处理完成，成功保存 ${resultCount} 条评估数据`);
     res.json({
       success: true,
       message: `成功保存 ${resultCount} 条评估数据`,
@@ -658,6 +734,7 @@ router.post('/dify-evaluation', asyncHandler(async (req, res) => {
   } catch (error) {
     // 检查是否是维度验证错误
     if (error.message && error.message.includes('维度验证失败')) {
+      console.error('维度验证失败:', error.message);
       return res.status(400).json({
         success: false,
         message: error.message
