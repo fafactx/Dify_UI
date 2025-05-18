@@ -374,8 +374,55 @@ start_services() {
     # 检查是否需要初始化数据库
     if [ ! -f "data/evaluations.db" ]; then
         echo "初始化 SQLite 数据库..."
-        # 如果数据库文件不存在，将在首次运行时自动创建
-        echo "数据库将在首次运行时自动创建"
+
+        # 创建空数据库文件
+        touch "data/evaluations.db"
+
+        # 使用 SQLite 初始化数据库结构
+        if command -v sqlite3 &> /dev/null; then
+            echo "使用 SQLite 初始化数据库结构..."
+
+            # 创建基本表结构
+            sqlite3 "data/evaluations.db" <<EOF
+CREATE TABLE IF NOT EXISTS evaluations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  result_key TEXT UNIQUE,
+  timestamp INTEGER NOT NULL,
+  date TEXT NOT NULL,
+  data JSON NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS products (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  part_number TEXT UNIQUE NOT NULL,
+  product_family TEXT NOT NULL,
+  last_updated INTEGER NOT NULL,
+  evaluation_count INTEGER DEFAULT 0,
+  avg_score REAL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS mags (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  mag_id TEXT UNIQUE NOT NULL,
+  last_updated INTEGER NOT NULL,
+  evaluation_count INTEGER DEFAULT 0,
+  avg_score REAL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS stats_cache (
+  id TEXT PRIMARY KEY,
+  data JSON NOT NULL,
+  last_updated INTEGER NOT NULL
+);
+EOF
+            echo "数据库结构初始化完成"
+        else
+            echo "SQLite 未安装，将由应用程序自动创建数据库结构"
+        fi
+
+        # 设置适当的权限
+        chmod 666 "data/evaluations.db"
+        echo "空数据库文件创建完成: data/evaluations.db"
     else
         echo "SQLite 数据库已存在"
     fi
