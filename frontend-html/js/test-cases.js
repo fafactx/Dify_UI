@@ -144,16 +144,106 @@ async function loadTestCases() {
         // Get API URL
         const apiBaseUrl = getApiBaseUrl();
 
-        // Try to get evaluations directly
+        // Try to get evaluations directly first
         const url = `${apiBaseUrl}/api/evaluations`;
         console.log(`Fetching test cases from: ${url}`);
 
-        // Fetch data
-        const response = await fetch(url);
+        try {
+            // Fetch data from evaluations endpoint
+            const response = await fetch(url);
 
-        if (!response.ok) {
-            // If evaluations endpoint fails, try the test-cases endpoint as fallback
-            console.warn(`Evaluations API failed, trying test-cases endpoint as fallback`);
+            if (response.ok) {
+                const data = await response.json();
+                console.log("Evaluations API response:", data);
+
+                // Check if database is empty
+                if (!data || !data.data || data.data.length === 0 ||
+                    (data.success === false && data.message && data.message.includes('数据库为空'))) {
+                    showEmptyState();
+                    testCases = [];
+                    return;
+                }
+
+                // Process the data from evaluations endpoint
+                testCases = data.data.map(item => {
+                    // Create a base object with the item's metadata
+                    let testCase = {
+                        id: item.id,
+                        result_key: item.result_key || '',
+                        timestamp: item.timestamp || '',
+                        date: item.date || new Date().toISOString(),
+                        average_score: 0
+                    };
+
+                    // If data is nested in a data field, extract it
+                    let evalData = {};
+
+                    // Handle case where data is stored as a JSON string
+                    if (item.data && typeof item.data === 'string') {
+                        try {
+                            evalData = JSON.parse(item.data);
+                        } catch (e) {
+                            console.warn(`Failed to parse data for item ${item.id}:`, e);
+                            evalData = {};
+                        }
+                    } else if (item.data && typeof item.data === 'object') {
+                        evalData = item.data;
+                    } else {
+                        // If no data field, use the item itself as the data
+                        evalData = item;
+                    }
+
+                    console.log(`Sample data for item ${item.id}:`, evalData);
+
+                    // Copy all properties from evalData to the test case
+                    for (const key in evalData) {
+                        if (evalData.hasOwnProperty(key)) {
+                            testCase[key] = evalData[key];
+                        }
+                    }
+
+                    // Calculate average score if not present
+                    if (!testCase.average_score &&
+                        (testCase.hallucination_control || testCase.quality ||
+                         testCase.professionalism || testCase.usefulness)) {
+
+                        let sum = 0;
+                        let count = 0;
+
+                        if (testCase.hallucination_control) {
+                            sum += parseFloat(testCase.hallucination_control);
+                            count++;
+                        }
+                        if (testCase.quality) {
+                            sum += parseFloat(testCase.quality);
+                            count++;
+                        }
+                        if (testCase.professionalism) {
+                            sum += parseFloat(testCase.professionalism);
+                            count++;
+                        }
+                        if (testCase.usefulness) {
+                            sum += parseFloat(testCase.usefulness);
+                            count++;
+                        }
+
+                        if (count > 0) {
+                            testCase.average_score = sum / count;
+                        }
+                    }
+
+                    return testCase;
+                });
+
+                console.log(`Processed ${testCases.length} test cases from evaluations endpoint`);
+            } else {
+                throw new Error(`Evaluations API failed: ${response.status} ${response.statusText}`);
+            }
+        } catch (evalError) {
+            console.warn("Error fetching from evaluations endpoint:", evalError);
+
+            // Fallback to test-cases endpoint
+            console.log("Falling back to test-cases endpoint");
             const fallbackUrl = `${apiBaseUrl}/api/test-cases`;
             const fallbackResponse = await fetch(fallbackUrl);
 
@@ -162,6 +252,7 @@ async function loadTestCases() {
             }
 
             const fallbackData = await fallbackResponse.json();
+            console.log("Test-cases API response:", fallbackData);
 
             // Check if database is empty
             if (fallbackData.is_empty || (fallbackData.success === false && fallbackData.message && fallbackData.message.includes('数据库为空'))) {
@@ -170,55 +261,91 @@ async function loadTestCases() {
                 return;
             }
 
-            // Store test cases
-            testCases = fallbackData.testCases || fallbackData.data || [];
-        } else {
-            const data = await response.json();
-
-            // Check if database is empty
-            if (!data || !data.data || data.data.length === 0 ||
-                (data.success === false && data.message && data.message.includes('数据库为空'))) {
-                showEmptyState();
-                testCases = [];
-                return;
-            }
-
-            // Store test cases - handle different response formats
-            testCases = data.data.map(item => {
-                // If data is nested in a data field, extract it
-                const evalData = item.data ? JSON.parse(item.data) : item;
-
-                return {
+            // Process the data from test-cases endpoint
+            const rawTestCases = fallbackData.testCases || fallbackData.data || [];
+            testCases = rawTestCases.map(item => {
+                // Create a base object with the item's metadata
+                let testCase = {
                     id: item.id,
-                    result_key: item.result_key,
-                    timestamp: item.timestamp,
-                    date: item.date,
-                    'CAS Name': evalData['CAS Name'] || 'N/A',
-                    'Product Family': evalData['Product Family'] || 'N/A',
-                    'Part Number': evalData['Part Number'] || 'N/A',
-                    MAG: evalData.MAG || 'N/A',
-                    Question: evalData.Question || '',
-                    Answer: evalData.Answer || '',
-                    'Question Scenario': evalData['Question Scenario'] || '',
-                    'Answer Source': evalData['Answer Source'] || '',
-                    'Question Complexity': evalData['Question Complexity'] || '',
-                    'Question Frequency': evalData['Question Frequency'] || '',
-                    'Question Category': evalData['Question Category'] || '',
-                    'Source Category': evalData['Source Category'] || '',
-                    hallucination_control: evalData.hallucination_control || 0,
-                    quality: evalData.quality || 0,
-                    professionalism: evalData.professionalism || 0,
-                    usefulness: evalData.usefulness || 0,
-                    average_score: evalData.average_score || 0,
-                    summary: evalData.summary || '',
-                    LLM_ANSWER: evalData.LLM_ANSWER || ''
+                    result_key: item.result_key || '',
+                    timestamp: item.timestamp || '',
+                    date: item.date || new Date().toISOString(),
+                    average_score: 0
                 };
+
+                // If data is nested in a data field, extract it
+                let evalData = {};
+
+                // Handle case where data is stored as a JSON string
+                if (item.data && typeof item.data === 'string') {
+                    try {
+                        evalData = JSON.parse(item.data);
+                    } catch (e) {
+                        console.warn(`Failed to parse data for item ${item.id}:`, e);
+                        evalData = {};
+                    }
+                } else if (item.data && typeof item.data === 'object') {
+                    evalData = item.data;
+                } else {
+                    // If no data field, use the item itself as the data
+                    evalData = item;
+                }
+
+                // Copy all properties from evalData to the test case
+                for (const key in evalData) {
+                    if (evalData.hasOwnProperty(key)) {
+                        testCase[key] = evalData[key];
+                    }
+                }
+
+                // Calculate average score if not present
+                if (!testCase.average_score &&
+                    (testCase.hallucination_control || testCase.quality ||
+                     testCase.professionalism || testCase.usefulness)) {
+
+                    let sum = 0;
+                    let count = 0;
+
+                    if (testCase.hallucination_control) {
+                        sum += parseFloat(testCase.hallucination_control);
+                        count++;
+                    }
+                    if (testCase.quality) {
+                        sum += parseFloat(testCase.quality);
+                        count++;
+                    }
+                    if (testCase.professionalism) {
+                        sum += parseFloat(testCase.professionalism);
+                        count++;
+                    }
+                    if (testCase.usefulness) {
+                        sum += parseFloat(testCase.usefulness);
+                        count++;
+                    }
+
+                    if (count > 0) {
+                        testCase.average_score = sum / count;
+                    }
+                }
+
+                return testCase;
             });
+
+            console.log(`Processed ${testCases.length} test cases from test-cases endpoint`);
         }
 
         // Apply search filter if needed
         if (searchTerm) {
             testCases = filterTestCases(testCases, searchTerm);
+        }
+
+        // Log the first test case for debugging
+        if (testCases.length > 0) {
+            console.log("Sample test case:", testCases[0]);
+
+            // Get all keys from the first test case for debugging
+            const keys = Object.keys(testCases[0]);
+            console.log("Available fields in test case:", keys);
         }
 
         // Render test cases
@@ -267,7 +394,12 @@ function renderTestCases() {
     const endIndex = Math.min(startIndex + pageSize, testCases.length);
     const pageTestCases = testCases.slice(startIndex, endIndex);
 
-    // Generate HTML
+    console.log(`Rendering test cases: ${startIndex + 1} to ${endIndex} of ${testCases.length}`);
+
+    // First, update the table headers based on the first test case
+    updateTableHeaders(testCases[0]);
+
+    // Generate HTML for table rows
     testCasesBody.innerHTML = pageTestCases.map(testCase => {
         // Format score with color
         const score = testCase.average_score;
@@ -277,7 +409,16 @@ function renderTestCases() {
         else if (score >= 50) scoreClass = 'bg-warning';
         else if (score > 0) scoreClass = 'bg-danger';
 
-        return `
+        // Debug log for each test case
+        console.log(`Rendering test case ID ${testCase.id}:`, {
+            'CAS Name': testCase['CAS Name'],
+            'Product Family': testCase['Product Family'],
+            'Part Number': testCase['Part Number'],
+            'Score': score
+        });
+
+        // Generate row HTML with all sample elements
+        let rowHtml = `
         <tr data-id="${testCase.id}">
             <td>
                 <input type="checkbox" class="form-check-input case-checkbox"
@@ -285,15 +426,25 @@ function renderTestCases() {
                        ${selectedIds.has(testCase.id) ? 'checked' : ''}>
             </td>
             <td>${testCase.id}</td>
-            <td>${formatDate(testCase.date || testCase.timestamp)}</td>
-            <td>${testCase['CAS Name'] || 'N/A'}</td>
-            <td>${testCase['Product Family'] || 'N/A'}</td>
-            <td>${testCase['Part Number'] || 'N/A'}</td>
-            <td>
-                <span class="badge ${scoreClass} score-badge">
-                    ${score ? score.toFixed(1) : 'N/A'}
-                </span>
-            </td>
+            <td>${formatDate(testCase.date || testCase.timestamp)}</td>`;
+
+        // Add cells for each displayed field
+        const displayFields = getDisplayFields();
+        displayFields.forEach(field => {
+            if (field === 'average_score') {
+                rowHtml += `
+                <td>
+                    <span class="badge ${scoreClass} score-badge">
+                        ${score ? score.toFixed(1) : 'N/A'}
+                    </span>
+                </td>`;
+            } else {
+                rowHtml += `<td>${testCase[field] || 'N/A'}</td>`;
+            }
+        });
+
+        // Add actions column
+        rowHtml += `
             <td>
                 <button class="btn btn-sm btn-danger" onclick="deleteTestCase(${testCase.id})">
                     <i class="fas fa-trash"></i>
@@ -302,17 +453,99 @@ function renderTestCases() {
                     <i class="fas fa-eye"></i>
                 </button>
             </td>
-        </tr>
-        `;
+        </tr>`;
+
+        return rowHtml;
     }).join('');
 
     // Update pagination info
-    paginationInfo.textContent = `Showing ${startIndex + 1} to ${endIndex} of ${testCases.length} entries`;
+    if (paginationInfo) {
+        paginationInfo.textContent = `Showing ${startIndex + 1} to ${endIndex} of ${testCases.length} entries`;
+    }
 
     // Add event listeners to checkboxes
     document.querySelectorAll('.case-checkbox').forEach(checkbox => {
         checkbox.addEventListener('change', handleCheckboxChange);
     });
+}
+
+/**
+ * Update table headers based on the sample data
+ */
+function updateTableHeaders(sampleData) {
+    if (!sampleData) return;
+
+    // Get the table header row
+    const tableHead = document.querySelector('#testCasesTable thead tr');
+    if (!tableHead) return;
+
+    // Clear existing headers except the first one (checkbox)
+    while (tableHead.children.length > 1) {
+        tableHead.removeChild(tableHead.lastChild);
+    }
+
+    // Add ID and Date columns (always present)
+    tableHead.innerHTML += `
+        <th class="w-16">ID</th>
+        <th class="w-32">Date</th>`;
+
+    // Add columns for each displayed field
+    const displayFields = getDisplayFields();
+    displayFields.forEach(field => {
+        let displayName = field;
+        // Format field name for display
+        if (field === 'average_score') {
+            displayName = 'Score';
+        }
+        tableHead.innerHTML += `<th class="w-32">${displayName}</th>`;
+    });
+
+    // Add Actions column
+    tableHead.innerHTML += `<th class="w-24">Actions</th>`;
+
+    console.log("Updated table headers based on sample data");
+}
+
+/**
+ * Get the fields to display in the table
+ */
+function getDisplayFields() {
+    // If we have test cases, dynamically determine fields to display
+    if (testCases && testCases.length > 0) {
+        const sampleCase = testCases[0];
+        const allFields = Object.keys(sampleCase);
+
+        // Priority fields that should always be displayed if available
+        const priorityFields = [
+            'CAS Name',
+            'Product Family',
+            'Part Number',
+            'MAG',
+            'Question Category',
+            'Question Complexity'
+        ];
+
+        // Filter priority fields that exist in the sample
+        const availablePriorityFields = priorityFields.filter(field =>
+            allFields.includes(field) && sampleCase[field]
+        );
+
+        // Always include average_score at the end
+        if (allFields.includes('average_score')) {
+            return [...availablePriorityFields, 'average_score'];
+        }
+
+        return availablePriorityFields;
+    }
+
+    // Default fields if no test cases are available
+    return [
+        'CAS Name',
+        'Product Family',
+        'Part Number',
+        'MAG',
+        'average_score'
+    ];
 }
 
 /**
@@ -1417,8 +1650,14 @@ function getApiBaseUrl() {
     const hostname = window.location.hostname;
     const port = window.location.port;
 
+    console.log("Current hostname:", hostname);
+    console.log("Current port:", port);
+    console.log("Current protocol:", window.location.protocol);
+    console.log("Current origin:", window.location.origin);
+
     // If we're running on localhost or 127.0.0.1
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        console.log("Running on localhost, using http://localhost:3000");
         return 'http://localhost:3000';
     }
 
@@ -1426,18 +1665,30 @@ function getApiBaseUrl() {
     if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
         // If we're already on port 3000, use the current origin
         if (port === '3000') {
+            console.log("Running on IP with port 3000, using current origin");
             return window.location.origin;
         }
         // Otherwise, use the IP with port 3000
+        console.log(`Running on IP, using ${window.location.protocol}//${hostname}:3000`);
         return `${window.location.protocol}//${hostname}:3000`;
+    }
+
+    // If we're running from a file:// URL (local file system)
+    if (window.location.protocol === 'file:') {
+        // Try to use a default server URL - this should be configured based on your deployment
+        const defaultServerUrl = 'http://localhost:3000';
+        console.log(`Running from file:// URL, using default server: ${defaultServerUrl}`);
+        return defaultServerUrl;
     }
 
     // If we're on the same server but different port
     if (port && port !== '3000') {
+        console.log(`Running on server with port ${port}, using port 3000 instead`);
         return `${window.location.protocol}//${hostname}:3000`;
     }
 
     // Default to relative path (same origin)
+    console.log("Using relative path (same origin)");
     return '';
 }
 
