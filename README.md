@@ -386,9 +386,66 @@ cd DIFY_UI
 
 ## Linux 环境安装指南
 
-如果您在 Linux 环境中部署本项目，可能需要安装一些额外的依赖项，特别是对于 `better-sqlite3` 模块。
+我们提供了自动化安装和测试脚本，使您可以轻松地在Linux环境中部署和测试本项目。
 
-### 安装系统依赖
+### 使用自动化安装脚本
+
+```bash
+# 克隆代码库
+git clone https://github.com/fafactx/Dify_UI.git
+cd Dify_UI
+
+# 设置执行权限
+chmod +x install.sh
+
+# 运行安装脚本
+./install.sh
+```
+
+安装脚本将自动执行以下操作：
+1. 安装必要的系统依赖（git、nodejs、npm、curl）
+2. 创建必要的目录（data、logs）
+3. 安装Node.js依赖
+4. 设置适当的文件权限
+5. 创建启动、停止和重启脚本
+
+### 启动和停止服务
+
+安装完成后，您可以使用以下命令启动、停止和重启服务：
+
+```bash
+# 启动服务
+./start.sh
+
+# 停止服务
+./stop.sh
+
+# 重启服务
+./restart.sh
+```
+
+### 测试最近的修改
+
+我们还提供了一个测试脚本，用于测试最近的修改，特别是与JSON文件和SQLite数据库交互相关的修改：
+
+```bash
+# 设置执行权限
+chmod +x test_changes.sh
+
+# 运行测试脚本
+./test_changes.sh
+```
+
+测试脚本将自动执行以下操作：
+1. 拉取最新代码
+2. 启动服务器并检查日志
+3. 测试数据库文件自动创建功能
+4. 测试Dify数据保存功能
+5. 检查数据目录，确认没有生成JSON文件
+
+### 手动安装（如果自动脚本不适用）
+
+如果您在 Linux 环境中手动部署本项目，可能需要安装一些额外的依赖项，特别是对于 `better-sqlite3` 模块。
 
 ```bash
 # 更新包管理器
@@ -396,11 +453,7 @@ sudo apt-get update
 
 # 安装编译工具和 Python
 sudo apt-get install -y build-essential python3
-```
 
-### 安装 Node.js 依赖
-
-```bash
 # 进入后端目录
 cd backend
 
@@ -409,23 +462,15 @@ npm install
 
 # 如果 better-sqlite3 安装失败，尝试使用 --build-from-source 选项
 npm install better-sqlite3 --build-from-source
-```
 
-### 创建数据目录
-
-```bash
 # 确保数据目录存在
-mkdir -p backend/data
-```
+mkdir -p data
 
-### 启动服务
-
-```bash
 # 启动后端服务
 node server.js
 
 # 在另一个终端启动前端服务
-cd frontend-html
+cd ../frontend-html
 python3 -m http.server 3001
 ```
 
@@ -581,3 +626,11 @@ SyntaxError: Unexpected reserved word
 ## 许可证
 
 本项目采用 MIT 许可证。
+
+## 最近更新
+
+- **2023-05-20**: 添加了Linux环境安装脚本和测试脚本，简化了部署和测试过程
+- **2023-05-19**: 修复了前端显示与JSON文件/SQLite数据库交互的问题
+  - 添加了自动删除JSON文件的功能
+  - 确保数据库文件存在且可写
+  - 修改了前端显示逻辑，在数据库为空时显示"No Data"而不是"0"
