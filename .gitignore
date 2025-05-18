@@ -1,38 +1,38 @@
-# Node.js 依赖
+# Node.js 依赖 - 仅排除 node_modules
 node_modules/
-npm-debug.log
-yarn-debug.log
-yarn-error.log
+# npm-debug.log
+# yarn-debug.log
+# yarn-error.log
 
 # 数据文件 - 允许所有文件提交
 # backend/data/*.json
-!backend/data/
-!backend/data/*
+# !backend/data/
+# !backend/data/*
 
 # 配置文件 - 允许提交
 # backend/config.js
 
-# 环境变量
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# 环境变量 - 允许提交
+# .env
+# .env.local
+# .env.development.local
+# .env.test.local
+# .env.production.local
 
-# 编辑器文件
-.vscode/
-.idea/
-*.swp
-*.swo
+# 编辑器文件 - 允许提交
+# .vscode/
+# .idea/
+# *.swp
+# *.swo
 
-# 操作系统文件
-.DS_Store
-Thumbs.db
+# 操作系统文件 - 允许提交
+# .DS_Store
+# Thumbs.db
 
 # 日志文件 - 允许提交
 # logs
 # *.log
 
-# 构建输出
-dist/
-build/
+# 构建输出 - 允许提交
+# dist/
+# build/
