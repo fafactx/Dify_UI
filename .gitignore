@@ -4,12 +4,13 @@ npm-debug.log
 yarn-debug.log
 yarn-error.log
 
-# 数据文件
-backend/data/*.json
-!backend/data/.gitkeep
+# 数据文件 - 允许所有文件提交
+# backend/data/*.json
+!backend/data/
+!backend/data/*
 
-# 配置文件（包含敏感信息）
-backend/config.js
+# 配置文件 - 允许提交
+# backend/config.js
 
 # 环境变量
 .env
@@ -28,9 +29,9 @@ backend/config.js
 .DS_Store
 Thumbs.db
 
-# 日志文件
-logs
-*.log
+# 日志文件 - 允许提交
+# logs
+# *.log
 
 # 构建输出
 dist/
