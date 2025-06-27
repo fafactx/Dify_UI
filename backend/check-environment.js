@@ -91,7 +91,16 @@ function checkBetterSqlite3() {
     }
   } catch (error) {
     console.log(`   ❌ Better-SQLite3加载失败: ${error.message}`);
-    console.log('   💡 可能需要重新编译，尝试运行: npm rebuild better-sqlite3');
+
+    // 检查是否是段错误相关
+    if (error.message.includes('segmentation fault') ||
+        error.message.includes('SIGSEGV') ||
+        error.message.includes('Module did not self-register')) {
+      console.log('   🚨 检测到段错误或模块注册问题');
+      console.log('   💡 启动脚本将自动重新编译Better-SQLite3');
+    } else {
+      console.log('   💡 可能需要重新编译，尝试运行: npm rebuild better-sqlite3');
+    }
     return false;
   }
 }
@@ -202,6 +211,31 @@ function checkPortAvailability() {
 function autoFix() {
   console.log('\n🔧 开始自动修复...\n');
 
+  // 检查是否需要清理重装
+  const needsCleanInstall = !checkBetterSqlite3();
+
+  if (needsCleanInstall) {
+    console.log('🧹 检测到严重问题，执行完全清理重装...');
+
+    // 清理node_modules
+    const nodeModulesPath = path.join(__dirname, 'node_modules');
+    const packageLockPath = path.join(__dirname, 'package-lock.json');
+
+    try {
+      if (fs.existsSync(nodeModulesPath)) {
+        console.log('   删除node_modules目录...');
+        fs.rmSync(nodeModulesPath, { recursive: true, force: true });
+      }
+
+      if (fs.existsSync(packageLockPath)) {
+        console.log('   删除package-lock.json...');
+        fs.unlinkSync(packageLockPath);
+      }
+    } catch (error) {
+      console.log('⚠️  清理文件时出错:', error.message);
+    }
+  }
+
   // 修复依赖
   console.log('📦 安装/更新依赖包...');
   try {
@@ -217,13 +251,53 @@ function autoFix() {
   try {
     execSync('npm rebuild better-sqlite3', { stdio: 'inherit', cwd: __dirname });
     console.log('✅ Better-SQLite3重新编译完成');
+
+    // 测试编译结果
+    if (!checkBetterSqlite3()) {
+      console.log('⚠️  编译完成但测试失败，尝试使用稳定版本...');
+
+      // 尝试使用稳定版本
+      execSync('npm uninstall better-sqlite3', { stdio: 'inherit', cwd: __dirname });
+      execSync('npm install better-sqlite3@8.4.0', { stdio: 'inherit', cwd: __dirname });
+
+      if (!checkBetterSqlite3()) {
+        console.log('❌ 使用稳定版本仍然失败');
+        return false;
+      } else {
+        console.log('✅ 稳定版本安装成功');
+      }
+    }
   } catch (error) {
     console.log('❌ Better-SQLite3重新编译失败:', error.message);
     console.log('💡 请确保系统已安装编译工具:');
     console.log('   Windows: npm install --global windows-build-tools');
     console.log('   Ubuntu/Debian: sudo apt-get install build-essential python3');
     console.log('   CentOS/RHEL: sudo yum groupinstall "Development Tools"');
-    return false;
+
+    // 尝试使用预编译版本作为备选
+    console.log('\n🔄 尝试使用预编译版本...');
+    try {
+      execSync('npm uninstall better-sqlite3', { stdio: 'inherit', cwd: __dirname });
+      execSync('npm install better-sqlite3@8.4.0', { stdio: 'inherit', cwd: __dirname });
+
+      if (checkBetterSqlite3()) {
+        console.log('✅ 预编译版本安装成功');
+      } else {
+        return false;
+      }
+    } catch (fallbackError) {
+      console.log('❌ 预编译版本也失败:', fallbackError.message);
+      return false;
+    }
+  }
+
+  // 修复npm安全漏洞
+  console.log('\n🔒 修复npm安全漏洞...');
+  try {
+    execSync('npm audit fix --force', { stdio: 'inherit', cwd: __dirname });
+    console.log('✅ 安全漏洞修复完成');
+  } catch (error) {
+    console.log('⚠️  安全漏洞修复失败，但不影响系统运行:', error.message);
   }
 
   return true;
