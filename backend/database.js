@@ -91,7 +91,26 @@ function initializeDatabase(dbPath) {
 
     // 连接数据库
     console.log(`正在连接数据库...`);
-    const db = sqlite3(dbPath, { verbose: console.log });
+    const db = sqlite3(dbPath, {
+      verbose: console.log,
+      fileMustExist: false,
+      timeout: 5000
+    });
+
+    // 测试数据库连接
+    try {
+      const testStmt = db.prepare('SELECT 1 as test');
+      const testResult = testStmt.get();
+      if (testResult && testResult.test === 1) {
+        console.log(`数据库连接测试成功`);
+      } else {
+        throw new Error('数据库连接测试失败');
+      }
+    } catch (testError) {
+      console.error(`数据库连接测试失败: ${testError.message}`);
+      throw testError;
+    }
+
     console.log(`数据库连接成功`);
 
     // 启用外键约束

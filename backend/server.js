@@ -363,7 +363,18 @@ if (config.backup && config.backup.enabled) {
 // 自动删除JSON文件的功能
 function deleteJsonFiles() {
   try {
-    const jsonFiles = fs.readdirSync(dbDir).filter(file =>
+    // 确保数据目录存在
+    if (!fs.existsSync(dbDir)) {
+      logger.warn(`数据目录不存在，无法删除JSON文件: ${dbDir}`);
+      return;
+    }
+
+    // 列出目录内容
+    const dirContents = fs.readdirSync(dbDir);
+    logger.info(`数据目录内容: ${dirContents.join(', ') || '(空)'}`);
+
+    // 过滤出JSON文件
+    const jsonFiles = dirContents.filter(file =>
       file.endsWith('.json') && (file.startsWith('evaluation_') || file === 'index.json')
     );
 
@@ -371,7 +382,13 @@ function deleteJsonFiles() {
       logger.warn(`发现 ${jsonFiles.length} 个 JSON 文件，正在删除...`);
       jsonFiles.forEach(file => {
         try {
-          fs.unlinkSync(path.join(dbDir, file));
+          const filePath = path.join(dbDir, file);
+          // 检查文件大小
+          const stats = fs.statSync(filePath);
+          logger.info(`准备删除 JSON 文件: ${file}, 大小: ${stats.size} 字节`);
+
+          // 删除文件
+          fs.unlinkSync(filePath);
           logger.info(`已删除 JSON 文件: ${file}`);
         } catch (unlinkError) {
           logger.error(`删除 JSON 文件 ${file} 失败: ${unlinkError.message}`);
@@ -381,8 +398,21 @@ function deleteJsonFiles() {
     } else {
       logger.info('未发现 JSON 文件');
     }
+
+    // 再次检查目录内容，确认JSON文件已被删除
+    const afterDirContents = fs.readdirSync(dbDir);
+    const afterJsonFiles = afterDirContents.filter(file =>
+      file.endsWith('.json') && (file.startsWith('evaluation_') || file === 'index.json')
+    );
+
+    if (afterJsonFiles.length > 0) {
+      logger.warn(`删除后仍有 ${afterJsonFiles.length} 个 JSON 文件: ${afterJsonFiles.join(', ')}`);
+    } else {
+      logger.info('确认: 数据目录中没有JSON文件');
+    }
   } catch (error) {
     logger.error(`删除 JSON 文件时出错: ${error.message}`);
+    logger.error(`错误堆栈: ${error.stack}`);
   }
 }
 
