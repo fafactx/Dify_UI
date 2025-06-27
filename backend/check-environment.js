@@ -1,0 +1,256 @@
+// check-environment.js - 环境检查和自动修复脚本
+const fs = require('fs');
+const path = require('path');
+const { execSync } = require('child_process');
+
+console.log('🔍 开始环境检查...\n');
+
+// 检查Node.js版本
+function checkNodeVersion() {
+  console.log('📋 检查Node.js版本...');
+  const nodeVersion = process.version;
+  const majorVersion = parseInt(nodeVersion.slice(1).split('.')[0]);
+  
+  console.log(`   当前版本: ${nodeVersion}`);
+  
+  if (majorVersion < 14) {
+    console.log('❌ Node.js版本过低，建议使用14.0.0或更高版本');
+    return false;
+  } else {
+    console.log('✅ Node.js版本符合要求');
+    return true;
+  }
+}
+
+// 检查依赖包
+function checkDependencies() {
+  console.log('\n📦 检查依赖包...');
+  
+  const packageJsonPath = path.join(__dirname, 'package.json');
+  if (!fs.existsSync(packageJsonPath)) {
+    console.log('❌ package.json文件不存在');
+    return false;
+  }
+  
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  const dependencies = packageJson.dependencies || {};
+  
+  console.log('   检查关键依赖:');
+  
+  const criticalDeps = [
+    'better-sqlite3',
+    'express',
+    'cors',
+    'body-parser'
+  ];
+  
+  let allDepsOk = true;
+  
+  for (const dep of criticalDeps) {
+    if (dependencies[dep]) {
+      console.log(`   ✅ ${dep}: ${dependencies[dep]}`);
+    } else {
+      console.log(`   ❌ ${dep}: 缺失`);
+      allDepsOk = false;
+    }
+  }
+  
+  // 检查node_modules
+  const nodeModulesPath = path.join(__dirname, 'node_modules');
+  if (!fs.existsSync(nodeModulesPath)) {
+    console.log('   ❌ node_modules目录不存在，需要运行npm install');
+    allDepsOk = false;
+  } else {
+    console.log('   ✅ node_modules目录存在');
+  }
+  
+  return allDepsOk;
+}
+
+// 检查Better-SQLite3编译
+function checkBetterSqlite3() {
+  console.log('\n🗄️  检查Better-SQLite3编译状态...');
+  
+  try {
+    const sqlite3 = require('better-sqlite3');
+    console.log('   ✅ Better-SQLite3加载成功');
+    
+    // 测试创建内存数据库
+    const testDb = sqlite3(':memory:');
+    testDb.exec('CREATE TABLE test (id INTEGER PRIMARY KEY)');
+    testDb.exec('INSERT INTO test (id) VALUES (1)');
+    const result = testDb.prepare('SELECT COUNT(*) as count FROM test').get();
+    testDb.close();
+    
+    if (result.count === 1) {
+      console.log('   ✅ Better-SQLite3功能测试通过');
+      return true;
+    } else {
+      console.log('   ❌ Better-SQLite3功能测试失败');
+      return false;
+    }
+  } catch (error) {
+    console.log(`   ❌ Better-SQLite3加载失败: ${error.message}`);
+    console.log('   💡 可能需要重新编译，尝试运行: npm rebuild better-sqlite3');
+    return false;
+  }
+}
+
+// 检查数据目录
+function checkDataDirectory() {
+  console.log('\n📁 检查数据目录...');
+  
+  const dataDir = path.join(__dirname, 'data');
+  
+  if (!fs.existsSync(dataDir)) {
+    console.log('   ⚠️  数据目录不存在，正在创建...');
+    try {
+      fs.mkdirSync(dataDir, { recursive: true, mode: 0o755 });
+      console.log('   ✅ 数据目录创建成功');
+    } catch (error) {
+      console.log(`   ❌ 数据目录创建失败: ${error.message}`);
+      return false;
+    }
+  } else {
+    console.log('   ✅ 数据目录存在');
+  }
+  
+  // 检查权限
+  try {
+    fs.accessSync(dataDir, fs.constants.R_OK | fs.constants.W_OK);
+    console.log('   ✅ 数据目录权限正常');
+    return true;
+  } catch (error) {
+    console.log(`   ❌ 数据目录权限不足: ${error.message}`);
+    return false;
+  }
+}
+
+// 检查配置文件
+function checkConfigFiles() {
+  console.log('\n⚙️  检查配置文件...');
+  
+  const configPath = path.join(__dirname, 'config.js');
+  if (!fs.existsSync(configPath)) {
+    console.log('   ❌ config.js文件不存在');
+    return false;
+  } else {
+    console.log('   ✅ config.js文件存在');
+  }
+  
+  // 检查前端配置
+  const frontendConfigPath = path.join(__dirname, '../frontend-html/js/config.js');
+  if (!fs.existsSync(frontendConfigPath)) {
+    console.log('   ❌ 前端config.js文件不存在');
+    return false;
+  } else {
+    console.log('   ✅ 前端config.js文件存在');
+    
+    // 检查IP配置
+    const frontendConfig = fs.readFileSync(frontendConfigPath, 'utf8');
+    if (frontendConfig.includes('10.193.21.115')) {
+      console.log('   ✅ 前端IP配置正确 (10.193.21.115)');
+    } else {
+      console.log('   ⚠️  前端IP配置可能需要更新');
+    }
+  }
+  
+  return true;
+}
+
+// 自动修复函数
+function autoFix() {
+  console.log('\n🔧 开始自动修复...\n');
+  
+  // 修复依赖
+  console.log('📦 安装/更新依赖包...');
+  try {
+    execSync('npm install', { stdio: 'inherit', cwd: __dirname });
+    console.log('✅ 依赖包安装完成');
+  } catch (error) {
+    console.log('❌ 依赖包安装失败:', error.message);
+    return false;
+  }
+  
+  // 重新编译Better-SQLite3
+  console.log('\n🔨 重新编译Better-SQLite3...');
+  try {
+    execSync('npm rebuild better-sqlite3', { stdio: 'inherit', cwd: __dirname });
+    console.log('✅ Better-SQLite3重新编译完成');
+  } catch (error) {
+    console.log('❌ Better-SQLite3重新编译失败:', error.message);
+    console.log('💡 请确保系统已安装编译工具:');
+    console.log('   Windows: npm install --global windows-build-tools');
+    console.log('   Ubuntu/Debian: sudo apt-get install build-essential python3');
+    console.log('   CentOS/RHEL: sudo yum groupinstall "Development Tools"');
+    return false;
+  }
+  
+  return true;
+}
+
+// 主函数
+function main() {
+  console.log('🚀 RAGLLM评估系统环境检查工具\n');
+  
+  const checks = [
+    { name: 'Node.js版本', fn: checkNodeVersion },
+    { name: '依赖包', fn: checkDependencies },
+    { name: 'Better-SQLite3', fn: checkBetterSqlite3 },
+    { name: '数据目录', fn: checkDataDirectory },
+    { name: '配置文件', fn: checkConfigFiles }
+  ];
+  
+  let allPassed = true;
+  const failedChecks = [];
+  
+  for (const check of checks) {
+    if (!check.fn()) {
+      allPassed = false;
+      failedChecks.push(check.name);
+    }
+  }
+  
+  console.log('\n📊 检查结果:');
+  if (allPassed) {
+    console.log('🎉 所有检查都通过了！系统应该可以正常运行。');
+    console.log('\n🚀 现在可以启动服务器:');
+    console.log('   node server.js');
+  } else {
+    console.log(`❌ 发现 ${failedChecks.length} 个问题: ${failedChecks.join(', ')}`);
+    
+    // 询问是否自动修复
+    const readline = require('readline');
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+    
+    rl.question('\n🔧 是否尝试自动修复这些问题? (y/N): ', (answer) => {
+      if (answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes') {
+        if (autoFix()) {
+          console.log('\n🎉 自动修复完成！请重新运行检查脚本验证。');
+        } else {
+          console.log('\n❌ 自动修复失败，请手动解决问题。');
+        }
+      } else {
+        console.log('\n💡 请手动解决上述问题后重新运行检查。');
+      }
+      rl.close();
+    });
+  }
+}
+
+// 如果直接运行此脚本
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  checkNodeVersion,
+  checkDependencies,
+  checkBetterSqlite3,
+  checkDataDirectory,
+  checkConfigFiles,
+  autoFix
+};

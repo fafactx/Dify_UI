@@ -5,7 +5,11 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "check": "node check-environment.js",
+    "setup": "npm install && npm run check",
+    "rebuild": "npm rebuild better-sqlite3",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "better-sqlite3": "^8.5.0",

@@ -48,6 +48,35 @@ if (!fs.existsSync(dbDir)) {
 
 const evaluationsDAL = new EvaluationsDAL(dbPath);
 
+// 异步初始化数据库连接
+let isDbInitialized = false;
+async function initializeDatabase() {
+  if (!isDbInitialized) {
+    try {
+      await evaluationsDAL.initialize();
+      isDbInitialized = true;
+      console.log('API路由数据库初始化完成');
+    } catch (error) {
+      console.error('API路由数据库初始化失败:', error.message);
+      throw error;
+    }
+  }
+}
+
+// 中间件：确保数据库已初始化
+const ensureDbInitialized = async (req, res, next) => {
+  try {
+    await initializeDatabase();
+    next();
+  } catch (error) {
+    console.error('数据库初始化中间件失败:', error.message);
+    res.status(500).json({
+      success: false,
+      message: `数据库初始化失败: ${error.message}`
+    });
+  }
+};
+
 // 中间件：错误处理
 const asyncHandler = fn => (req, res, next) => {
   Promise.resolve(fn(req, res, next)).catch(next);
@@ -553,7 +582,7 @@ router.get('/field-labels', asyncHandler(async (req, res) => {
 // 删除ID范围内的测试用例 - 已在上面定义，此处删除重复代码
 
 // 保存评估数据 (兼容旧API)
-router.post('/save-evaluation', asyncHandler(async (req, res) => {
+router.post('/save-evaluation', ensureDbInitialized, asyncHandler(async (req, res) => {
   const evaluationData = req.body;
 
   // 验证请求数据
@@ -565,30 +594,6 @@ router.post('/save-evaluation', asyncHandler(async (req, res) => {
   }
 
   try {
-    // 检查数据库连接状态
-    if (!evaluationsDAL.db) {
-      console.error('数据库连接未初始化');
-      return res.status(500).json({
-        success: false,
-        message: '数据库连接未初始化'
-      });
-    }
-
-    // 测试数据库连接
-    try {
-      const testStmt = evaluationsDAL.db.prepare('SELECT 1 as test');
-      const testResult = testStmt.get();
-      if (!testResult || testResult.test !== 1) {
-        throw new Error('数据库连接测试失败');
-      }
-    } catch (dbTestError) {
-      console.error('数据库连接测试失败:', dbTestError.message);
-      return res.status(500).json({
-        success: false,
-        message: `数据库连接不可用: ${dbTestError.message}`
-      });
-    }
-
     // 处理评估结果
     const results = {};
     let resultCount = 0;

@@ -19,8 +19,8 @@ const { createBackup } = require('./utils/backup');
 // 导入API路由
 const apiRoutes = require('./api-routes');
 
-// 导入数据库模块
-const { getDatabase } = require('./database');
+// 导入数据库管理器
+const databaseManager = require('./database-manager');
 
 // 加载配置
 let config;
@@ -146,91 +146,32 @@ try {
 logger.info(`初始化数据库: ${dbPath}`);
 logger.info('验证数据库连接和结构...');
 
-try {
-  // 获取数据库连接
-  const db = getDatabase(dbPath);
-  logger.info('数据库初始化成功');
+// 异步初始化数据库
+async function initializeDatabase() {
+  try {
+    // 使用数据库管理器初始化
+    await databaseManager.initialize(dbPath);
+    logger.info('数据库初始化成功');
 
-  // 验证数据库表结构
-  const tablesStmt = db.prepare("SELECT name FROM sqlite_master WHERE type='table'");
-  const tables = tablesStmt.all().map(t => t.name);
+    // 获取连接信息
+    const connectionInfo = databaseManager.getConnectionInfo();
+    logger.info('数据库连接信息:', connectionInfo);
 
-  // 检查必要的表是否存在
-  const requiredTables = ['evaluations', 'products', 'mags', 'stats_cache', 'field_labels'];
-  const missingTables = requiredTables.filter(table => !tables.includes(table));
+    // 验证数据库表结构
+    const db = databaseManager.getConnection();
+    const tablesStmt = db.prepare("SELECT name FROM sqlite_master WHERE type='table'");
+    const tables = tablesStmt.all().map(t => t.name);
 
-  if (missingTables.length > 0) {
-    logger.warn(`数据库缺少以下表: ${missingTables.join(', ')}`);
-    logger.warn('将尝试创建缺失的表');
+    // 检查必要的表是否存在
+    const requiredTables = ['evaluations', 'products', 'mags', 'stats_cache', 'field_labels'];
+    const missingTables = requiredTables.filter(table => !tables.includes(table));
 
-    // 创建缺失的表
-    if (missingTables.includes('evaluations')) {
-      logger.info('创建 evaluations 表...');
-      db.exec(`
-        CREATE TABLE IF NOT EXISTS evaluations (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          result_key TEXT UNIQUE,
-          timestamp INTEGER NOT NULL,
-          date TEXT NOT NULL,
-          data JSON NOT NULL
-        )
-      `);
+    if (missingTables.length > 0) {
+      logger.warn(`数据库缺少以下表: ${missingTables.join(', ')}`);
+      logger.warn('数据库管理器应该已经创建了这些表，这可能表示初始化问题');
+    } else {
+      logger.info('数据库表结构验证成功，所有必要的表都存在');
     }
-
-    if (missingTables.includes('products')) {
-      logger.info('创建 products 表...');
-      db.exec(`
-        CREATE TABLE IF NOT EXISTS products (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          part_number TEXT UNIQUE NOT NULL,
-          product_family TEXT NOT NULL,
-          last_updated INTEGER NOT NULL,
-          evaluation_count INTEGER DEFAULT 0,
-          avg_score REAL DEFAULT 0
-        )
-      `);
-    }
-
-    if (missingTables.includes('mags')) {
-      logger.info('创建 mags 表...');
-      db.exec(`
-        CREATE TABLE IF NOT EXISTS mags (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          mag_id TEXT UNIQUE NOT NULL,
-          last_updated INTEGER NOT NULL,
-          evaluation_count INTEGER DEFAULT 0,
-          avg_score REAL DEFAULT 0
-        )
-      `);
-    }
-
-    if (missingTables.includes('stats_cache')) {
-      logger.info('创建 stats_cache 表...');
-      db.exec(`
-        CREATE TABLE IF NOT EXISTS stats_cache (
-          id TEXT PRIMARY KEY,
-          data JSON NOT NULL,
-          last_updated INTEGER NOT NULL
-        )
-      `);
-    }
-
-    if (missingTables.includes('field_labels')) {
-      logger.info('创建 field_labels 表...');
-      db.exec(`
-        CREATE TABLE IF NOT EXISTS field_labels (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          field_key TEXT UNIQUE NOT NULL,
-          display_name TEXT NOT NULL,
-          is_visible INTEGER DEFAULT 1,
-          display_order INTEGER DEFAULT 999,
-          last_updated INTEGER NOT NULL
-        )
-      `);
-    }
-  } else {
-    logger.info('数据库表结构验证成功，所有必要的表都存在');
-  }
 
   // 检查数据库记录数
   try {
@@ -278,20 +219,9 @@ try {
     logger.error(`数据库写入测试失败: ${writeError.message}`);
     logger.error('数据库可能是只读的，请检查文件权限');
   }
-} catch (error) {
-  logger.error(`数据库初始化失败: ${error.message}`);
-  logger.error(`错误堆栈: ${error.stack}`);
-
-  // 尝试使用绝对路径
-  try {
-    logger.info(`尝试使用绝对路径初始化数据库...`);
-    const absoluteDbPath = path.resolve(__dirname, config.storage.dataDir, 'evaluations.db');
-    logger.info(`绝对路径: ${absoluteDbPath}`);
-
-    const db = getDatabase(absoluteDbPath);
-    logger.info(`使用绝对路径初始化数据库成功`);
-  } catch (absPathError) {
-    logger.error(`使用绝对路径初始化数据库失败: ${absPathError.message}`);
+  } catch (error) {
+    logger.error(`数据库初始化失败: ${error.message}`);
+    logger.error(`错误堆栈: ${error.stack}`);
     logger.error('服务器将继续启动，但可能无法正常工作');
   }
 }
@@ -423,10 +353,16 @@ deleteJsonFiles();
 const jsonCleanupInterval = setInterval(deleteJsonFiles, 60 * 60 * 1000); // 每小时执行一次
 logger.info('已启用自动删除JSON文件功能: 每小时检查一次');
 
-// 启动服务器
-const server = app.listen(PORT, HOST, () => {
-  logger.info(`服务器运行在 http://${publicUrl}:${PORT}`);
-  logger.info(`服务器绑定到 ${HOST}:${PORT}`);
+// 启动服务器 - 异步初始化数据库后启动
+async function startServer() {
+  try {
+    // 初始化数据库
+    await initializeDatabase();
+
+    // 启动HTTP服务器
+    const server = app.listen(PORT, HOST, () => {
+      logger.info(`服务器运行在 http://${publicUrl}:${PORT}`);
+      logger.info(`服务器绑定到 ${HOST}:${PORT}`);
 
   // 输出配置信息
   logger.info('服务器配置:');
@@ -444,13 +380,23 @@ const server = app.listen(PORT, HOST, () => {
     logger.info(`- 自动备份: 启用 (每 ${config.backup.frequency / (60 * 60 * 1000)} 小时)`);
     logger.info(`- 备份目录: ${config.backup.backupDir}`);
     logger.info(`- 最大备份数: ${config.backup.maxBackups}`);
-  } else {
-    logger.info(`- 自动备份: 禁用`);
-  }
-});
+    } else {
+      logger.info(`- 自动备份: 禁用`);
+    }
 
-// 优雅关闭
-process.on('SIGTERM', () => {
+    return server;
+    });
+  } catch (error) {
+    logger.error('服务器启动失败:', error.message);
+    logger.error('错误堆栈:', error.stack);
+    process.exit(1);
+  }
+}
+
+// 启动服务器
+startServer().then(server => {
+  // 优雅关闭处理
+  process.on('SIGTERM', () => {
   logger.info('收到 SIGTERM 信号，正在关闭服务器...');
 
   // 清除备份定时器
@@ -463,8 +409,14 @@ process.on('SIGTERM', () => {
     clearInterval(jsonCleanupInterval);
   }
 
-  server.close(() => {
-    logger.info('服务器已关闭');
-    process.exit(0);
+    server.close(() => {
+      // 关闭数据库连接
+      databaseManager.close();
+      logger.info('服务器已关闭');
+      process.exit(0);
+    });
   });
+}).catch(error => {
+  logger.error('服务器启动失败:', error.message);
+  process.exit(1);
 });

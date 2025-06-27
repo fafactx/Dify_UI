@@ -10,7 +10,7 @@ module.exports = {
 
     // 显示的服务器地址（用于日志和客户端配置）
     // 如果未设置，将使用本地IP地址
-    publicUrl: process.env.PUBLIC_URL || '192.168.50.65'
+    publicUrl: process.env.PUBLIC_URL || '10.193.21.115'
   },
 
   // 身份验证配置（可选）

@@ -1,6 +1,6 @@
 // evaluations-dal.js - 评估数据访问层
 
-const { getDatabase } = require('./database');
+const databaseManager = require('./database-manager');
 const { getDbLogger } = require('./utils/db-logger');
 const fieldLabelsDAL = require('./field-labels-dal');
 const fs = require('fs');
@@ -9,18 +9,52 @@ const path = require('path');
 class EvaluationsDAL {
   constructor(dbPath) {
     this.dbPath = dbPath;
-    this.logger = getDbLogger();
+    this.logger = this._initializeLogger();
+    this.db = null;
+    this.isInitialized = false;
+  }
 
-    // 检查数据库文件
-    this._checkDatabaseFile();
-
-    // 初始化数据库连接
+  // 安全初始化日志系统
+  _initializeLogger() {
     try {
-      this.db = getDatabase(dbPath);
-      console.log(`EvaluationsDAL 初始化成功，使用数据库: ${dbPath}`);
+      return getDbLogger();
+    } catch (error) {
+      console.warn('日志系统初始化失败，使用控制台日志:', error.message);
+      return {
+        logEvaluationSave: (key, data) => console.log(`[LOG] 保存评估: ${key}`),
+        logError: (type, error) => console.error(`[LOG] 错误 ${type}:`, error.message)
+      };
+    }
+  }
+
+  // 异步初始化数据库连接
+  async initialize() {
+    if (this.isInitialized) {
+      return this.db;
+    }
+
+    try {
+      console.log(`EvaluationsDAL 初始化数据库连接: ${this.dbPath}`);
+      await databaseManager.initialize(this.dbPath);
+      this.db = databaseManager.getConnection();
+      this.isInitialized = true;
+      console.log(`EvaluationsDAL 初始化成功`);
+      return this.db;
     } catch (error) {
       console.error(`EvaluationsDAL 初始化失败: ${error.message}`);
       throw error;
+    }
+  }
+
+  // 确保数据库已初始化
+  _ensureInitialized() {
+    if (!this.isInitialized || !this.db) {
+      throw new Error('EvaluationsDAL 未初始化，请先调用 initialize() 方法');
+    }
+
+    // 检查连接健康状态
+    if (!databaseManager.isConnectionHealthy()) {
+      throw new Error('数据库连接不健康，请检查数据库状态');
     }
   }
 
@@ -71,6 +105,9 @@ class EvaluationsDAL {
 
   // 保存新的评估数据
   saveEvaluation(resultKey, evaluationData) {
+    // 确保数据库已初始化
+    this._ensureInitialized();
+
     const timestamp = Date.now();
     const date = new Date(timestamp).toISOString();
 
@@ -266,6 +303,9 @@ class EvaluationsDAL {
 
   // 获取所有评估数据（支持分页和过滤）
   getEvaluations(options = {}) {
+    // 确保数据库已初始化
+    this._ensureInitialized();
+
     const {
       page = 1,
       limit = 20,
