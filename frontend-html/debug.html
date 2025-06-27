@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API调试</title>
+    <script src="js/config.js"></script>
+</head>
+<body>
+    <h1>API调试测试</h1>
+    <div id="result"></div>
+    
+    <script>
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                // 显示配置信息
+                resultDiv.innerHTML += `<p><strong>配置:</strong> ${JSON.stringify(window.appConfig)}</p>`;
+                
+                const apiUrl = window.appConfig.apiBaseUrl + '/api/stats';
+                resultDiv.innerHTML += `<p><strong>请求URL:</strong> ${apiUrl}</p>`;
+                
+                const response = await fetch(apiUrl);
+                resultDiv.innerHTML += `<p><strong>响应状态:</strong> ${response.status}</p>`;
+                
+                const data = await response.text();
+                resultDiv.innerHTML += `<p><strong>响应数据:</strong> ${data}</p>`;
+                
+            } catch (error) {
+                resultDiv.innerHTML += `<p><strong>错误:</strong> ${error.message}</p>`;
+            }
+        }
+        
+        // 页面加载后立即测试
+        window.onload = testAPI;
+    </script>
+</body>
+</html>

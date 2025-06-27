@@ -974,29 +974,45 @@
                 const apiBaseUrl = getApiBaseUrl();
                 const url = `${apiBaseUrl}/api/stats`;
                 console.log('API URL:', url);
+                console.log('配置文件API地址:', window.appConfig ? window.appConfig.apiBaseUrl : '未找到配置文件');
 
                 // 发起请求
                 const response = await fetch(url, {
                     method: 'GET',
                     headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    mode: 'cors'
+                        'Accept': 'application/json'
+                    }
                 });
+
+                console.log('响应状态:', response.status, response.statusText);
+                console.log('响应头:', [...response.headers.entries()]);
 
                 // 检查响应状态
                 if (!response.ok) {
-                    throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
+                    const errorText = await response.text();
+                    console.error('API错误响应:', errorText);
+                    throw new Error(`API请求失败: ${response.status} ${response.statusText}, 响应内容: ${errorText}`);
                 }
 
                 // 解析响应数据
-                const data = await response.json();
-                console.log('API响应数据:', data);
+                const responseText = await response.text();
+                console.log('原始响应文本:', responseText);
+
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('JSON解析失败:', parseError);
+                    throw new Error(`JSON解析失败: ${parseError.message}, 原始响应: ${responseText}`);
+                }
+
+                console.log('解析后的API响应数据:', data);
 
                 // 检查数据格式
                 if (!data || !data.stats) {
                     console.warn('后端返回的统计数据格式不正确:', data);
+                    // 显示错误信息到页面
+                    showApiError('后端返回的数据格式不正确', data);
                     return;
                 }
 
@@ -1006,7 +1022,26 @@
                 console.log('统计数据加载成功:', data.stats);
             } catch (error) {
                 console.error('获取统计数据失败:', error);
+                // 显示错误信息到页面
+                showApiError('获取统计数据失败', error);
             }
+        }
+
+        // 显示API错误信息
+        function showApiError(message, details) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'alert alert-danger m-3';
+            errorDiv.innerHTML = `
+                <h5><i class="fas fa-exclamation-triangle"></i> ${message}</h5>
+                <p><strong>详细信息:</strong> ${details.message || JSON.stringify(details)}</p>
+                <p><strong>API地址:</strong> ${getApiBaseUrl()}/api/stats</p>
+                <p><strong>配置文件:</strong> ${window.appConfig ? JSON.stringify(window.appConfig) : '未找到'}</p>
+                <button class="btn btn-primary btn-sm" onclick="loadDashboardStats()">重试</button>
+            `;
+
+            // 在页面顶部显示错误
+            const container = document.querySelector('.main-content') || document.body;
+            container.insertBefore(errorDiv, container.firstChild);
         }
 
         // 更新统计卡片
@@ -1273,8 +1308,18 @@
 
         // 获取API基础URL
         function getApiBaseUrl() {
-            // 使用Windows IP地址
-            return 'http://10.192.18.143:3000';
+            // 优先使用配置文件中的设置
+            if (window.appConfig && window.appConfig.apiBaseUrl) {
+                return window.appConfig.apiBaseUrl;
+            }
+
+            // 如果没有配置文件，使用自动检测
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                return 'http://localhost:3000';
+            } else {
+                // 生产环境，使用当前主机的3000端口
+                return `${window.location.protocol}//${window.location.hostname}:3000`;
+            }
         }
 
         // 转换产品数据为所需格式

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RAGLLM Test Suite - Test Cases</title>
+    <script src="js/config.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -1242,7 +1243,12 @@
 
         // Get API base URL
         function getApiBaseUrl() {
-            // 检测当前URL中的主机名
+            // 优先使用配置文件中的设置
+            if (window.appConfig && window.appConfig.apiBaseUrl) {
+                return window.appConfig.apiBaseUrl;
+            }
+
+            // 如果没有配置文件，使用自动检测
             const currentHost = window.location.hostname;
             const currentPort = window.location.port;
 
@@ -1251,8 +1257,13 @@
 
             // 如果当前页面是通过IP地址访问的，使用相同的IP地址
             if (/^\d+\.\d+\.\d+\.\d+$/.test(currentHost)) {
-                // 使用当前主机名和端口（如果有）
-                return `${window.location.protocol}//${currentHost}${currentPort ? ':' + currentPort : ''}`;
+                // 使用当前主机名和3000端口
+                return `${window.location.protocol}//${currentHost}:3000`;
+            }
+
+            // 本地开发环境
+            if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+                return 'http://localhost:3000';
             }
 
             // 默认情况下，使用相对路径

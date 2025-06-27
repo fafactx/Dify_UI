@@ -25,9 +25,48 @@ node check-environment.js
 REM 检查环境检查是否成功
 if %errorlevel% neq 0 (
     echo.
-    echo ❌ 环境检查失败，请解决上述问题后重新运行
-    pause
-    exit /b 1
+    echo ⚠️  环境检查发现问题，正在自动修复...
+
+    REM 自动修复Better-SQLite3问题
+    echo 🔧 修复Better-SQLite3编译问题...
+
+    REM 清理并重新安装
+    echo    清理node_modules...
+    if exist node_modules rmdir /s /q node_modules
+    if exist package-lock.json del /f package-lock.json
+
+    REM 重新安装依赖
+    echo    重新安装依赖包...
+    npm install
+
+    REM 单独重新编译Better-SQLite3
+    echo    重新编译Better-SQLite3...
+    npm rebuild better-sqlite3
+
+    REM 如果还有问题，尝试使用预编译版本
+    node -e "require('better-sqlite3')" >nul 2>&1
+    if %errorlevel% neq 0 (
+        echo    尝试使用预编译版本...
+        npm uninstall better-sqlite3
+        npm install better-sqlite3@8.4.0
+    )
+
+    REM 修复npm安全漏洞
+    echo 🔒 修复npm安全漏洞...
+    npm audit fix --force >nul 2>&1
+
+    REM 再次运行环境检查
+    echo 🔍 重新运行环境检查...
+    node check-environment.js
+
+    if %errorlevel% neq 0 (
+        echo.
+        echo ❌ 自动修复失败，请手动解决问题
+        pause
+        exit /b 1
+    )
+
+    echo ✅ 自动修复完成
 )
 
 echo.

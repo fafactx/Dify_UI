@@ -23,8 +23,60 @@ node check-environment.js
 # 检查环境检查是否成功
 if [ $? -ne 0 ]; then
     echo ""
-    echo "❌ 环境检查失败，请解决上述问题后重新运行"
-    exit 1
+    echo "⚠️  环境检查发现问题，正在自动修复..."
+
+    # 自动修复Better-SQLite3段错误问题
+    echo "🔧 修复Better-SQLite3编译问题..."
+
+    # 检查是否有段错误
+    if dmesg | tail -20 | grep -q "segfault\|Segmentation fault"; then
+        echo "   检测到段错误，重新编译Better-SQLite3..."
+
+        # 清理并重新安装
+        echo "   清理node_modules..."
+        rm -rf node_modules package-lock.json
+
+        # 确保编译环境
+        echo "   检查编译环境..."
+        if command -v apt-get &> /dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y build-essential python3
+        elif command -v yum &> /dev/null; then
+            sudo yum groupinstall -y "Development Tools"
+            sudo yum install -y python3
+        fi
+
+        # 重新安装依赖
+        echo "   重新安装依赖包..."
+        npm install
+
+        # 单独重新编译Better-SQLite3
+        echo "   重新编译Better-SQLite3..."
+        npm rebuild better-sqlite3
+
+        # 如果还有问题，尝试使用预编译版本
+        if ! node -e "require('better-sqlite3')" 2>/dev/null; then
+            echo "   尝试使用预编译版本..."
+            npm uninstall better-sqlite3
+            npm install better-sqlite3@8.4.0
+        fi
+    fi
+
+    # 修复npm安全漏洞
+    echo "🔒 修复npm安全漏洞..."
+    npm audit fix --force 2>/dev/null || true
+
+    # 再次运行环境检查
+    echo "🔍 重新运行环境检查..."
+    node check-environment.js
+
+    if [ $? -ne 0 ]; then
+        echo ""
+        echo "❌ 自动修复失败，请手动解决问题"
+        exit 1
+    fi
+
+    echo "✅ 自动修复完成"
 fi
 
 echo ""

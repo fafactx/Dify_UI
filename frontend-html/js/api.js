@@ -4,9 +4,14 @@
  */
 
 // API 基础 URL
-// 自动检测后端API地址
+// 优先使用配置文件中的API地址
 function getApiBaseUrl() {
-    // 如果在同一域名下，使用相对路径
+    // 优先使用配置文件中的设置
+    if (window.appConfig && window.appConfig.apiBaseUrl) {
+        return window.appConfig.apiBaseUrl;
+    }
+
+    // 如果没有配置文件，使用自动检测
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         // 本地开发环境，使用固定端口
         return 'http://localhost:3000';
@@ -50,7 +55,7 @@ async function apiRequest(endpoint, options = {}) {
     // 合并默认选项和传入的选项
     const requestOptions = {
         headers: {
-            'Content-Type': 'application/json',
+            'Accept': 'application/json',
             ...createAuthHeader(),
             ...(options.headers || {})
         },
