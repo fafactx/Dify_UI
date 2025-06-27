@@ -10,9 +10,9 @@ function checkNodeVersion() {
   console.log('📋 检查Node.js版本...');
   const nodeVersion = process.version;
   const majorVersion = parseInt(nodeVersion.slice(1).split('.')[0]);
-  
+
   console.log(`   当前版本: ${nodeVersion}`);
-  
+
   if (majorVersion < 14) {
     console.log('❌ Node.js版本过低，建议使用14.0.0或更高版本');
     return false;
@@ -25,27 +25,27 @@ function checkNodeVersion() {
 // 检查依赖包
 function checkDependencies() {
   console.log('\n📦 检查依赖包...');
-  
+
   const packageJsonPath = path.join(__dirname, 'package.json');
   if (!fs.existsSync(packageJsonPath)) {
     console.log('❌ package.json文件不存在');
     return false;
   }
-  
+
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   const dependencies = packageJson.dependencies || {};
-  
+
   console.log('   检查关键依赖:');
-  
+
   const criticalDeps = [
     'better-sqlite3',
     'express',
     'cors',
     'body-parser'
   ];
-  
+
   let allDepsOk = true;
-  
+
   for (const dep of criticalDeps) {
     if (dependencies[dep]) {
       console.log(`   ✅ ${dep}: ${dependencies[dep]}`);
@@ -54,7 +54,7 @@ function checkDependencies() {
       allDepsOk = false;
     }
   }
-  
+
   // 检查node_modules
   const nodeModulesPath = path.join(__dirname, 'node_modules');
   if (!fs.existsSync(nodeModulesPath)) {
@@ -63,25 +63,25 @@ function checkDependencies() {
   } else {
     console.log('   ✅ node_modules目录存在');
   }
-  
+
   return allDepsOk;
 }
 
 // 检查Better-SQLite3编译
 function checkBetterSqlite3() {
   console.log('\n🗄️  检查Better-SQLite3编译状态...');
-  
+
   try {
     const sqlite3 = require('better-sqlite3');
     console.log('   ✅ Better-SQLite3加载成功');
-    
+
     // 测试创建内存数据库
     const testDb = sqlite3(':memory:');
     testDb.exec('CREATE TABLE test (id INTEGER PRIMARY KEY)');
     testDb.exec('INSERT INTO test (id) VALUES (1)');
     const result = testDb.prepare('SELECT COUNT(*) as count FROM test').get();
     testDb.close();
-    
+
     if (result.count === 1) {
       console.log('   ✅ Better-SQLite3功能测试通过');
       return true;
@@ -99,9 +99,9 @@ function checkBetterSqlite3() {
 // 检查数据目录
 function checkDataDirectory() {
   console.log('\n📁 检查数据目录...');
-  
+
   const dataDir = path.join(__dirname, 'data');
-  
+
   if (!fs.existsSync(dataDir)) {
     console.log('   ⚠️  数据目录不存在，正在创建...');
     try {
@@ -114,7 +114,7 @@ function checkDataDirectory() {
   } else {
     console.log('   ✅ 数据目录存在');
   }
-  
+
   // 检查权限
   try {
     fs.accessSync(dataDir, fs.constants.R_OK | fs.constants.W_OK);
@@ -129,7 +129,7 @@ function checkDataDirectory() {
 // 检查配置文件
 function checkConfigFiles() {
   console.log('\n⚙️  检查配置文件...');
-  
+
   const configPath = path.join(__dirname, 'config.js');
   if (!fs.existsSync(configPath)) {
     console.log('   ❌ config.js文件不存在');
@@ -137,7 +137,7 @@ function checkConfigFiles() {
   } else {
     console.log('   ✅ config.js文件存在');
   }
-  
+
   // 检查前端配置
   const frontendConfigPath = path.join(__dirname, '../frontend-html/js/config.js');
   if (!fs.existsSync(frontendConfigPath)) {
@@ -145,7 +145,7 @@ function checkConfigFiles() {
     return false;
   } else {
     console.log('   ✅ 前端config.js文件存在');
-    
+
     // 检查IP配置
     const frontendConfig = fs.readFileSync(frontendConfigPath, 'utf8');
     if (frontendConfig.includes('10.193.21.115')) {
@@ -154,14 +154,54 @@ function checkConfigFiles() {
       console.log('   ⚠️  前端IP配置可能需要更新');
     }
   }
-  
+
   return true;
+}
+
+// 检查端口占用
+function checkPortAvailability() {
+  console.log('\n🔌 检查端口3000占用情况...');
+
+  try {
+    if (process.platform === 'win32') {
+      // Windows系统
+      const result = execSync('netstat -ano | findstr :3000', { encoding: 'utf8' });
+      if (result.trim()) {
+        const lines = result.trim().split('\n');
+        const pids = lines.map(line => {
+          const parts = line.trim().split(/\s+/);
+          return parts[parts.length - 1];
+        }).filter(pid => pid && !isNaN(pid));
+
+        if (pids.length > 0) {
+          console.log(`   ⚠️  端口3000被以下进程占用: ${pids.join(', ')}`);
+          console.log('   💡 启动脚本会自动终止这些进程');
+          return false;
+        }
+      }
+    } else {
+      // Linux/macOS系统
+      const result = execSync('lsof -ti:3000 2>/dev/null || true', { encoding: 'utf8' });
+      if (result.trim()) {
+        const pids = result.trim().split('\n').filter(pid => pid);
+        console.log(`   ⚠️  端口3000被以下进程占用: ${pids.join(', ')}`);
+        console.log('   💡 启动脚本会自动终止这些进程');
+        return false;
+      }
+    }
+
+    console.log('   ✅ 端口3000可用');
+    return true;
+  } catch (error) {
+    console.log('   ✅ 端口3000可用 (检查命令执行失败，但这通常表示端口未被占用)');
+    return true;
+  }
 }
 
 // 自动修复函数
 function autoFix() {
   console.log('\n🔧 开始自动修复...\n');
-  
+
   // 修复依赖
   console.log('📦 安装/更新依赖包...');
   try {
@@ -171,7 +211,7 @@ function autoFix() {
     console.log('❌ 依赖包安装失败:', error.message);
     return false;
   }
-  
+
   // 重新编译Better-SQLite3
   console.log('\n🔨 重新编译Better-SQLite3...');
   try {
@@ -185,32 +225,33 @@ function autoFix() {
     console.log('   CentOS/RHEL: sudo yum groupinstall "Development Tools"');
     return false;
   }
-  
+
   return true;
 }
 
 // 主函数
 function main() {
   console.log('🚀 RAGLLM评估系统环境检查工具\n');
-  
+
   const checks = [
     { name: 'Node.js版本', fn: checkNodeVersion },
     { name: '依赖包', fn: checkDependencies },
     { name: 'Better-SQLite3', fn: checkBetterSqlite3 },
     { name: '数据目录', fn: checkDataDirectory },
-    { name: '配置文件', fn: checkConfigFiles }
+    { name: '配置文件', fn: checkConfigFiles },
+    { name: '端口可用性', fn: checkPortAvailability }
   ];
-  
+
   let allPassed = true;
   const failedChecks = [];
-  
+
   for (const check of checks) {
     if (!check.fn()) {
       allPassed = false;
       failedChecks.push(check.name);
     }
   }
-  
+
   console.log('\n📊 检查结果:');
   if (allPassed) {
     console.log('🎉 所有检查都通过了！系统应该可以正常运行。');
@@ -218,14 +259,14 @@ function main() {
     console.log('   node server.js');
   } else {
     console.log(`❌ 发现 ${failedChecks.length} 个问题: ${failedChecks.join(', ')}`);
-    
+
     // 询问是否自动修复
     const readline = require('readline');
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout
     });
-    
+
     rl.question('\n🔧 是否尝试自动修复这些问题? (y/N): ', (answer) => {
       if (answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes') {
         if (autoFix()) {
@@ -252,5 +293,6 @@ module.exports = {
   checkBetterSqlite3,
   checkDataDirectory,
   checkConfigFiles,
+  checkPortAvailability,
   autoFix
 };

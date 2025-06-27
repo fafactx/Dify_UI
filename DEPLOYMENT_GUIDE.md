@@ -123,10 +123,18 @@ npm rebuild better-sqlite3
 
 **解决方案:**
 ```bash
-# 查找占用端口的进程
-netstat -tlnp | grep :3000
-# 或者修改config.js中的端口配置
+# 使用内置端口管理工具
+cd backend
+npm run kill-port        # 检查并清理端口3000
+
+# 或者手动查找占用端口的进程
+netstat -tlnp | grep :3000  # Linux/macOS
+netstat -ano | findstr :3000  # Windows
+
+# 启动脚本会自动处理端口占用问题
 ```
+
+**注意**: 新版启动脚本已经集成了自动端口清理功能，会在启动前自动终止占用端口的进程。
 
 #### 4. 权限问题
 ```

@@ -9,6 +9,8 @@
     "check": "node check-environment.js",
     "setup": "npm install && npm run check",
     "rebuild": "npm rebuild better-sqlite3",
+    "port": "node port-manager.js",
+    "kill-port": "node port-manager.js 3000",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {

@@ -22,6 +22,9 @@ const apiRoutes = require('./api-routes');
 // 导入数据库管理器
 const databaseManager = require('./database-manager');
 
+// 导入端口管理器
+const PortManager = require('./port-manager');
+
 // 加载配置
 let config;
 try {
@@ -356,6 +359,24 @@ logger.info('已启用自动删除JSON文件功能: 每小时检查一次');
 // 启动服务器 - 异步初始化数据库后启动
 async function startServer() {
   try {
+    // 清理端口占用
+    const portManager = new PortManager(PORT);
+    const portResult = await portManager.clearPort({
+      force: false,
+      waitTime: 2000,
+      maxRetries: 2,
+      verbose: true
+    });
+
+    if (!portResult.success) {
+      logger.error(`端口清理失败: ${portResult.message}`);
+      if (portResult.remainingPids) {
+        logger.error(`仍有进程占用端口: ${portResult.remainingPids.join(', ')}`);
+        logger.error('请手动终止这些进程或以管理员权限运行');
+      }
+      process.exit(1);
+    }
+
     // 初始化数据库
     await initializeDatabase();
 
