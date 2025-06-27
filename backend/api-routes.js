@@ -84,7 +84,7 @@ const asyncHandler = fn => (req, res, next) => {
 
 // 评估数据管理 API
 // 添加新评估
-router.post('/evaluations', asyncHandler(async (req, res) => {
+router.post('/evaluations', ensureDbInitialized, asyncHandler(async (req, res) => {
   const evaluationData = req.body;
 
   // 验证请求数据
@@ -141,7 +141,7 @@ router.post('/evaluations', asyncHandler(async (req, res) => {
 }));
 
 // 获取评估列表
-router.get('/evaluations', asyncHandler(async (req, res) => {
+router.get('/evaluations', ensureDbInitialized, asyncHandler(async (req, res) => {
   const options = {
     page: parseInt(req.query.page) || 1,
     limit: parseInt(req.query.limit) || 20,
@@ -163,7 +163,7 @@ router.get('/evaluations', asyncHandler(async (req, res) => {
 }));
 
 // 获取单个评估详情
-router.get('/evaluations/:id', asyncHandler(async (req, res) => {
+router.get('/evaluations/:id', ensureDbInitialized, asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id);
   const evaluation = evaluationsDAL.getEvaluationById(id);
 
@@ -181,7 +181,7 @@ router.get('/evaluations/:id', asyncHandler(async (req, res) => {
 }));
 
 // 获取总体统计概览
-router.get('/stats/overview', asyncHandler(async (req, res) => {
+router.get('/stats/overview', ensureDbInitialized, asyncHandler(async (req, res) => {
   const stats = evaluationsDAL.getStatsOverview();
 
   res.json({
@@ -191,7 +191,7 @@ router.get('/stats/overview', asyncHandler(async (req, res) => {
 }));
 
 // 获取统计数据 - 主要API端点
-router.get('/stats', asyncHandler(async (req, res) => {
+router.get('/stats', ensureDbInitialized, asyncHandler(async (req, res) => {
   try {
     // 从数据库获取统计概览（使用缓存）
     const stats = evaluationsDAL.getStatsOverview();
@@ -679,7 +679,7 @@ router.post('/dify-evaluation', asyncHandler(async (req, res) => {
 */
 
 // 数据库检查 API - 仅用于调试
-router.get('/dbinfo', asyncHandler(async (req, res) => {
+router.get('/dbinfo', ensureDbInitialized, asyncHandler(async (req, res) => {
   try {
     // 获取数据库信息
     const dbInfo = evaluationsDAL.getDebugInfo();
