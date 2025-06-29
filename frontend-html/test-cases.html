@@ -306,11 +306,8 @@
         </div>
     </div>
 
-    <!-- 引入外部 JavaScript 文件 -->
-    <script src="js/test-cases.js"></script>
-
     <script>
-        // 全局变量 - 保留这些变量以确保兼容性
+        // 全局变量
         let testCases = [];
         let currentPage = 1;
         const pageSize = 10;
@@ -335,20 +332,49 @@
         const productFamiliesElement = document.getElementById('productFamilies');
         const magCountElement = document.getElementById('magCount');
 
+        // 性能监控 - 基于React Profiler模式
+        const performanceMetrics = {
+            loadTime: 0,
+            renderTime: 0,
+            searchTime: 0,
+            apiCalls: 0
+        };
+
+        function logPerformanceMetrics() {
+            console.group('🚀 页面性能指标');
+            console.log('数据加载时间:', performanceMetrics.loadTime + 'ms');
+            console.log('渲染时间:', performanceMetrics.renderTime + 'ms');
+            console.log('搜索时间:', performanceMetrics.searchTime + 'ms');
+            console.log('API调用次数:', performanceMetrics.apiCalls);
+            console.log('测试用例数量:', testCases.length);
+            console.log('缓存命中率:', renderCache.size > 0 ? '有缓存' : '无缓存');
+            console.groupEnd();
+        }
+
         // Initialize the page
         document.addEventListener('DOMContentLoaded', () => {
-            loadData();
+            console.log('Test Cases页面初始化开始...');
+            console.log('配置信息:', window.appConfig);
+            console.log('API基础URL:', getApiBaseUrl());
+
+            // 添加性能监控
+            const startTime = performance.now();
+
+            loadData().then(() => {
+                performanceMetrics.loadTime = performance.now() - startTime;
+                logPerformanceMetrics();
+            });
 
             // Event listeners
-            selectAllCheckbox.addEventListener('change', handleSelectAll);
-            deleteSelectedBtn.addEventListener('click', showDeleteConfirmation);
-            deleteRangeBtn.addEventListener('click', showDeleteRangeModal);
-            refreshBtn.addEventListener('click', loadData);
+            if (selectAllCheckbox) selectAllCheckbox.addEventListener('change', handleSelectAll);
+            if (deleteSelectedBtn) deleteSelectedBtn.addEventListener('click', showDeleteConfirmation);
+            if (deleteRangeBtn) deleteRangeBtn.addEventListener('click', showDeleteRangeModal);
+            if (refreshBtn) refreshBtn.addEventListener('click', loadData);
 
-            // 搜索功能
+            // 搜索功能 - 使用防抖优化，基于React最佳实践
             const searchInput = document.getElementById('searchInput');
             if (searchInput) {
-                searchInput.addEventListener('input', handleSearch);
+                searchInput.addEventListener('input', debouncedSearch);
             }
 
             // Modal event listeners
@@ -406,7 +432,7 @@
         }
 
         /**
-         * 加载统计信息
+         * 加载统计信息 - 优化版本，基于React最佳实践
          */
         async function loadStats() {
             try {
@@ -414,14 +440,19 @@
                 const url = `${apiBaseUrl}/api/stats`;
                 console.log('加载统计信息, API URL:', url);
 
+                // 使用AbortController来处理请求取消
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
+
                 const response = await fetch(url, {
                     method: 'GET',
                     headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
+                        'Accept': 'application/json'
                     },
-                    mode: 'cors'
+                    signal: controller.signal
                 });
+
+                clearTimeout(timeoutId);
 
                 if (!response.ok) {
                     throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
@@ -436,7 +467,11 @@
                 // 更新统计UI
                 updateStatsUI();
             } catch (error) {
-                console.error('加载统计信息错误:', error);
+                if (error.name === 'AbortError') {
+                    console.warn('统计信息请求超时');
+                } else {
+                    console.error('加载统计信息错误:', error);
+                }
                 statsData = null;
                 // 显示默认统计信息
                 updateStatsUI();
@@ -513,15 +548,162 @@
          * 加载测试用例数据 - 改进版
          */
         async function loadTestCases() {
+            console.time('loadTestCases'); // 性能测量
+
             try {
                 console.log('正在加载测试用例...');
 
                 // 重置选择
                 selectedIds.clear();
-                selectAllCheckbox.checked = false;
+                if (selectAllCheckbox) selectAllCheckbox.checked = false;
                 updateDeleteSelectedButton();
 
-                // 显示加载状态
+                // 显示优化的加载状态
+                showLoadingState();
+
+                // 并行加载策略 - 同时尝试多个端点
+                const apiBaseUrl = getApiBaseUrl();
+                const testCasesData = await loadTestCasesWithFallback(apiBaseUrl);
+
+                // 检查数据库是否为空
+                if (testCasesData.isEmpty) {
+                    showEmptyState();
+                    testCases = [];
+                    return;
+                }
+
+                // 缓存和处理数据
+                testCases = processTestCasesData(testCasesData.data);
+
+                // 应用搜索过滤（如果有）
+                if (searchTerm) {
+                    testCases = filterTestCases(testCases, searchTerm);
+                }
+
+                // 渲染测试用例
+                renderTestCases();
+                renderPagination();
+
+                console.timeEnd('loadTestCases');
+            } catch (error) {
+                console.error('加载测试用例错误:', error);
+                showErrorState(error);
+                console.timeEnd('loadTestCases');
+            }
+        }
+
+        /**
+         * 并行加载测试用例数据，带回退机制
+         */
+        async function loadTestCasesWithFallback(apiBaseUrl) {
+            const endpoints = [
+                `${apiBaseUrl}/api/evaluations`,
+                `${apiBaseUrl}/api/test-cases`
+            ];
+
+            // 使用Promise.allSettled来并行尝试所有端点
+            const results = await Promise.allSettled(
+                endpoints.map(url => fetchWithTimeout(url, 8000))
+            );
+
+            // 找到第一个成功的响应
+            for (let i = 0; i < results.length; i++) {
+                const result = results[i];
+                if (result.status === 'fulfilled') {
+                    const data = result.value;
+                    console.log(`成功从端点 ${endpoints[i]} 获取数据`);
+
+                    // 检查是否为空
+                    if (data.is_empty || (data.success === false && data.message?.includes('数据库为空'))) {
+                        return { isEmpty: true, data: [] };
+                    }
+
+                    return {
+                        isEmpty: false,
+                        data: data.data || data.testCases || []
+                    };
+                }
+            }
+
+            // 如果所有端点都失败，抛出最后一个错误
+            const lastError = results[results.length - 1];
+            throw new Error(lastError.reason?.message || '所有API端点都无法访问');
+        }
+
+        /**
+         * 带超时的fetch请求
+         */
+        async function fetchWithTimeout(url, timeout = 5000) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+            try {
+                // 增加API调用计数
+                performanceMetrics.apiCalls++;
+
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                return await response.json();
+            } catch (error) {
+                clearTimeout(timeoutId);
+                throw error;
+            }
+        }
+
+        /**
+         * 处理测试用例数据
+         */
+        function processTestCasesData(rawData) {
+            if (!Array.isArray(rawData)) {
+                console.warn('测试用例数据不是数组格式:', rawData);
+                return [];
+            }
+
+            return rawData.map(item => {
+                // 标准化数据格式
+                let testCase = {
+                    id: item.id,
+                    result_key: item.result_key || '',
+                    timestamp: item.timestamp || '',
+                    date: item.date || new Date().toISOString(),
+                    average_score: 0
+                };
+
+                // 处理嵌套的数据字段
+                let evalData = {};
+                if (item.data && typeof item.data === 'string') {
+                    try {
+                        evalData = JSON.parse(item.data);
+                    } catch (e) {
+                        console.warn(`解析数据失败 ID ${item.id}:`, e);
+                        evalData = {};
+                    }
+                } else if (item.data && typeof item.data === 'object') {
+                    evalData = item.data;
+                } else {
+                    evalData = item;
+                }
+
+                // 合并数据
+                return { ...testCase, ...evalData };
+            });
+        }
+
+        /**
+         * 显示加载状态
+         */
+        function showLoadingState() {
+            if (testCasesBody) {
                 testCasesBody.innerHTML = `
                     <tr>
                         <td colspan="8" class="text-center py-4">
@@ -532,69 +714,34 @@
                         </td>
                     </tr>
                 `;
+            }
+        }
 
-                // 动态获取API URL
-                const apiBaseUrl = getApiBaseUrl();
-                const url = `${apiBaseUrl}/api/test-cases`;
-                console.log('API URL:', url);
+        /**
+         * 显示空状态
+         */
+        function showEmptyState() {
+            if (testCasesBody) {
+                testCasesBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center py-4">
+                            <div class="bg-gray-50 p-4 rounded text-center">
+                                <i class="fas fa-database text-gray-400 text-3xl mb-2"></i>
+                                <h4 class="text-lg font-bold text-gray-600">数据库为空</h4>
+                                <p class="text-gray-500">还没有测试用例数据</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+            if (pagination) pagination.innerHTML = '';
+        }
 
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    mode: 'cors'
-                });
-
-                if (!response.ok) {
-                    throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
-                }
-
-                const data = await response.json();
-                console.log('API响应:', data);
-
-                // 检查数据格式
-                if (!data.testCases && !data.data) {
-                    // 检查是否是空数据库响应
-                    if (data.success === false && data.message && data.message.includes('数据库为空') || data.is_empty) {
-                        console.log('数据库为空');
-                        testCases = [];
-
-                        // 显示数据库为空提示
-                        testCasesBody.innerHTML = `
-                            <tr>
-                                <td colspan="8" class="text-center py-4">
-                                    <div class="bg-blue-50 p-4 rounded text-center">
-                                        <i class="fas fa-database text-blue-500 text-3xl mb-2"></i>
-                                        <h4 class="text-lg font-bold text-blue-800">数据库为空</h4>
-                                        <p class="text-blue-600">请等待数据从 Dify 同步</p>
-                                    </div>
-                                </td>
-                            </tr>
-                        `;
-
-                        // 清空分页
-                        pagination.innerHTML = '';
-                        return;
-                    } else {
-                        throw new Error('API响应格式不正确，缺少testCases或data字段');
-                    }
-                }
-
-                // 使用testCases字段或data字段
-                testCases = data.testCases || data.data || [];
-
-                // 应用搜索过滤（如果有）
-                if (searchTerm) {
-                    testCases = filterTestCases(testCases, searchTerm);
-                }
-
-                // 渲染测试用例
-                renderTestCases();
-                renderPagination();
-            } catch (error) {
-                console.error('加载测试用例错误:', error);
+        /**
+         * 显示错误状态
+         */
+        function showErrorState(error) {
+            if (testCasesBody) {
                 testCasesBody.innerHTML = `
                     <tr>
                         <td colspan="8" class="text-center py-4">
@@ -602,6 +749,7 @@
                                 <i class="fas fa-exclamation-circle text-red-500 text-3xl mb-2"></i>
                                 <h4 class="text-lg font-bold text-red-800">加载测试用例错误</h4>
                                 <p class="text-red-600">${error.message}</p>
+                                <p class="text-sm text-gray-600 mt-2">API地址: ${getApiBaseUrl()}</p>
                                 <button onclick="loadData()" class="mt-3 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
                                     <i class="fas fa-redo mr-1"></i> 重试
                                 </button>
@@ -609,10 +757,8 @@
                         </td>
                     </tr>
                 `;
-
-                // 清空分页
-                pagination.innerHTML = '';
             }
+            if (pagination) pagination.innerHTML = '';
         }
 
         /**
@@ -638,8 +784,15 @@
             });
         }
 
-        // 渲染测试用例 - 完整版
+        // 缓存渲染结果 - 基于React useMemo模式
+        let renderCache = new Map();
+        let lastRenderKey = '';
+
+        // 渲染测试用例 - 优化版本，基于React最佳实践
         function renderTestCases() {
+            const renderStartTime = performance.now();
+            console.time('renderTestCases');
+
             if (testCases.length === 0) {
                 testCasesBody.innerHTML = `
                     <tr>
@@ -656,61 +809,165 @@
             const endIndex = Math.min(startIndex + pageSize, testCases.length);
             const pageTestCases = testCases.slice(startIndex, endIndex);
 
+            // 创建缓存键 - 类似React的依赖数组
+            const renderKey = `${currentPage}-${pageSize}-${JSON.stringify(pageTestCases.map(tc => tc.id))}-${Array.from(selectedIds).join(',')}`;
+
+            // 如果缓存键相同，跳过重新渲染 - 类似React.memo
+            if (renderKey === lastRenderKey && renderCache.has(renderKey)) {
+                console.log('使用缓存的渲染结果');
+                console.timeEnd('renderTestCases');
+                return;
+            }
+
             // 首先，根据第一个测试用例更新表格标题
             updateTableHeaders(testCases[0]);
 
-            // 获取要显示的字段
-            const displayFields = getDisplayFields();
+            // 获取要显示的字段 - 缓存字段配置
+            const displayFields = memoizedGetDisplayFields();
 
-            // 生成HTML
-            testCasesBody.innerHTML = pageTestCases.map(testCase => {
-                // 创建行HTML
-                let rowHtml = `
-                <tr data-id="${testCase.id}">
-                    <td>
-                        <input type="checkbox" class="case-checkbox rounded"
-                               data-id="${testCase.id}"
-                               ${selectedIds.has(testCase.id) ? 'checked' : ''}>
-                    </td>
-                    <td>${testCase.id}</td>
-                    <td>${formatDate(testCase.date || testCase.timestamp)}</td>`;
+            // 使用DocumentFragment优化DOM操作 - 类似React的批量更新
+            const fragment = document.createDocumentFragment();
 
-                // 为每个显示字段添加单元格
-                displayFields.forEach(field => {
-                    if (field === 'average_score') {
-                        // 格式化分数
-                        const score = testCase.average_score;
-                        let scoreClass = '';
-                        if (score >= 90) scoreClass = 'text-green-600';
-                        else if (score >= 70) scoreClass = 'text-blue-600';
-                        else if (score >= 50) scoreClass = 'text-yellow-600';
-                        else if (score > 0) scoreClass = 'text-red-600';
-
-                        rowHtml += `<td class="${scoreClass} font-bold">${score ? score.toFixed(1) : 'N/A'}</td>`;
-                    } else {
-                        rowHtml += `<td>${testCase[field] || 'N/A'}</td>`;
-                    }
-                });
-
-                // 添加操作按钮
-                rowHtml += `
-                    <td>
-                        <button class="text-red-500 hover:text-red-700" onclick="deleteTestCase(${testCase.id})">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                        <button class="text-blue-500 hover:text-blue-700 ml-2" onclick="viewTestCase(${testCase.id})">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </td>
-                </tr>`;
-
-                return rowHtml;
-            }).join('');
-
-            // 添加事件监听器
-            document.querySelectorAll('.case-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', handleCheckboxChange);
+            // 批量创建行元素
+            pageTestCases.forEach(testCase => {
+                const row = createTestCaseRow(testCase, displayFields);
+                fragment.appendChild(row);
             });
+
+            // 一次性更新DOM
+            testCasesBody.innerHTML = '';
+            testCasesBody.appendChild(fragment);
+
+            // 批量添加事件监听器 - 使用事件委托优化
+            setupEventDelegation();
+
+            // 缓存渲染结果
+            renderCache.set(renderKey, true);
+            lastRenderKey = renderKey;
+
+            // 清理旧缓存 - 防止内存泄漏
+            if (renderCache.size > 10) {
+                const firstKey = renderCache.keys().next().value;
+                renderCache.delete(firstKey);
+            }
+
+            const renderTime = performance.now() - renderStartTime;
+            performanceMetrics.renderTime = renderTime;
+            console.timeEnd('renderTestCases');
+        }
+
+        // 缓存字段配置 - 类似useMemo
+        let cachedDisplayFields = null;
+        let lastFieldsKey = '';
+
+        function memoizedGetDisplayFields() {
+            const fieldsKey = testCases.length > 0 ? Object.keys(testCases[0]).join(',') : '';
+
+            if (fieldsKey === lastFieldsKey && cachedDisplayFields) {
+                return cachedDisplayFields;
+            }
+
+            cachedDisplayFields = getDisplayFields();
+            lastFieldsKey = fieldsKey;
+            return cachedDisplayFields;
+        }
+
+        // 创建单个测试用例行 - 优化版本
+        function createTestCaseRow(testCase, displayFields) {
+            const row = document.createElement('tr');
+            row.setAttribute('data-id', testCase.id);
+
+            // 创建复选框单元格
+            const checkboxCell = document.createElement('td');
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'case-checkbox rounded';
+            checkbox.setAttribute('data-id', testCase.id);
+            checkbox.checked = selectedIds.has(testCase.id);
+            checkboxCell.appendChild(checkbox);
+            row.appendChild(checkboxCell);
+
+            // ID单元格
+            const idCell = document.createElement('td');
+            idCell.textContent = testCase.id;
+            row.appendChild(idCell);
+
+            // 日期单元格
+            const dateCell = document.createElement('td');
+            dateCell.textContent = formatDate(testCase.date || testCase.timestamp);
+            row.appendChild(dateCell);
+
+            // 动态字段单元格
+            displayFields.forEach(field => {
+                const cell = document.createElement('td');
+
+                if (field === 'average_score') {
+                    // 格式化分数
+                    const score = testCase.average_score;
+                    let scoreClass = '';
+                    if (score >= 90) scoreClass = 'text-green-600';
+                    else if (score >= 70) scoreClass = 'text-blue-600';
+                    else if (score >= 50) scoreClass = 'text-yellow-600';
+                    else if (score > 0) scoreClass = 'text-red-600';
+
+                    cell.className = `${scoreClass} font-bold`;
+                    cell.textContent = score ? score.toFixed(1) : 'N/A';
+                } else {
+                    cell.textContent = testCase[field] || 'N/A';
+                }
+
+                row.appendChild(cell);
+            });
+
+            // 操作按钮单元格
+            const actionsCell = document.createElement('td');
+            actionsCell.innerHTML = `
+                <button class="text-red-500 hover:text-red-700" data-action="delete" data-id="${testCase.id}">
+                    <i class="fas fa-trash"></i>
+                </button>
+                <button class="text-blue-500 hover:text-blue-700 ml-2" data-action="view" data-id="${testCase.id}">
+                    <i class="fas fa-eye"></i>
+                </button>
+            `;
+            row.appendChild(actionsCell);
+
+            return row;
+        }
+
+        // 事件委托 - 优化事件监听器性能
+        function setupEventDelegation() {
+            // 移除旧的事件监听器
+            if (testCasesBody._delegatedHandler) {
+                testCasesBody.removeEventListener('click', testCasesBody._delegatedHandler);
+                testCasesBody.removeEventListener('change', testCasesBody._delegatedHandler);
+            }
+
+            // 添加新的委托事件监听器
+            const delegatedHandler = (event) => {
+                const target = event.target;
+
+                // 处理复选框变化
+                if (target.classList.contains('case-checkbox')) {
+                    handleCheckboxChange(event);
+                }
+
+                // 处理按钮点击
+                if (target.closest('[data-action]')) {
+                    const button = target.closest('[data-action]');
+                    const action = button.getAttribute('data-action');
+                    const id = parseInt(button.getAttribute('data-id'));
+
+                    if (action === 'delete') {
+                        deleteTestCase(id);
+                    } else if (action === 'view') {
+                        viewTestCase(id);
+                    }
+                }
+            };
+
+            testCasesBody.addEventListener('click', delegatedHandler);
+            testCasesBody.addEventListener('change', delegatedHandler);
+            testCasesBody._delegatedHandler = delegatedHandler;
         }
 
         // 查看测试用例详情 - 完整版
@@ -1002,6 +1259,38 @@
                     }
                 });
             }
+        }
+
+        // 防抖搜索 - 基于React useCallback和useDeferredValue模式
+        let searchTimeout = null;
+
+        function debouncedSearch(event) {
+            const value = event.target.value;
+
+            // 清除之前的定时器
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+
+            // 设置新的定时器 - 300ms延迟，类似React的useDeferredValue
+            searchTimeout = setTimeout(() => {
+                handleSearch(value);
+            }, 300);
+        }
+
+        function handleSearch(searchValue) {
+            const searchStartTime = performance.now();
+            console.time('search');
+
+            searchTerm = searchValue || '';
+            currentPage = 1; // 重置到第一页
+
+            // 重新加载数据以应用搜索过滤
+            loadTestCases().then(() => {
+                const searchTime = performance.now() - searchStartTime;
+                performanceMetrics.searchTime = searchTime;
+                console.timeEnd('search');
+            });
         }
 
         // Handle select all checkbox
