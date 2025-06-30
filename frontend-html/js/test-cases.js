@@ -412,7 +412,7 @@ function initializeTableHeaders() {
 }
 
 /**
- * 获取要显示的字段
+ * 获取要显示的字段 - 适配真实数据
  */
 function getDisplayFields() {
     // 如果已经从后端加载了字段标签，使用这些标签
@@ -423,12 +423,14 @@ function getDisplayFields() {
         return sortedLabels.map(label => label.field_key);
     }
 
-    // 默认字段
+    // 默认字段 - 基于真实数据格式
     return [
         'CAS Name',
         'Product Family',
         'Part Number',
         'MAG',
+        'Question Complexity',
+        'Question Category',
         'average_score'
     ];
 }

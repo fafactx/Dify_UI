@@ -104,7 +104,7 @@ async function fetchWithTimeout(url, timeout = 5000, signal) {
 }
 
 /**
- * 处理测试用例数据 - 修复版
+ * 处理测试用例数据 - 真实数据格式版本
  */
 function processTestCasesData(rawData) {
     if (!Array.isArray(rawData)) {
@@ -113,18 +113,18 @@ function processTestCasesData(rawData) {
     }
 
     console.log(`开始处理 ${rawData.length} 条原始数据`);
+    console.log('原始数据示例:', rawData[0]);
 
     const processedData = rawData.map((item, index) => {
         // 标准化数据格式
         let testCase = {
             id: item.id || index + 1,
-            result_key: item.result_key || `result_${index}`,
+            result_key: item.result_key || item.resultKey || `result_${index}`,
             timestamp: item.timestamp || item.date || new Date().toISOString(),
-            date: item.date || item.timestamp || new Date().toISOString(),
-            average_score: 0
+            date: item.date || item.timestamp || new Date().toISOString()
         };
 
-        // 处理嵌套的数据字段
+        // 处理嵌套的数据字段 - 适配真实数据格式
         let evalData = {};
 
         // 如果有data字段且是字符串，尝试解析JSON
@@ -147,26 +147,42 @@ function processTestCasesData(rawData) {
             // 移除基础字段，避免重复
             delete evalData.id;
             delete evalData.result_key;
+            delete evalData.resultKey;
             delete evalData.timestamp;
             delete evalData.date;
         }
 
-        // 计算平均分
-        const scores = [];
-        ['hallucination_control', 'quality', 'professionalism', 'usefulness'].forEach(field => {
-            if (evalData[field] && !isNaN(evalData[field])) {
-                scores.push(Number(evalData[field]));
+        // 确保关键字段存在
+        const finalData = {
+            ...testCase,
+            'CAS Name': evalData['CAS Name'] || 'N/A',
+            'Product Family': evalData['Product Family'] || 'N/A',
+            'Part Number': evalData['Part Number'] || 'N/A',
+            'MAG': evalData['MAG'] || 'N/A',
+            'Question': evalData['Question'] || 'N/A',
+            'Answer': evalData['Answer'] || 'N/A',
+            'Question Complexity': evalData['Question Complexity'] || 'N/A',
+            'Question Category': evalData['Question Category'] || 'N/A',
+            'hallucination_control': Number(evalData['hallucination_control']) || 0,
+            'quality': Number(evalData['quality']) || 0,
+            'professionalism': Number(evalData['professionalism']) || 0,
+            'usefulness': Number(evalData['usefulness']) || 0,
+            'average_score': Number(evalData['average_score']) || 0
+        };
+
+        // 如果没有预计算的平均分，则计算
+        if (!finalData.average_score) {
+            const scores = [
+                finalData.hallucination_control,
+                finalData.quality,
+                finalData.professionalism,
+                finalData.usefulness
+            ].filter(score => score > 0);
+
+            if (scores.length > 0) {
+                finalData.average_score = scores.reduce((a, b) => a + b, 0) / scores.length;
             }
-        });
-
-        if (scores.length > 0) {
-            evalData.average_score = scores.reduce((a, b) => a + b, 0) / scores.length;
-        } else if (evalData.average_score && !isNaN(evalData.average_score)) {
-            evalData.average_score = Number(evalData.average_score);
         }
-
-        // 合并数据
-        const finalData = { ...testCase, ...evalData };
 
         // 调试第一条数据
         if (index === 0) {
@@ -410,9 +426,12 @@ function renderTestCases() {
 
     if (filteredTestCases.length === 0) {
         const message = searchTerm ? `没有找到包含 "${searchTerm}" 的测试用例` : '没有找到测试用例';
+        const displayFields = window.getDisplayFields ? window.getDisplayFields() : [];
+        const totalCols = 3 + displayFields.length + 1; // checkbox + id + date + fields + actions
+
         testCasesBody.innerHTML = `
             <tr>
-                <td colspan="8" class="text-center">
+                <td colspan="${totalCols}" class="text-center">
                     <div class="empty-state">
                         <i class="fas fa-search"></i>
                         <h5>${message}</h5>
@@ -429,10 +448,44 @@ function renderTestCases() {
     const endIndex = Math.min(startIndex + pageSize, filteredTestCases.length);
     const pageTestCases = filteredTestCases.slice(startIndex, endIndex);
 
-    // Bootstrap样式渲染
+    // 获取要显示的字段
+    const displayFields = window.getDisplayFields ? window.getDisplayFields() : [
+        'CAS Name',
+        'Product Family',
+        'Part Number',
+        'MAG',
+        'Question Complexity',
+        'Question Category',
+        'average_score'
+    ];
+
+    // Bootstrap样式渲染 - 动态字段
     const rows = pageTestCases.map(testCase => {
         const scoreClass = testCase.average_score >= 80 ? 'text-success' :
                           testCase.average_score >= 60 ? 'text-warning' : 'text-danger';
+
+        // 构建动态字段列
+        const fieldCells = displayFields.map(field => {
+            let value = testCase[field];
+
+            // 特殊处理分数字段
+            if (field === 'average_score') {
+                return `
+                    <td>
+                        <span class="fw-bold ${scoreClass}">
+                            ${value ? Number(value).toFixed(1) : 'N/A'}
+                        </span>
+                    </td>
+                `;
+            }
+
+            // 处理其他字段
+            if (value === undefined || value === null || value === '') {
+                value = '<span class="text-muted">N/A</span>';
+            }
+
+            return `<td>${value}</td>`;
+        }).join('');
 
         return `
             <tr data-id="${testCase.id}">
@@ -443,15 +496,7 @@ function renderTestCases() {
                 </td>
                 <td><span class="badge bg-primary">${testCase.id}</span></td>
                 <td><small class="text-muted">${formatDate(testCase.date || testCase.timestamp)}</small></td>
-                <td>${testCase['CAS Name'] || '<span class="text-muted">N/A</span>'}</td>
-                <td>${testCase['Product Family'] || '<span class="text-muted">N/A</span>'}</td>
-                <td>${testCase['Part Number'] || '<span class="text-muted">N/A</span>'}</td>
-                <td>${testCase.MAG || '<span class="text-muted">N/A</span>'}</td>
-                <td>
-                    <span class="fw-bold ${scoreClass}">
-                        ${testCase.average_score ? testCase.average_score.toFixed(1) : 'N/A'}
-                    </span>
-                </td>
+                ${fieldCells}
                 <td>
                     <div class="btn-group btn-group-sm" role="group">
                         <button type="button" class="btn btn-outline-danger btn-action" onclick="deleteTestCase(${testCase.id})" title="Delete">
