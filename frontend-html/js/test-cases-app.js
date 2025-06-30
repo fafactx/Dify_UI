@@ -8,8 +8,6 @@ class TestCasesApp {
         // 数据存储
         this.allTestCases = [];
         this.filteredTestCases = [];
-        this.currentPage = 1;
-        this.pageSize = 25;
         this.searchTerm = '';
         this.dynamicFields = [];
 
@@ -46,7 +44,6 @@ class TestCasesApp {
             refreshBtn: document.getElementById('refreshBtn'),
             searchInput: document.getElementById('searchInput'),
             clearSearch: document.getElementById('clearSearch'),
-            pageSizeSelect: document.getElementById('pageSizeSelect'),
             loadingState: document.getElementById('loadingState'),
             errorState: document.getElementById('errorState'),
             errorMessage: document.getElementById('errorMessage'),
@@ -83,12 +80,7 @@ class TestCasesApp {
             this.filterAndRender();
         });
 
-        // 页面大小选择
-        this.elements.pageSizeSelect?.addEventListener('change', (e) => {
-            this.pageSize = parseInt(e.target.value);
-            this.currentPage = 1;
-            this.renderTable();
-        });
+
 
         console.log('✅ 事件监听器绑定完成');
     }
@@ -288,13 +280,8 @@ class TestCasesApp {
      * 渲染表格内容
      */
     renderTableBody() {
-        // 计算分页
-        const startIndex = (this.currentPage - 1) * this.pageSize;
-        const endIndex = Math.min(startIndex + this.pageSize, this.filteredTestCases.length);
-        const pageData = this.filteredTestCases.slice(startIndex, endIndex);
-
-        // 生成行
-        const rows = pageData.map(testCase => this.createTableRow(testCase));
+        // 显示所有过滤后的数据，不分页
+        const rows = this.filteredTestCases.map(testCase => this.createTableRow(testCase));
 
         this.elements.tableBody.innerHTML = rows.join('');
 
@@ -493,63 +480,16 @@ class TestCasesApp {
      * 渲染分页
      */
     renderPagination() {
-        const totalPages = Math.ceil(this.filteredTestCases.length / this.pageSize);
-        const startIndex = (this.currentPage - 1) * this.pageSize + 1;
-        const endIndex = Math.min(this.currentPage * this.pageSize, this.filteredTestCases.length);
-
-        // 分页信息
+        // 只显示总数信息，不显示分页控件
         const searchInfo = this.searchTerm ? ` (filtered)` : '';
         this.elements.paginationInfo.textContent =
-            `Showing ${startIndex}-${endIndex} of ${this.filteredTestCases.length} items${searchInfo}`;
+            `Showing all ${this.filteredTestCases.length} items${searchInfo}`;
 
-        // 分页控件
-        if (totalPages <= 1) {
-            this.elements.paginationNav.innerHTML = '';
-            return;
-        }
-
-        let paginationHTML = '<ul class="pagination pagination-sm mb-0">';
-
-        // 上一页
-        paginationHTML += `
-            <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
-                <button class="page-link" onclick="TestCasesApp.goToPage(${this.currentPage - 1})" ${this.currentPage === 1 ? 'disabled' : ''}>
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-            </li>
-        `;
-
-        // 页码
-        paginationHTML += `
-            <li class="page-item active">
-                <span class="page-link">${this.currentPage} / ${totalPages}</span>
-            </li>
-        `;
-
-        // 下一页
-        paginationHTML += `
-            <li class="page-item ${this.currentPage === totalPages ? 'disabled' : ''}">
-                <button class="page-link" onclick="TestCasesApp.goToPage(${this.currentPage + 1})" ${this.currentPage === totalPages ? 'disabled' : ''}>
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-            </li>
-        `;
-
-        paginationHTML += '</ul>';
-        this.elements.paginationNav.innerHTML = paginationHTML;
+        // 清空分页控件
+        this.elements.paginationNav.innerHTML = '';
     }
 
-    /**
-     * 跳转到指定页面
-     */
-    goToPage(page) {
-        const totalPages = Math.ceil(this.filteredTestCases.length / this.pageSize);
-        if (page < 1 || page > totalPages) return;
 
-        this.currentPage = page;
-        this.renderTableBody();
-        this.renderPagination();
-    }
 
     /**
      * 工具方法
