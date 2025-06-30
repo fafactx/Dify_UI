@@ -334,7 +334,7 @@ function updateStatsUI() {
 }
 
 /**
- * 初始化表格标题
+ * 初始化表格标题 - Bootstrap版本
  */
 function initializeTableHeaders() {
     // 获取表头容器
@@ -348,12 +348,14 @@ function initializeTableHeaders() {
     const headerRow = document.createElement('tr');
 
     // 添加复选框列
-    headerRow.innerHTML = `
-        <th class="w-12">
-            <input type="checkbox" id="selectAll" class="rounded">
+    let headerHTML = `
+        <th style="width: 50px;">
+            <div class="form-check">
+                <input type="checkbox" id="selectAll" class="form-check-input">
+            </div>
         </th>
-        <th class="w-16">ID</th>
-        <th class="w-32">Date</th>`;
+        <th style="width: 80px;">ID</th>
+        <th style="width: 120px;">Date</th>`;
 
     // 为每个显示字段添加列
     const displayFields = getDisplayFields();
@@ -371,11 +373,13 @@ function initializeTableHeaders() {
             displayName = 'Score';
         }
 
-        headerRow.innerHTML += `<th class="w-32">${displayName}</th>`;
+        headerHTML += `<th>${displayName}</th>`;
     });
 
     // 添加操作列
-    headerRow.innerHTML += `<th class="w-24">Actions</th>`;
+    headerHTML += `<th style="width: 100px;">Actions</th>`;
+
+    headerRow.innerHTML = headerHTML;
 
     // 将行添加到表头
     tableHead.appendChild(headerRow);

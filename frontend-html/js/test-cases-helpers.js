@@ -125,10 +125,10 @@ function showLoadingState() {
     if (testCasesBody) {
         testCasesBody.innerHTML = `
             <tr>
-                <td colspan="8" class="text-center py-4">
-                    <div class="flex justify-center items-center">
-                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-2"></div>
-                        <span>加载测试用例...</span>
+                <td colspan="9" class="text-center">
+                    <div class="loading-state">
+                        <div class="loading-spinner"></div>
+                        <div>加载测试用例...</div>
                     </div>
                 </td>
             </tr>
@@ -146,11 +146,15 @@ function showEmptyState() {
     if (testCasesBody) {
         testCasesBody.innerHTML = `
             <tr>
-                <td colspan="8" class="text-center py-4">
-                    <div class="bg-gray-50 p-4 rounded text-center">
-                        <i class="fas fa-database text-gray-400 text-3xl mb-2"></i>
-                        <h4 class="text-lg font-bold text-gray-600">数据库为空</h4>
-                        <p class="text-gray-500">还没有测试用例数据</p>
+                <td colspan="9" class="text-center">
+                    <div class="empty-state">
+                        <i class="fas fa-database"></i>
+                        <h5>数据库为空</h5>
+                        <p class="text-muted">还没有测试用例数据，请等待Dify工作流生成数据</p>
+                        <button onclick="loadData()" class="btn btn-primary btn-sm mt-2">
+                            <i class="fas fa-sync-alt me-1"></i>
+                            刷新
+                        </button>
                     </div>
                 </td>
             </tr>
@@ -169,13 +173,14 @@ function showErrorState(error) {
     if (testCasesBody) {
         testCasesBody.innerHTML = `
             <tr>
-                <td colspan="8" class="text-center py-4">
-                    <div class="bg-red-50 p-4 rounded text-center">
-                        <i class="fas fa-exclamation-circle text-red-500 text-3xl mb-2"></i>
-                        <h4 class="text-lg font-bold text-red-800">加载测试用例错误</h4>
-                        <p class="text-red-600">${error.message}</p>
-                        <button onclick="loadData()" class="mt-3 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
-                            <i class="fas fa-redo mr-1"></i> 重试
+                <td colspan="9" class="text-center">
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-circle text-danger"></i>
+                        <h5 class="text-danger">加载测试用例错误</h5>
+                        <p class="text-danger">${error.message}</p>
+                        <button onclick="loadData()" class="btn btn-danger btn-sm mt-2">
+                            <i class="fas fa-redo me-1"></i>
+                            重试
                         </button>
                     </div>
                 </td>
@@ -323,7 +328,7 @@ function hideDeleteRangeModal() {
     }
 }
 
-// 渲染测试用例 - 简化版本
+// 渲染测试用例 - Bootstrap版本
 function renderTestCases() {
     const testCasesBody = document.getElementById('testCasesBody');
     const testCases = window.testCases || [];
@@ -344,7 +349,13 @@ function renderTestCases() {
         const message = searchTerm ? `没有找到包含 "${searchTerm}" 的测试用例` : '没有找到测试用例';
         testCasesBody.innerHTML = `
             <tr>
-                <td colspan="8" class="text-center py-4">${message}</td>
+                <td colspan="8" class="text-center">
+                    <div class="empty-state">
+                        <i class="fas fa-search"></i>
+                        <h5>${message}</h5>
+                        <p class="text-muted">Try adjusting your search criteria</p>
+                    </div>
+                </td>
             </tr>
         `;
         return;
@@ -355,25 +366,38 @@ function renderTestCases() {
     const endIndex = Math.min(startIndex + pageSize, filteredTestCases.length);
     const pageTestCases = filteredTestCases.slice(startIndex, endIndex);
 
-    // 简单渲染
+    // Bootstrap样式渲染
     const rows = pageTestCases.map(testCase => {
+        const scoreClass = testCase.average_score >= 80 ? 'text-success' :
+                          testCase.average_score >= 60 ? 'text-warning' : 'text-danger';
+
         return `
             <tr data-id="${testCase.id}">
-                <td><input type="checkbox" class="case-checkbox rounded" data-id="${testCase.id}"></td>
-                <td>${testCase.id}</td>
-                <td>${formatDate(testCase.date || testCase.timestamp)}</td>
-                <td>${testCase['CAS Name'] || 'N/A'}</td>
-                <td>${testCase['Product Family'] || 'N/A'}</td>
-                <td>${testCase['Part Number'] || 'N/A'}</td>
-                <td>${testCase.MAG || 'N/A'}</td>
-                <td class="font-bold">${testCase.average_score ? testCase.average_score.toFixed(1) : 'N/A'}</td>
                 <td>
-                    <button class="text-red-500 hover:text-red-700" onclick="deleteTestCase(${testCase.id})">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                    <button class="text-blue-500 hover:text-blue-700 ml-2" onclick="viewTestCase(${testCase.id})">
-                        <i class="fas fa-eye"></i>
-                    </button>
+                    <div class="form-check">
+                        <input class="form-check-input case-checkbox" type="checkbox" data-id="${testCase.id}">
+                    </div>
+                </td>
+                <td><span class="badge bg-primary">${testCase.id}</span></td>
+                <td><small class="text-muted">${formatDate(testCase.date || testCase.timestamp)}</small></td>
+                <td>${testCase['CAS Name'] || '<span class="text-muted">N/A</span>'}</td>
+                <td>${testCase['Product Family'] || '<span class="text-muted">N/A</span>'}</td>
+                <td>${testCase['Part Number'] || '<span class="text-muted">N/A</span>'}</td>
+                <td>${testCase.MAG || '<span class="text-muted">N/A</span>'}</td>
+                <td>
+                    <span class="fw-bold ${scoreClass}">
+                        ${testCase.average_score ? testCase.average_score.toFixed(1) : 'N/A'}
+                    </span>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-danger btn-action" onclick="deleteTestCase(${testCase.id})" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-action" onclick="viewTestCase(${testCase.id})" title="View Details">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -387,7 +411,7 @@ function renderTestCases() {
     });
 }
 
-// 渲染分页控件 - 简化版
+// 渲染分页控件 - Bootstrap版本
 function renderPagination() {
     const pagination = document.getElementById('pagination');
     const testCases = window.testCases || [];
@@ -404,29 +428,51 @@ function renderPagination() {
     }
 
     const totalPages = Math.ceil(filteredTestCases.length / pageSize);
+    const startIndex = (currentPage - 1) * pageSize + 1;
+    const endIndex = Math.min(currentPage * pageSize, filteredTestCases.length);
 
     // 显示总记录数
     const searchInfo = searchTerm ? ` (搜索: "${searchTerm}")` : '';
-    const totalInfo = `共 ${filteredTestCases.length} 条记录${searchInfo}`;
+    const totalInfo = `显示 ${startIndex}-${endIndex} 条，共 ${filteredTestCases.length} 条记录${searchInfo}`;
 
-    // 如果只有一页，不显示分页控件
+    // 如果只有一页，只显示记录信息
     if (totalPages <= 1) {
-        pagination.innerHTML = `<div class="text-gray-600 text-sm mt-2">${totalInfo}</div>`;
+        pagination.innerHTML = `
+            <div class="text-muted">
+                <small>${totalInfo}</small>
+            </div>
+        `;
         return;
     }
 
-    // 创建分页HTML
+    // 创建Bootstrap分页HTML
     pagination.innerHTML = `
-        <div class="flex items-center space-x-2">
-            <button id="prevPage" class="px-3 py-1 rounded border ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}" ${currentPage === 1 ? 'disabled' : ''}>
-                上一页
-            </button>
-            <span class="text-gray-600">第 ${currentPage} 页，共 ${totalPages} 页</span>
-            <button id="nextPage" class="px-3 py-1 rounded border ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}" ${currentPage === totalPages ? 'disabled' : ''}>
-                下一页
-            </button>
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="text-muted">
+                <small>${totalInfo}</small>
+            </div>
+            <nav aria-label="Test cases pagination">
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                        <button class="page-link" id="prevPage" ${currentPage === 1 ? 'disabled' : ''}>
+                            <i class="fas fa-chevron-left"></i>
+                            <span class="d-none d-sm-inline ms-1">Previous</span>
+                        </button>
+                    </li>
+                    <li class="page-item active">
+                        <span class="page-link">
+                            ${currentPage} / ${totalPages}
+                        </span>
+                    </li>
+                    <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                        <button class="page-link" id="nextPage" ${currentPage === totalPages ? 'disabled' : ''}>
+                            <span class="d-none d-sm-inline me-1">Next</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </li>
+                </ul>
+            </nav>
         </div>
-        <div class="text-gray-600 text-sm mt-2">${totalInfo}</div>
     `;
 
     // 添加事件监听器
