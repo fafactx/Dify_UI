@@ -159,18 +159,11 @@ class EvaluationsDAL {
 
       return transaction();
     } catch (error) {
-      // 检查是否是数据不完整错误，直接丢弃
-      if (error.message && (error.message.includes('数据不完整') || error.message.includes('评分数据不完整'))) {
-        console.warn(`丢弃不完整数据 [${resultKey}]: ${error.message}`);
-        // 返回null表示数据已丢弃，不抛出错误
-        return null;
-      } else {
-        console.error(`保存评估数据 [${resultKey}] 时出错:`, error);
-        if (this.logger) {
-          this.logger.logError('save_evaluation', error);
-        }
-        throw error;
+      console.error(`保存评估数据 [${resultKey}] 时出错:`, error);
+      if (this.logger) {
+        this.logger.logError('save_evaluation', error);
       }
+      throw error;
     }
   }
 
@@ -184,34 +177,83 @@ class EvaluationsDAL {
     // 创建数据副本，避免修改原始数据
     const processedData = { ...data };
 
-    // 验证必要字段，不完整数据直接丢弃
-    const requiredFields = ['CAS Name', 'Product Family', 'Part Number'];
-    const missingFields = requiredFields.filter(field => !processedData[field] || processedData[field].trim() === '');
+    // 确保必要字段存在，自动补全缺失数据
+    if (!processedData['CAS Name']) {
+      processedData['CAS Name'] = 'unknown';
+      // 只在调试模式下输出警告日志
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`警告: 评估数据 [${resultKey}] 缺少 CAS Name 字段，已设置为 unknown`);
+      }
+    }
 
-    if (missingFields.length > 0) {
-      throw new Error(`数据不完整，缺少必要字段: ${missingFields.join(', ')}。数据已丢弃。`);
+    if (!processedData['Product Family']) {
+      // 尝试从Part Number推断Product Family
+      if (processedData['Part Number']) {
+        const partNumber = processedData['Part Number'];
+        if (partNumber.startsWith('TJA')) {
+          processedData['Product Family'] = 'IVN';
+        } else if (partNumber.startsWith('S32')) {
+          processedData['Product Family'] = 'MCU';
+        } else {
+          processedData['Product Family'] = 'Unknown';
+        }
+        // 只在调试模式下输出推断日志
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`从Part Number [${partNumber}] 推断Product Family: ${processedData['Product Family']}`);
+        }
+      } else {
+        processedData['Product Family'] = 'Unknown';
+        // 只在调试模式下输出警告日志
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`警告: 评估数据 [${resultKey}] 缺少 Product Family 字段，已设置为 Unknown`);
+        }
+      }
+    }
+
+    if (!processedData['Part Number']) {
+      processedData['Part Number'] = 'Unknown';
+      // 只在调试模式下输出警告日志
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`警告: 评估数据 [${resultKey}] 缺少 Part Number 字段，已设置为 Unknown`);
+      }
     }
 
     // 定义必需的维度字段
     const requiredDimensions = ['hallucination_control', 'quality', 'professionalism', 'usefulness'];
 
-    // 验证评分字段，不完整数据直接丢弃
-    const invalidDimensions = requiredDimensions.filter(dimension => {
-      const value = processedData[dimension];
-      return value === undefined || value === null || isNaN(Number(value));
-    });
-
-    if (invalidDimensions.length > 0) {
-      throw new Error(`评分数据不完整，缺少有效评分: ${invalidDimensions.join(', ')}。数据已丢弃。`);
-    }
-
-    // 转换为数值并计算平均分
+    // 确保所有维度字段都存在且为有效数值，自动补全缺失数据
     requiredDimensions.forEach(dimension => {
-      processedData[dimension] = Number(processedData[dimension]);
+      if (processedData[dimension] === undefined || processedData[dimension] === null) {
+        processedData[dimension] = 0;
+        // 只在调试模式下输出警告日志
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`警告: 评估数据 [${resultKey}] 缺少 ${dimension} 字段，已设置为 0`);
+        }
+      } else {
+        // 确保是数值类型
+        const numValue = Number(processedData[dimension]);
+        if (isNaN(numValue)) {
+          processedData[dimension] = 0;
+          // 只在调试模式下输出警告日志
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`警告: 评估数据 [${resultKey}] 的 ${dimension} 字段不是有效数字，已设置为 0`);
+          }
+        } else {
+          processedData[dimension] = numValue;
+        }
+      }
     });
 
-    processedData.average_score = requiredDimensions
-      .reduce((sum, dim) => sum + processedData[dim], 0) / requiredDimensions.length;
+    // 计算平均分
+    const validScores = requiredDimensions
+      .map(dim => processedData[dim])
+      .filter(score => score !== null && score !== undefined && !isNaN(score));
+
+    if (validScores.length > 0) {
+      processedData.average_score = validScores.reduce((sum, score) => sum + Number(score), 0) / validScores.length;
+    } else {
+      processedData.average_score = 0;
+    }
 
     // 添加时间戳（如果不存在）
     if (!processedData['timestamp']) {
