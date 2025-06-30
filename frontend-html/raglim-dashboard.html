@@ -857,7 +857,8 @@
                             </div>
                         </div>
                         <div class="col-md-9">
-                            <div class="card">
+                            <!-- General Settings Card -->
+                            <div class="card mb-4">
                                 <div class="card-header">
                                     <h5 class="mb-0">General Settings</h5>
                                 </div>
@@ -903,6 +904,27 @@
                                     </form>
                                 </div>
                             </div>
+
+                            <!-- Evaluation Weights Card -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Evaluation Weights</h5>
+                                    <small class="text-muted">Adjust the importance of each evaluation dimension</small>
+                                </div>
+                                <div class="card-body">
+                                    <div id="weight-sliders">
+                                        <!-- Weight sliders will be dynamically generated here -->
+                                        <div class="text-center text-muted py-4">
+                                            <i class="fas fa-spinner fa-spin me-2"></i>
+                                            Loading evaluation dimensions...
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <button type="button" class="btn btn-primary me-2" id="apply-weights">Apply Weights</button>
+                                        <button type="button" class="btn btn-outline-secondary" id="reset-weights">Reset to Default</button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -914,6 +936,9 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Main JS -->
+    <script src="js/main.js"></script>
 
     <!-- 自定义脚本 -->
     <script>
@@ -931,6 +956,11 @@
 
             menuItems.forEach(item => {
                 item.addEventListener('click', function() {
+                    // 跳过包含链接的菜单项
+                    if (this.querySelector('a')) {
+                        return;
+                    }
+
                     // 移除所有活动状态
                     menuItems.forEach(mi => mi.classList.remove('active'));
                     // 添加当前活动状态
@@ -944,6 +974,11 @@
                             section.classList.remove('d-none');
                         }
                     });
+
+                    // 调用相应的更新函数
+                    if (viewName === 'settings' && typeof updateSettingsView === 'function') {
+                        updateSettingsView();
+                    }
                 });
             });
 

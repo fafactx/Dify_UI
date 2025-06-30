@@ -42,9 +42,9 @@ const elements = {
     resetWeights: getElement('reset-weights'),
     refreshBtn: getElement('refresh-btn'),
     lastUpdated: getElement('last-updated'),
-    dashboardLink: getElement('dashboard-link'),
-    compareLink: getElement('compare-link'),
-    settingsLink: getElement('settings-link'),
+    dashboardLink: document.querySelector('[data-view="dashboard"]'),
+    compareLink: document.querySelector('[data-view="compare"]'),
+    settingsLink: document.querySelector('[data-view="settings"]'),
     detailModal: document.getElementById('detail-modal') ? new bootstrap.Modal(document.getElementById('detail-modal')) : null,
     detailContent: getElement('detail-content')
 };
@@ -92,10 +92,8 @@ function addSafeEventListener(element, event, handler) {
  * 设置事件监听器
  */
 function setupEventListeners() {
-    // 导航链接
-    addSafeEventListener(elements.dashboardLink, 'click', () => showView('dashboard'));
-    addSafeEventListener(elements.compareLink, 'click', () => showView('compare'));
-    addSafeEventListener(elements.settingsLink, 'click', () => showView('settings'));
+    // 导航链接 - 使用现有的侧边栏菜单系统
+    // 这些事件已经在HTML中的脚本中处理了
 
     // 搜索输入
     addSafeEventListener(elements.searchInput, 'input', handleSearch);
@@ -202,20 +200,20 @@ function showView(viewName) {
     state.currentView = viewName;
 
     // 隐藏所有视图
-    elements.dashboardView.classList.add('d-none');
-    elements.compareView.classList.add('d-none');
-    elements.settingsView.classList.add('d-none');
+    if (elements.dashboardView) elements.dashboardView.classList.add('d-none');
+    if (elements.compareView) elements.compareView.classList.add('d-none');
+    if (elements.settingsView) elements.settingsView.classList.add('d-none');
 
     // 移除所有导航链接的激活状态
-    elements.dashboardLink.classList.remove('active');
-    elements.compareLink.classList.remove('active');
-    elements.settingsLink.classList.remove('active');
+    if (elements.dashboardLink) elements.dashboardLink.classList.remove('active');
+    if (elements.compareLink) elements.compareLink.classList.remove('active');
+    if (elements.settingsLink) elements.settingsLink.classList.remove('active');
 
     // 显示选定的视图
     switch (viewName) {
         case 'dashboard':
-            elements.dashboardView.classList.remove('d-none');
-            elements.dashboardLink.classList.add('active');
+            if (elements.dashboardView) elements.dashboardView.classList.remove('d-none');
+            if (elements.dashboardLink) elements.dashboardLink.classList.add('active');
 
             // 当切换到仪表板视图时，确保图表正确显示
             setTimeout(() => {
@@ -243,13 +241,13 @@ function showView(viewName) {
             }, 100);
             break;
         case 'compare':
-            elements.compareView.classList.remove('d-none');
-            elements.compareLink.classList.add('active');
+            if (elements.compareView) elements.compareView.classList.remove('d-none');
+            if (elements.compareLink) elements.compareLink.classList.add('active');
             updateCompareView();
             break;
         case 'settings':
-            elements.settingsView.classList.remove('d-none');
-            elements.settingsLink.classList.add('active');
+            if (elements.settingsView) elements.settingsView.classList.remove('d-none');
+            if (elements.settingsLink) elements.settingsLink.classList.add('active');
             updateSettingsView();
             break;
     }
@@ -815,19 +813,38 @@ function updateCompareTable() {
  * 更新设置视图
  */
 function updateSettingsView() {
+    // 检查权重滑块容器是否存在
+    if (!elements.weightSliders) {
+        console.warn('权重滑块容器不存在，跳过设置视图更新');
+        return;
+    }
+
     // 获取所有维度
     const dimensions = new Set();
-    state.evaluations.forEach(eval => {
-        Object.keys(eval).forEach(key => {
-            if (typeof eval[key] === 'number' &&
-                key !== 'timestamp' &&
-                key !== 'id' &&
-                key !== 'average_score' &&
-                !key.includes('_id')) {
-                dimensions.add(key);
-            }
+    if (state.evaluations && state.evaluations.length > 0) {
+        state.evaluations.forEach(eval => {
+            Object.keys(eval).forEach(key => {
+                if (typeof eval[key] === 'number' &&
+                    key !== 'timestamp' &&
+                    key !== 'id' &&
+                    key !== 'average_score' &&
+                    !key.includes('_id')) {
+                    dimensions.add(key);
+                }
+            });
         });
-    });
+    }
+
+    // 如果没有数据，显示提示信息
+    if (dimensions.size === 0) {
+        elements.weightSliders.innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-info-circle me-2"></i>
+                No evaluation data available. Load some test cases first.
+            </div>
+        `;
+        return;
+    }
 
     // 创建权重滑块 HTML
     const slidersHtml = Array.from(dimensions).map(dim => `
@@ -852,7 +869,10 @@ function updateSettingsView() {
             state.weights[dimension] = value;
 
             // 更新显示的值
-            e.target.previousElementSibling.querySelector('.weight-value').textContent = value;
+            const weightValueSpan = e.target.parentElement.querySelector('.weight-value');
+            if (weightValueSpan) {
+                weightValueSpan.textContent = value.toFixed(1);
+            }
         });
     });
 }
