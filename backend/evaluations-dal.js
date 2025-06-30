@@ -12,6 +12,7 @@ class EvaluationsDAL {
     this.logger = this._initializeLogger();
     this.db = null;
     this.isInitialized = false;
+    this._fieldLabelsInitialized = false; // 字段标签初始化标记
   }
 
   // 安全初始化日志系统
@@ -158,14 +159,11 @@ class EvaluationsDAL {
 
       return transaction();
     } catch (error) {
-      // 检查是否是维度验证错误
-      if (error.message && error.message.includes('评估数据只能包含4个指定维度')) {
-        console.error(`维度验证错误 [${resultKey}]:`, error.message);
-        if (this.logger) {
-          this.logger.logError('dimension_validation', error);
-        }
-        // 重新抛出错误，但保留原始消息以便API可以返回给客户端
-        throw new Error(`维度验证失败: ${error.message}`);
+      // 检查是否是数据不完整错误，直接丢弃
+      if (error.message && (error.message.includes('数据不完整') || error.message.includes('评分数据不完整'))) {
+        console.warn(`丢弃不完整数据 [${resultKey}]: ${error.message}`);
+        // 返回null表示数据已丢弃，不抛出错误
+        return null;
       } else {
         console.error(`保存评估数据 [${resultKey}] 时出错:`, error);
         if (this.logger) {
@@ -186,125 +184,34 @@ class EvaluationsDAL {
     // 创建数据副本，避免修改原始数据
     const processedData = { ...data };
 
-    // 确保必要字段存在
-    if (!processedData['CAS Name']) {
-      processedData['CAS Name'] = 'unknown';
-      // 只在调试模式下输出警告日志
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`警告: 评估数据 [${resultKey}] 缺少 CAS Name 字段`);
-      }
-    }
+    // 验证必要字段，不完整数据直接丢弃
+    const requiredFields = ['CAS Name', 'Product Family', 'Part Number'];
+    const missingFields = requiredFields.filter(field => !processedData[field] || processedData[field].trim() === '');
 
-    if (!processedData['Product Family']) {
-      // 尝试从Part Number推断Product Family
-      if (processedData['Part Number']) {
-        const partNumber = processedData['Part Number'];
-        if (partNumber.startsWith('TJA')) {
-          processedData['Product Family'] = 'IVN';
-        } else if (partNumber.startsWith('S32')) {
-          processedData['Product Family'] = 'MCU';
-        } else {
-          processedData['Product Family'] = 'Unknown';
-        }
-        // 只在调试模式下输出推断日志
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`从Part Number [${partNumber}] 推断Product Family: ${processedData['Product Family']}`);
-        }
-      } else {
-        processedData['Product Family'] = 'Unknown';
-        // 只在调试模式下输出警告日志
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`警告: 评估数据 [${resultKey}] 缺少 Product Family 字段`);
-        }
-      }
+    if (missingFields.length > 0) {
+      throw new Error(`数据不完整，缺少必要字段: ${missingFields.join(', ')}。数据已丢弃。`);
     }
 
     // 定义必需的维度字段
     const requiredDimensions = ['hallucination_control', 'quality', 'professionalism', 'usefulness'];
 
-    // 定义已知的非维度字段（这些字段不会被视为额外维度）
-    const knownNonDimensionFields = [
-      'CAS Name', 'Product Family', 'MAG', 'Part Number', 'Question', 'Answer',
-      'Question Scenario', 'Answer Source', 'Question Complexity', 'Question Frequency',
-      'Question Category', 'Source Category', 'average_score', 'summary', 'timestamp',
-      'date', 'id', 'result_key'
-    ];
-
-    // 检查是否有额外的维度字段
-    const extraDimensions = Object.keys(processedData).filter(key => {
-      // 如果是必需的维度字段或已知的非维度字段，则不是额外维度
-      if (requiredDimensions.includes(key) || knownNonDimensionFields.includes(key)) {
-        return false;
-      }
-
-      // 检查是否是以dimension_开头的字段
-      if (key.startsWith('dimension_')) {
-        return true;
-      }
-
-      // 检查是否是以score_开头的字段
-      if (key.startsWith('score_')) {
-        return true;
-      }
-
-      // 其他字段不视为维度字段
-      return false;
+    // 验证评分字段，不完整数据直接丢弃
+    const invalidDimensions = requiredDimensions.filter(dimension => {
+      const value = processedData[dimension];
+      return value === undefined || value === null || isNaN(Number(value));
     });
 
-    if (extraDimensions.length > 0) {
-      console.error(`错误: 评估数据 [${resultKey}] 包含额外的维度字段: ${extraDimensions.join(', ')}`);
-      throw new Error(`评估数据只能包含4个指定维度: hallucination_control, quality, professionalism, usefulness。发现额外维度: ${extraDimensions.join(', ')}`);
+    if (invalidDimensions.length > 0) {
+      throw new Error(`评分数据不完整，缺少有效评分: ${invalidDimensions.join(', ')}。数据已丢弃。`);
     }
 
-    // 确保所有必需的维度字段都存在
-    let missingDimensions = [];
-    requiredDimensions.forEach(dim => {
-      if (processedData[dim] === undefined) {
-        missingDimensions.push(dim);
-        // 为缺失的维度设置默认值
-        processedData[dim] = 0;
-      }
+    // 转换为数值并计算平均分
+    requiredDimensions.forEach(dimension => {
+      processedData[dimension] = Number(processedData[dimension]);
     });
 
-    if (missingDimensions.length > 0) {
-      console.warn(`警告: 评估数据 [${resultKey}] 缺少维度字段: ${missingDimensions.join(', ')}，已设置为默认值0`);
-    }
-
-    // 确保评分字段是数字类型
-    const scoreFields = [...requiredDimensions, 'average_score'];
-    scoreFields.forEach(field => {
-      if (processedData[field] !== undefined) {
-        // 转换为数字
-        const score = parseFloat(processedData[field]);
-        if (isNaN(score)) {
-          console.log(`警告: 评估数据 [${resultKey}] 的 ${field} 字段不是有效数字: ${processedData[field]}`);
-          processedData[field] = 0;
-        } else {
-          processedData[field] = score;
-        }
-      }
-    });
-
-    // 如果没有平均分，计算平均分
-    if (processedData['average_score'] === undefined) {
-      let totalScore = 0;
-      let scoreCount = 0;
-
-      requiredDimensions.forEach(field => {
-        if (processedData[field] !== undefined) {
-          totalScore += processedData[field];
-          scoreCount++;
-        }
-      });
-
-      if (scoreCount > 0) {
-        processedData['average_score'] = Math.round(totalScore / scoreCount * 10) / 10;
-        console.log(`为评估数据 [${resultKey}] 计算平均分: ${processedData['average_score']}`);
-      } else {
-        processedData['average_score'] = 0;
-        console.log(`警告: 评估数据 [${resultKey}] 没有评分字段，无法计算平均分`);
-      }
-    }
+    processedData.average_score = requiredDimensions
+      .reduce((sum, dim) => sum + processedData[dim], 0) / requiredDimensions.length;
 
     // 添加时间戳（如果不存在）
     if (!processedData['timestamp']) {
@@ -765,10 +672,15 @@ class EvaluationsDAL {
   // 私有方法：初始化字段标签
   _initializeFieldLabels(sampleData) {
     try {
-      // 检查字段标签表是否为空
-      if (fieldLabelsDAL.isFieldLabelsEmpty()) {
-        console.log('字段标签表为空，从样本数据初始化字段标签');
-        fieldLabelsDAL.initializeFieldLabelsFromSample(sampleData);
+      // 使用缓存避免重复查询
+      if (!this._fieldLabelsInitialized) {
+        // 检查字段标签表是否为空
+        if (fieldLabelsDAL.isFieldLabelsEmpty()) {
+          console.log('字段标签表为空，从样本数据初始化字段标签');
+          fieldLabelsDAL.initializeFieldLabelsFromSample(sampleData);
+        }
+        // 标记为已初始化，避免后续重复检查
+        this._fieldLabelsInitialized = true;
       }
     } catch (error) {
       console.error('初始化字段标签时出错:', error);

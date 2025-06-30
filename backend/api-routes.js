@@ -101,27 +101,52 @@ router.post('/evaluations', ensureDbInitialized, asyncHandler(async (req, res) =
     let resultCount = 0;
 
     // 如果数据包含result0, result1等键，分别处理每个评估
+    let discardedCount = 0;
     for (const key in evaluationData) {
       if (key.startsWith('result')) {
         const result = evaluationData[key];
         const saveResult = evaluationsDAL.saveEvaluation(key, result);
-        results[key] = { success: true, id: saveResult.lastInsertRowid };
-        resultCount++;
+
+        if (saveResult === null) {
+          // 数据被丢弃
+          results[key] = { success: false, reason: 'incomplete_data' };
+          discardedCount++;
+        } else {
+          results[key] = { success: true, id: saveResult.lastInsertRowid };
+          resultCount++;
+        }
       }
     }
 
     // 如果没有找到result开头的键，将整个请求体视为单个评估
-    if (resultCount === 0) {
+    if (resultCount === 0 && discardedCount === 0) {
       const resultKey = `result${Date.now()}`;
       const saveResult = evaluationsDAL.saveEvaluation(resultKey, evaluationData);
-      results[resultKey] = { success: true, id: saveResult.lastInsertRowid };
-      resultCount = 1;
+
+      if (saveResult === null) {
+        results[resultKey] = { success: false, reason: 'incomplete_data' };
+        discardedCount = 1;
+      } else {
+        results[resultKey] = { success: true, id: saveResult.lastInsertRowid };
+        resultCount = 1;
+      }
+    }
+
+    // 构建响应消息
+    let message = `成功保存 ${resultCount} 条评估数据`;
+    if (discardedCount > 0) {
+      message += `，丢弃 ${discardedCount} 条不完整数据`;
     }
 
     res.json({
       success: true,
-      message: `成功保存 ${resultCount} 条评估数据`,
-      results
+      message,
+      results,
+      stats: {
+        saved: resultCount,
+        discarded: discardedCount,
+        total: resultCount + discardedCount
+      }
     });
   } catch (error) {
     // 检查是否是维度验证错误
