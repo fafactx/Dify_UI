@@ -38,16 +38,22 @@ async function loadTestCasesWithFallback(apiBaseUrl, signal) {
                 return { isEmpty: true, data: [] };
             }
 
-            // 更灵活的数据提取
+            // 更灵活的数据提取 - 修复版
             let extractedData = [];
-            if (data.data && Array.isArray(data.data)) {
-                extractedData = data.data;
-            } else if (data.testCases && Array.isArray(data.testCases)) {
+            if (data.testCases && Array.isArray(data.testCases)) {
                 extractedData = data.testCases;
+                console.log(`从testCases字段提取到 ${extractedData.length} 条数据`);
+            } else if (data.data && Array.isArray(data.data)) {
+                extractedData = data.data;
+                console.log(`从data字段提取到 ${extractedData.length} 条数据`);
             } else if (data.evaluations && Array.isArray(data.evaluations)) {
                 extractedData = data.evaluations;
+                console.log(`从evaluations字段提取到 ${extractedData.length} 条数据`);
             } else if (Array.isArray(data)) {
                 extractedData = data;
+                console.log(`直接使用数组数据，共 ${extractedData.length} 条`);
+            } else {
+                console.warn('无法识别的数据格式:', Object.keys(data));
             }
 
             console.log(`从端点 ${endpoints[i]} 提取到 ${extractedData.length} 条数据`);
@@ -124,50 +130,28 @@ function processTestCasesData(rawData) {
             date: item.date || item.timestamp || new Date().toISOString()
         };
 
-        // 处理嵌套的数据字段 - 适配真实数据格式
-        let evalData = {};
-
-        // 如果有data字段且是字符串，尝试解析JSON
-        if (item.data && typeof item.data === 'string') {
-            try {
-                evalData = JSON.parse(item.data);
-                console.log(`成功解析ID ${item.id} 的JSON数据`);
-            } catch (e) {
-                console.warn(`解析数据失败 ID ${item.id}:`, e);
-                evalData = {};
-            }
-        }
-        // 如果data字段是对象，直接使用
-        else if (item.data && typeof item.data === 'object') {
-            evalData = item.data;
-        }
-        // 否则使用整个item作为数据
-        else {
-            evalData = { ...item };
-            // 移除基础字段，避免重复
-            delete evalData.id;
-            delete evalData.result_key;
-            delete evalData.resultKey;
-            delete evalData.timestamp;
-            delete evalData.date;
-        }
-
-        // 确保关键字段存在
+        // API已经返回扁平化数据，直接使用
         const finalData = {
             ...testCase,
-            'CAS Name': evalData['CAS Name'] || 'N/A',
-            'Product Family': evalData['Product Family'] || 'N/A',
-            'Part Number': evalData['Part Number'] || 'N/A',
-            'MAG': evalData['MAG'] || 'N/A',
-            'Question': evalData['Question'] || 'N/A',
-            'Answer': evalData['Answer'] || 'N/A',
-            'Question Complexity': evalData['Question Complexity'] || 'N/A',
-            'Question Category': evalData['Question Category'] || 'N/A',
-            'hallucination_control': Number(evalData['hallucination_control']) || 0,
-            'quality': Number(evalData['quality']) || 0,
-            'professionalism': Number(evalData['professionalism']) || 0,
-            'usefulness': Number(evalData['usefulness']) || 0,
-            'average_score': Number(evalData['average_score']) || 0
+            'CAS Name': item['CAS Name'] || 'N/A',
+            'Product Family': item['Product Family'] || 'N/A',
+            'Part Number': item['Part Number'] || 'N/A',
+            'MAG': item['MAG'] || item.MAG || 'N/A',
+            'Question': item['Question'] || item.Question || 'N/A',
+            'Answer': item['Answer'] || item.Answer || 'N/A',
+            'Question Complexity': item['Question Complexity'] || 'N/A',
+            'Question Category': item['Question Category'] || 'N/A',
+            'Question Scenario': item['Question Scenario'] || 'N/A',
+            'Answer Source': item['Answer Source'] || 'N/A',
+            'Question Frequency': item['Question Frequency'] || 'N/A',
+            'Source Category': item['Source Category'] || 'N/A',
+            'hallucination_control': Number(item.hallucination_control) || 0,
+            'quality': Number(item.quality) || 0,
+            'professionalism': Number(item.professionalism) || 0,
+            'usefulness': Number(item.usefulness) || 0,
+            'average_score': Number(item.average_score) || 0,
+            'summary': item.summary || '',
+            'LLM_ANSWER': item.LLM_ANSWER || ''
         };
 
         // 如果没有预计算的平均分，则计算

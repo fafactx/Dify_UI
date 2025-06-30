@@ -423,7 +423,7 @@ function getDisplayFields() {
         return sortedLabels.map(label => label.field_key);
     }
 
-    // 默认字段 - 基于真实数据格式
+    // 默认字段 - 基于API返回的真实数据格式
     return [
         'CAS Name',
         'Product Family',
