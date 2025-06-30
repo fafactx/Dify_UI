@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Debug Tool</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="js/config.js"></script>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>API调试工具</h1>
+        <p class="text-muted">用于测试服务器上的API连接和数据获取</p>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>环境信息</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="envInfo"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>API测试</h5>
+                    </div>
+                    <div class="card-body">
+                        <button id="testApi" class="btn btn-primary">测试API连接</button>
+                        <div id="apiResults" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>详细日志</h5>
+                    </div>
+                    <div class="card-body">
+                        <pre id="debugLog" style="max-height: 400px; overflow-y: auto; background: #f8f9fa; padding: 15px;"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let debugLog = '';
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] [${type.toUpperCase()}] ${message}\n`;
+            debugLog += logEntry;
+            document.getElementById('debugLog').textContent = debugLog;
+            console.log(message);
+        }
+        
+        function getApiBaseUrl() {
+            // 优先使用配置文件中的设置
+            if (window.appConfig && window.appConfig.apiBaseUrl) {
+                return window.appConfig.apiBaseUrl;
+            }
+
+            // 自动检测
+            const currentHost = window.location.hostname;
+            const currentProtocol = window.location.protocol;
+
+            // 如果当前页面是通过IP地址访问的，使用相同的IP地址
+            if (/^\d+\.\d+\.\d+\.\d+$/.test(currentHost)) {
+                return `${currentProtocol}//${currentHost}:3000`;
+            }
+
+            // 本地开发环境
+            if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+                return 'http://localhost:3000';
+            }
+
+            // 服务器环境
+            return `${currentProtocol}//${currentHost}:3000`;
+        }
+        
+        function displayEnvInfo() {
+            const envInfo = {
+                'URL': window.location.href,
+                'Hostname': window.location.hostname,
+                'Port': window.location.port || '默认端口',
+                'Protocol': window.location.protocol,
+                'API Base URL': getApiBaseUrl(),
+                'Config': window.appConfig ? JSON.stringify(window.appConfig, null, 2) : '未找到配置'
+            };
+            
+            let html = '';
+            for (const [key, value] of Object.entries(envInfo)) {
+                html += `<p><strong>${key}:</strong> ${value}</p>`;
+            }
+            
+            document.getElementById('envInfo').innerHTML = html;
+            log('环境信息已显示');
+        }
+        
+        async function testApiEndpoints() {
+            const apiBaseUrl = getApiBaseUrl();
+            const endpoints = [
+                '/api/stats',
+                '/api/evaluations',
+                '/api/test-cases',
+                '/api/field-labels'
+            ];
+            
+            log(`开始测试API端点，基础URL: ${apiBaseUrl}`);
+            
+            const results = [];
+            
+            for (const endpoint of endpoints) {
+                const fullUrl = `${apiBaseUrl}${endpoint}`;
+                log(`测试端点: ${fullUrl}`);
+                
+                try {
+                    const response = await fetch(fullUrl, {
+                        method: 'GET',
+                        headers: { 'Accept': 'application/json' },
+                        timeout: 10000
+                    });
+                    
+                    const status = response.status;
+                    const statusText = response.statusText;
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        results.push({
+                            endpoint,
+                            status: 'success',
+                            statusCode: status,
+                            dataLength: Array.isArray(data.data) ? data.data.length : 'N/A',
+                            data: data
+                        });
+                        log(`✅ ${endpoint} - 成功 (${status}) - 数据长度: ${Array.isArray(data.data) ? data.data.length : 'N/A'}`);
+                    } else {
+                        results.push({
+                            endpoint,
+                            status: 'error',
+                            statusCode: status,
+                            error: statusText
+                        });
+                        log(`❌ ${endpoint} - 失败 (${status}): ${statusText}`, 'error');
+                    }
+                } catch (error) {
+                    results.push({
+                        endpoint,
+                        status: 'error',
+                        error: error.message
+                    });
+                    log(`❌ ${endpoint} - 异常: ${error.message}`, 'error');
+                }
+            }
+            
+            // 显示结果
+            let html = '<div class="mt-3">';
+            results.forEach(result => {
+                const badgeClass = result.status === 'success' ? 'bg-success' : 'bg-danger';
+                html += `
+                    <div class="mb-2">
+                        <span class="badge ${badgeClass}">${result.endpoint}</span>
+                        <small class="ms-2">
+                            ${result.status === 'success' ? 
+                                `状态: ${result.statusCode}, 数据: ${result.dataLength}` : 
+                                `错误: ${result.error}`
+                            }
+                        </small>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            document.getElementById('apiResults').innerHTML = html;
+            log('API测试完成');
+            
+            return results;
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            log('API调试工具初始化');
+            displayEnvInfo();
+            
+            document.getElementById('testApi').addEventListener('click', testApiEndpoints);
+        });
+    </script>
+</body>
+</html>

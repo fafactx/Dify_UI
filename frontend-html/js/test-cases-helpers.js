@@ -4,13 +4,15 @@
  */
 
 /**
- * 并行加载测试用例数据，带回退机制
+ * 并行加载测试用例数据，带回退机制 - 修复版
  */
 async function loadTestCasesWithFallback(apiBaseUrl, signal) {
     const endpoints = [
         `${apiBaseUrl}/api/evaluations`,
         `${apiBaseUrl}/api/test-cases`
     ];
+
+    console.log('尝试从以下端点加载数据:', endpoints);
 
     // 使用Promise.allSettled来并行尝试所有端点
     const results = await Promise.allSettled(
@@ -22,23 +24,46 @@ async function loadTestCasesWithFallback(apiBaseUrl, signal) {
         const result = results[i];
         if (result.status === 'fulfilled') {
             const data = result.value;
-            console.log(`成功从端点 ${endpoints[i]} 获取数据`);
+            console.log(`成功从端点 ${endpoints[i]} 获取数据:`, data);
 
-            // 检查是否为空
-            if (data.is_empty || (data.success === false && data.message?.includes('数据库为空'))) {
+            // 更严格的空数据检查
+            const isEmpty = (
+                data.is_empty === true ||
+                (data.success === false && data.message?.includes('数据库为空')) ||
+                (data.success === false && data.message?.includes('请等待数据从 Dify 同步'))
+            );
+
+            if (isEmpty) {
+                console.log('服务器返回空数据状态');
                 return { isEmpty: true, data: [] };
             }
 
+            // 更灵活的数据提取
+            let extractedData = [];
+            if (data.data && Array.isArray(data.data)) {
+                extractedData = data.data;
+            } else if (data.testCases && Array.isArray(data.testCases)) {
+                extractedData = data.testCases;
+            } else if (data.evaluations && Array.isArray(data.evaluations)) {
+                extractedData = data.evaluations;
+            } else if (Array.isArray(data)) {
+                extractedData = data;
+            }
+
+            console.log(`从端点 ${endpoints[i]} 提取到 ${extractedData.length} 条数据`);
+
             return {
-                isEmpty: false,
-                data: data.data || data.testCases || []
+                isEmpty: extractedData.length === 0,
+                data: extractedData
             };
+        } else {
+            console.error(`端点 ${endpoints[i]} 失败:`, result.reason);
         }
     }
 
-    // 如果所有端点都失败，抛出最后一个错误
-    const lastError = results[results.length - 1];
-    throw new Error(lastError.reason?.message || '所有API端点都无法访问');
+    // 如果所有端点都失败，抛出详细错误
+    const errors = results.map((result, i) => `${endpoints[i]}: ${result.reason?.message || result.reason}`);
+    throw new Error(`所有API端点都无法访问:\n${errors.join('\n')}`);
 }
 
 /**
@@ -79,7 +104,7 @@ async function fetchWithTimeout(url, timeout = 5000, signal) {
 }
 
 /**
- * 处理测试用例数据
+ * 处理测试用例数据 - 修复版
  */
 function processTestCasesData(rawData) {
     if (!Array.isArray(rawData)) {
@@ -87,34 +112,72 @@ function processTestCasesData(rawData) {
         return [];
     }
 
-    return rawData.map(item => {
+    console.log(`开始处理 ${rawData.length} 条原始数据`);
+
+    const processedData = rawData.map((item, index) => {
         // 标准化数据格式
         let testCase = {
-            id: item.id,
-            result_key: item.result_key || '',
-            timestamp: item.timestamp || '',
-            date: item.date || new Date().toISOString(),
+            id: item.id || index + 1,
+            result_key: item.result_key || `result_${index}`,
+            timestamp: item.timestamp || item.date || new Date().toISOString(),
+            date: item.date || item.timestamp || new Date().toISOString(),
             average_score: 0
         };
 
         // 处理嵌套的数据字段
         let evalData = {};
+
+        // 如果有data字段且是字符串，尝试解析JSON
         if (item.data && typeof item.data === 'string') {
             try {
                 evalData = JSON.parse(item.data);
+                console.log(`成功解析ID ${item.id} 的JSON数据`);
             } catch (e) {
                 console.warn(`解析数据失败 ID ${item.id}:`, e);
                 evalData = {};
             }
-        } else if (item.data && typeof item.data === 'object') {
+        }
+        // 如果data字段是对象，直接使用
+        else if (item.data && typeof item.data === 'object') {
             evalData = item.data;
-        } else {
-            evalData = item;
+        }
+        // 否则使用整个item作为数据
+        else {
+            evalData = { ...item };
+            // 移除基础字段，避免重复
+            delete evalData.id;
+            delete evalData.result_key;
+            delete evalData.timestamp;
+            delete evalData.date;
+        }
+
+        // 计算平均分
+        const scores = [];
+        ['hallucination_control', 'quality', 'professionalism', 'usefulness'].forEach(field => {
+            if (evalData[field] && !isNaN(evalData[field])) {
+                scores.push(Number(evalData[field]));
+            }
+        });
+
+        if (scores.length > 0) {
+            evalData.average_score = scores.reduce((a, b) => a + b, 0) / scores.length;
+        } else if (evalData.average_score && !isNaN(evalData.average_score)) {
+            evalData.average_score = Number(evalData.average_score);
         }
 
         // 合并数据
-        return { ...testCase, ...evalData };
+        const finalData = { ...testCase, ...evalData };
+
+        // 调试第一条数据
+        if (index === 0) {
+            console.log('第一条处理后的数据示例:', finalData);
+        }
+
+        return finalData;
     });
+
+    console.log(`数据处理完成，共 ${processedData.length} 条`);
+    return processedData;
 }
 
 /**

@@ -36,9 +36,15 @@ let lastRenderKey = '';
 
 // Initialize the page
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Test Cases页面初始化开始...');
-    console.log('配置信息:', window.appConfig);
-    console.log('API基础URL:', getApiBaseUrl());
+    console.log('🚀 Test Cases页面初始化开始...');
+    console.log('📋 配置信息:', window.appConfig);
+    console.log('🌐 API基础URL:', getApiBaseUrl());
+    console.log('🔧 当前环境:', {
+        hostname: window.location.hostname,
+        port: window.location.port,
+        protocol: window.location.protocol,
+        pathname: window.location.pathname
+    });
 
     // 初始化DOM元素
     initializeDOMElements();
@@ -49,9 +55,11 @@ document.addEventListener('DOMContentLoaded', () => {
     loadData().then(() => {
         performanceMetrics.loadTime = performance.now() - startTime;
         logPerformanceMetrics();
+        console.log('✅ 页面初始化成功完成');
     }).catch(error => {
-        console.error('页面初始化失败:', error);
+        console.error('❌ 页面初始化失败:', error);
         performanceMetrics.loadTime = performance.now() - startTime;
+        logPerformanceMetrics();
     });
 
     // Event listeners
@@ -183,33 +191,43 @@ async function loadData() {
     }
 }
 
-// Get API base URL
+// Get API base URL - 修复版
 function getApiBaseUrl() {
     // 优先使用配置文件中的设置
     if (window.appConfig && window.appConfig.apiBaseUrl) {
+        console.log('🔧 使用配置文件中的API URL:', window.appConfig.apiBaseUrl);
         return window.appConfig.apiBaseUrl;
     }
 
     // 如果没有配置文件，使用自动检测
     const currentHost = window.location.hostname;
     const currentPort = window.location.port;
+    const currentProtocol = window.location.protocol;
 
-    console.log('Current hostname:', currentHost);
-    console.log('Current port:', currentPort);
+    console.log('🔍 自动检测API URL - 当前环境:', {
+        hostname: currentHost,
+        port: currentPort,
+        protocol: currentProtocol
+    });
 
     // 如果当前页面是通过IP地址访问的，使用相同的IP地址
     if (/^\d+\.\d+\.\d+\.\d+$/.test(currentHost)) {
-        // 使用当前主机名和3000端口
-        return `${window.location.protocol}//${currentHost}:3000`;
+        const apiUrl = `${currentProtocol}//${currentHost}:3000`;
+        console.log('🌐 检测到IP地址访问，使用API URL:', apiUrl);
+        return apiUrl;
     }
 
     // 本地开发环境
     if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
-        return 'http://localhost:3000';
+        const apiUrl = 'http://localhost:3000';
+        console.log('🏠 检测到本地环境，使用API URL:', apiUrl);
+        return apiUrl;
     }
 
-    // 默认情况下，使用相对路径
-    return '';
+    // 服务器环境 - 使用相同的主机和协议，但端口3000
+    const apiUrl = `${currentProtocol}//${currentHost}:3000`;
+    console.log('🖥️ 服务器环境，使用API URL:', apiUrl);
+    return apiUrl;
 }
 
 /**
