@@ -112,14 +112,11 @@ class EvaluationsDAL {
     const date = new Date(timestamp).toISOString();
 
     try {
-      // 记录原始数据
-      console.log(`接收到评估数据 [${resultKey}]`);
-
       // 验证和预处理评估数据
       const processedData = this._preprocessEvaluationData(evaluationData, resultKey);
 
-      // 记录处理后的数据
-      if (this.logger) {
+      // 只在调试模式下记录详细日志
+      if (process.env.NODE_ENV === 'development' && this.logger) {
         this.logger.logEvaluationSave(resultKey, processedData);
       }
 
@@ -136,7 +133,11 @@ class EvaluationsDAL {
         `);
 
         const result = insertStmt.run(resultKey, timestamp, date, JSON.stringify(processedData));
-        console.log(`评估数据 [${resultKey}] 已保存到数据库，ID: ${result.lastInsertRowid}`);
+
+        // 只在调试模式下输出详细日志
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`评估数据 [${resultKey}] 已保存到数据库，ID: ${result.lastInsertRowid}`);
+        }
 
         // 更新产品信息
         this._updateProductInfo(processedData['Part Number'], processedData['Product Family']);
@@ -177,7 +178,10 @@ class EvaluationsDAL {
 
   // 预处理评估数据
   _preprocessEvaluationData(data, resultKey) {
-    console.log(`预处理评估数据 [${resultKey}]`);
+    // 只在调试模式下输出预处理日志
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`预处理评估数据 [${resultKey}]`);
+    }
 
     // 创建数据副本，避免修改原始数据
     const processedData = { ...data };
@@ -185,7 +189,10 @@ class EvaluationsDAL {
     // 确保必要字段存在
     if (!processedData['CAS Name']) {
       processedData['CAS Name'] = 'unknown';
-      console.log(`警告: 评估数据 [${resultKey}] 缺少 CAS Name 字段`);
+      // 只在调试模式下输出警告日志
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`警告: 评估数据 [${resultKey}] 缺少 CAS Name 字段`);
+      }
     }
 
     if (!processedData['Product Family']) {
@@ -199,10 +206,16 @@ class EvaluationsDAL {
         } else {
           processedData['Product Family'] = 'Unknown';
         }
-        console.log(`从Part Number [${partNumber}] 推断Product Family: ${processedData['Product Family']}`);
+        // 只在调试模式下输出推断日志
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`从Part Number [${partNumber}] 推断Product Family: ${processedData['Product Family']}`);
+        }
       } else {
         processedData['Product Family'] = 'Unknown';
-        console.log(`警告: 评估数据 [${resultKey}] 缺少 Product Family 字段`);
+        // 只在调试模式下输出警告日志
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`警告: 评估数据 [${resultKey}] 缺少 Product Family 字段`);
+        }
       }
     }
 

@@ -355,7 +355,10 @@ router.get('/test-cases', asyncHandler(async (req, res) => {
     // 首先检查数据库是否为空
     const stats = evaluationsDAL.getStatsOverview();
     if (stats.is_empty || stats.overall_average === -1) {
-      console.log('数据库为空，返回空测试用例列表');
+      // 只在调试模式下输出日志
+      if (process.env.NODE_ENV === 'development') {
+        console.log('数据库为空，返回空测试用例列表');
+      }
       return res.json({
         success: false,
         message: '数据库为空，请等待数据从 Dify 同步',
@@ -417,8 +420,10 @@ router.get('/test-cases', asyncHandler(async (req, res) => {
       };
     });
 
-    // 打印调试信息
-    console.log(`返回 ${simplifiedData.length} 条测试用例数据`);
+    // 只在调试模式下打印调试信息
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`返回 ${simplifiedData.length} 条测试用例数据`);
+    }
 
     // 返回简化的数据结构
     res.json({

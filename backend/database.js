@@ -7,7 +7,10 @@ const path = require('path');
 // 确保数据目录存在
 function ensureDbDirectory(dbPath) {
   const dir = path.dirname(dbPath);
-  console.log(`检查数据目录是否存在: ${dir}`);
+  // 只在调试模式下输出详细日志
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`检查数据目录是否存在: ${dir}`);
+  }
 
   if (!fs.existsSync(dir)) {
     console.log(`数据目录不存在，正在创建: ${dir}`);
@@ -111,14 +114,21 @@ function initializeDatabase(dbPath) {
       throw testError;
     }
 
-    console.log(`数据库连接成功`);
+    // 只在调试模式下输出详细日志
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`数据库连接成功`);
+    }
 
     // 启用外键约束
-    console.log(`启用外键约束...`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`启用外键约束...`);
+    }
     db.pragma('foreign_keys = ON');
 
     // 创建评估表
-    console.log(`创建评估表...`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`创建评估表...`);
+    }
     db.exec(`
       CREATE TABLE IF NOT EXISTS evaluations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -246,11 +256,17 @@ let dbFilePath = null;
 
 function getDatabase(dbPath) {
   try {
-    console.log(`请求获取数据库连接: ${dbPath}`);
+    // 只在调试模式下输出连接日志
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`请求获取数据库连接: ${dbPath}`);
+    }
 
     // 如果数据库已初始化且路径相同，直接返回
     if (db && dbFilePath === dbPath) {
-      console.log(`返回已存在的数据库连接: ${dbPath}`);
+      // 只在调试模式下输出连接日志
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`返回已存在的数据库连接: ${dbPath}`);
+      }
       return db;
     }
 
